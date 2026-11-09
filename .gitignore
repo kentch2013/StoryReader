@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Uploads and temporary files
+uploads/
+tmp/
+*.tmp
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS and Editor metadata
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
