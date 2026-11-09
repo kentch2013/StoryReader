@@ -2,7 +2,7 @@
 
 **Version:** 1.0.0  
 **Target Environment:** Local Node.js Express server on Windows 11 host + iPhone 14 Plus (iOS Safari 17/18) client via secure HTTPS tunnel  
-**AI Engine:** Google Gemini (`@google/genai` SDK, `gemini-2.5-flash`)  
+**AI Engine:** Google Gemini (`@google/genai` SDK, `gemini-3.1-flash` default; supports `gemini-3.5-flash` / `gemma4`)  
 **Target User:** Grade 2 Reader (ages 7–8) + Parent (co-reader / operator)
 
 ---
@@ -29,7 +29,7 @@ graph TD
     end
 
     subgraph Cloud ["Google Gen AI API"]
-        GEMINI["Gemini 2.5 Flash (Vision & Structured JSON)"]
+        GEMINI["Gemini 3.1 Flash / 3.5 Flash (Vision & Structured JSON)"]
     end
 
     UI --> CAM
@@ -88,10 +88,10 @@ Before writing code, the following six core failure modes have been analyzed and
   2. **Gesture-Gated Audio Unlocking:** An initial "Let's Read!" or "Start Chunk" tap fires a zero-volume audio pulse to unlock Safari's Web Audio / Speech subsystem.
   3. Asynchronous voice selection: Listen to `speechSynthesis.onvoiceschanged` with fallback to default system voice if English voices load lazily.
 
-### Risk 5: Invalid Gemini Model String & Vision Schema Edge Cases
-* **Root Cause:** Public Gemini endpoints on `@google/genai` SDK do not include non-standard tags like `gemini-3.1-flash`. Additionally, if a parent uploads a blurry or non-book image, strict parsing could crash or hallucinate questions.
+### Risk 5: Google AI Studio Model Access & Vision Schema Edge Cases
+* **Root Cause:** The Google AI Studio account has active access to `gemini-3.1-flash`, `gemini-3.5-flash`, and `gemma4` (without `gemini-2.5-flash`). Additionally, if a parent uploads a blurry or non-book image, strict parsing could crash or hallucinate questions.
 * **Architectural Solution:**
-  1. Standardize on **`gemini-2.5-flash`** as the default production model, parameterized via `process.env.GEMINI_MODEL`.
+  1. Standardize on **`gemini-3.1-flash`** as the default production model, parameterized via `process.env.GEMINI_MODEL`, with seamless fallback to `gemini-3.5-flash` or `gemma4`.
   2. Vision Schema Resilience: The `/api/analyze-book` schema includes validation flags:
      ```json
      {

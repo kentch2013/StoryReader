@@ -27,7 +27,7 @@ StoryScout is a local, lightweight web application designed for a parent and chi
 - **Input:** Multi-part form data containing an array of image files (book pages in sequence).
 - **Gemini Processing:**
   - Gemini receives the images in order.
-  - Uses `gemini-2.5-flash` with multimodal vision and a strict JSON schema.
+  - Uses `gemini-3.1-flash` (or `gemini-3.5-flash` / `gemma4`) with multimodal vision and a strict JSON schema.
 - **Output JSON Schema:**
 ```json
 {
