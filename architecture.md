@@ -259,3 +259,14 @@ To satisfy iOS Safari's Web Speech API security requirement without certificate 
    - 7-8 year old vocabulary includes fillers ("like", "um", "because").
    - ASR transcription artifacts (e.g. slight homophone errors) are ignored if the conceptual kernel is present.
    - Feedback is capped at 25 words to prevent overwhelming auditory processing.
+
+---
+
+## 8. Implementation Roadmap & Verification Gates
+
+The complete step-by-step roadmap is maintained in [`roadmap.md`](./roadmap.md).
+Every module is enforced via a strict 4-step progression:
+1. **Pipeline Extension:** Domain-specific code and interfaces.
+2. **Code Verification:** Deterministic automated test assertions.
+3. **Digital Samples:** Automated test harnesses using synthetic/digital fixtures.
+4. **Human Verification:** Manual validation on target hardware (iPhone 14 Plus Safari + Windows host).
