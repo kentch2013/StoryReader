@@ -163,7 +163,15 @@ Before writing code, the following six core failure modes have been analyzed and
           "acceptable_phrasings": { "type": "ARRAY", "items": { "type": "STRING" } },
           "hint_level_1": { "type": "STRING", "description": "Attempt 1 spatial eye-anchor" },
           "hint_level_2": { "type": "STRING", "description": "Attempt 2 leading question" },
-          "scaffold_hint": { "type": "STRING", "description": "Gentle hint if child struggles" }
+          "scaffold_hint": { "type": "STRING", "description": "Gentle hint if child struggles" },
+          "entity_graph": {
+            "type": "OBJECT",
+            "properties": {
+              "characters": { "type": "ARRAY" },
+              "social_relations": { "type": "ARRAY" },
+              "discourse_referents": { "type": "OBJECT" }
+            }
+          }
         },
         "required": ["chunk_id", "page_range", "chunk_type", "lookout_prompt", "checkin_question", "target_answer_concept", "keyword_clusters", "acceptable_phrasings", "hint_level_1", "hint_level_2", "scaffold_hint"]
       }
@@ -182,7 +190,22 @@ Before writing code, the following six core failure modes have been analyzed and
   "target_answer_concept": "He was upset because his grandmother made it for him and it was special.",
   "scaffold_hint": "Think about who gave Leo that hat!",
   "child_transcript": "because his grandma made it",
-  "attempt_count": 1
+  "attempt_count": 1,
+  "microturn_used": false,
+  "entity_graph": {
+    "characters": [
+      { "canonical_id": "char_grandma", "canonical_name": "grandma", "gender": "female", "aliases": ["nana", "grandmother"], "kinship_compositions": ["mom's mom", "mother's mom"] }
+    ],
+    "social_relations": [
+      { "subject_id": "char_grandma", "relation": "grandmother_of", "target_id": "char_leo" }
+    ],
+    "discourse_referents": {
+      "she": "grandma",
+      "her": "grandma",
+      "he": "Leo",
+      "him": "Leo"
+    }
+  }
 }
 ```
 * **Response JSON Schema:**
@@ -192,7 +215,12 @@ Before writing code, the following six core failure modes have been analyzed and
   "properties": {
     "status": { "type": "STRING", "enum": ["mastered", "needs_scaffold", "off_track"] },
     "spoken_feedback": { "type": "STRING", "description": "Under 25 words warm, enthusiastic Grade 2 spoken response" },
-    "follow_up_prompt": { "type": "STRING", "description": "Scaffolding nudge if needs_scaffold, otherwise null", "nullable": true }
+    "follow_up_prompt": { "type": "STRING", "description": "Scaffolding nudge if needs_scaffold, otherwise null", "nullable": true },
+    "attempt_count": { "type": "INTEGER" },
+    "resolved": { "type": "BOOLEAN" },
+    "is_microturn": { "type": "BOOLEAN", "description": "True when asking the child to clarify an ambiguous referent without consuming an attempt" },
+    "microturn_used": { "type": "BOOLEAN" },
+    "diagnostics": { "type": "OBJECT" }
   },
   "required": ["status", "spoken_feedback"]
 }
@@ -256,52 +284,71 @@ StoryReader/
 
 ## 6. The Zero-Lag Stack: Coarse-to-Fine Semantic Slot Diagnostic Funnel
 
-To prevent latency anxiety, eliminate brittle keyword dictionaries, avoid cloud rate-limit bottlenecks, and accurately diagnose Grade 2 cognitive misconceptions, StoryReader utilizes a **Coarse-to-Fine Semantic Slot Diagnostic Funnel** powered by local quantized Cross-Encoder NLI (`Xenova/nli-deberta-v3-xsmall` @ ~40MB in ONNX runtime):
+To prevent latency anxiety, eliminate brittle keyword dictionaries, avoid cloud rate-limit bottlenecks, and accurately diagnose Grade 2 cognitive misconceptions, StoryReader utilizes a **Coarse-to-Fine Semantic Slot Diagnostic Funnel** powered by local quantized Cross-Encoder NLI (`Xenova/nli-deberta-v3-xsmall` @ ~40MB in ONNX runtime) paired with a dynamic discourse and relational resolution engine (`services/discourse_resolver.js`):
 
 ```
                        [Child Transcript]
                                │
                                ▼
 ┌─────────────────────────────────────────────────────────────┐
-│ LAYER 1: Grounding & Intelligibility Filter                 │
+│ LAYER 1: Discourse, Relational & Intelligibility Gate (0ms) │
+│ • Grounding: Kinship composition, social graph, anaphora    │
+│ • Ambiguity Cascade: Salience ──► Exclusivity ──► Microturn │
+│ • Shrug fast-path: "i don't know", "" ──► Instant scaffold  │
 │ • Inquiry detector: "who made the hat" ──► QUESTION_ECHO    │
 │ • Stutter detector: "the hat the hat"  ──► SUPERFICIAL_ATTR │
-│ • Shrug fast-path:  "i don't know", "" ──► Instant scaffold │
 └──────────────────────────────┬──────────────────────────────┘
                                │ (Passes: Grounded speech)
                                ▼
 ┌─────────────────────────────────────────────────────────────┐
 │ LAYER 2: Semantic Slot & Consistency Decomp. (ONNX Batch)   │
-│ Single forward pass (~25ms) across 8 parallel hypotheses:   │
-│ • [Actor Slot]     Grandma vs. Grandpa/Friend/Cat           │
-│ • [Recipient Slot] "The hat was for Leo" (vs. grandpa's hat)│
-│ • [Attribute Slot] "The hat was red" (vs. blue hat)         │
-│ • [Action Slot]    Knitted/Made vs. Bought at store         │
+│ Single forward pass (~25ms, max_length: 64) over hypotheses:│
+│ • [Actor Slot]       Grandma vs. Grandpa/Friend/Pet         │
+│ • [Beneficiary Slot] Bound possessive: "Grandma made Leo's  │
+│                      hat" vs. unmapped beneficiary probe    │
+│ • [Attribute Slot]   "The hat was red" (vs. blue hat)       │
+│ • [Action Slot]      Knitted/Made vs. Bought at store       │
 └──────────────────────────────┬──────────────────────────────┘
                                │
                                ▼
 ┌─────────────────────────────────────────────────────────────┐
 │ LAYER 3: Cognitive Resolution & Socratic Scaffolding Gate   │
 │ Resolves diagnosed error mode to targeted spoken audio:     │
-│ • Beneficiary Contradiction (C >= 0.70) ──► CHARACTER_CONF. │
-│ • Attribute Contradiction (C >= 0.70)   ──► DISTRACTOR_MISC.│
-│ • Forward Entailment (Efwd >= 0.50)     ──► MASTERED        │
+│ • Forward Entailment (Efwd >= 0.50, Cfwd < 0.35) ──► MASTERED│
+│ • Forward-Only Error Modes:                                 │
+│   - Character Confusion (Efwd >= 0.70) ──► CHARACTER_CONF.  │
+│   - Distractor Misconception (Efwd >= 0.70) ──► DISTRACTOR  │
+│ • Vague Object Guard: "something/anything" blocks mastery   │
+│ • Minimal Core Length Bound: <= 6 words or targetE >= 0.05  │
 │ • Hard attempt cap: Attempt 2 auto-reveal (resolved: true)  │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ### Core Principles of the Coarse-to-Fine Funnel:
-1. **Unidirectional Forward Causality:**
+1. **Dynamic Entity-Grounded Discourse Resolution (`services/discourse_resolver.js`):**
+   - Replaces brittle static dictionaries with per-chunk `entity_graph` grounding produced during Gemini book analysis.
+   - Dynamic kinship composition: Maps generational compositions (`"mom's mom"`, `"mother's mother"`) to canonical character entities (`grandma`).
+   - Cross-generational mismatch detection: Detects conflations across generational tiers (`CROSS_GEN_REGEX`), routing directly to `CHARACTER_CONFUSION`.
+   - Social relation normalization: Infers reciprocal relations (e.g. `"Jim and John are friends"` allows `"Jim's friend"` to ground to John).
+   - Pronoun anaphora resolution: Resolves third-person pronouns (`he`, `she`, `they`) to salient narrative referents.
+   - **Hierarchical Ambiguity Cascade:**
+     - *Tier 1 (Question Discourse Salience):* Resolves ambiguous pronouns if the question specifically asks about a unique character.
+     - *Tier 2 (Predicate Exclusivity):* Resolves ambiguous actors if only one character in the chunk performed the action.
+     - *Tier 3 (Free Clarification Micro-Turn):* If ambiguity cannot be resolved deterministically, triggers a free clarification prompt (`is_microturn: true`, e.g. *"Did you mean Leo or his friend?"*) without consuming the child's attempt count.
+2. **Unidirectional Forward Causality:**
    - Mastery is awarded *only* when the child transcript forward-entails the target concept ($Child \implies Target$).
    - Reverse entailment ($Target \implies Child$) is strictly forbidden for mastery, eliminating false positives on question premise repetitions or single-word fragments.
-2. **Parallel Consistency Slot Probing:**
+   - Forward-only causality is also strictly enforced for error probes (`character_confusion`, `distractor_misconception`), preventing reverse entailment leaks from generating false negatives.
+3. **Parallel Consistency Slot Probing & Beneficiary Binding:**
    - Rather than checking only positive similarity, parallel negative consistency probes test whether the child contradicts known story facts:
-     - Beneficiary consistency: `"grandma made grampa's hat"` contradicts `"The hat was for Leo"` with 83.4% contradiction.
+     - Beneficiary consistency: Bound possessive attribution (`${actor} made ${recipient}'s hat`) provides sharp contrast against conflicting beneficiaries.
      - Attribute consistency: `"his nana made the blue hat"` contradicts `"The hat was red"` with 99.8% contradiction.
-3. **Compound Generational Normalization:**
-   - Pre-tokenization normalizer maps compound generational terms (`"mother's nana"`, `"mom's grandma"`) into `great-relative`, preventing DeBERTa from matching the subtoken `"nana"` to `"grandma"`.
-4. **Single-Pass Tensor Execution (<30ms):**
-   - All 8 diagnostic hypotheses are batched into a single tensor evaluation pass, maintaining sub-30ms edge latency without GPU requirements.
+4. **Input Tokenization & Vague Object Hardening:**
+   - DeBERTa sequence length configured to `max_length: 64` to prevent truncation of complex Grade 2 causal compound sentences.
+   - Vague object guard (`hasVagueObject`: `something`, `anything`, `stuff`) prevents vague minimal-core matches from bypassing detail requirements.
+   - Minimal core hypothesis matching is restricted to concise responses ($\le 6$ words) unless anchored by target concept alignment ($targetE \ge 0.05$).
+5. **Single-Pass Tensor Execution (<30ms):**
+   - All diagnostic hypotheses are batched into a single ONNX tensor evaluation pass, maintaining sub-30ms edge latency without GPU requirements.
 
 ---
 

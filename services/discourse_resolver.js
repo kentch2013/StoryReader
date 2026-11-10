@@ -1,0 +1,262 @@
+/**
+ * Discourse Resolver Service
+ *
+ * Implements:
+ * 1. Kinship compositional mapping (e.g. "mothers mother" -> "grandma")
+ * 2. Cross-generational mismatch detection (flagging CHARACTER_CONFUSION)
+ * 3. Social relational mapping (e.g. "jims friend" -> "john")
+ * 4. Anaphora / pronoun resolution (e.g. "she" -> "grandma", "it" -> "the hat", "he" -> "Leo")
+ * 5. Hierarchical Ambiguity Cascade with Free Micro-Turn
+ */
+
+const CROSS_GEN_REGEX = /\b(mothers?|fathers?|moms?|dads?)\s+(nana|grandma|grandmother|granny|grandpa|grandfather|gramps)\b/i;
+
+function escapeRegex(str = '') {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Resolves relational discourse, kinship compositions, social relations,
+ * anaphora / pronouns, and hierarchical ambiguity cascade with micro-turns.
+ *
+ * @param {string} normalizedTranscript - The sanitized child transcript.
+ * @param {object} rubric - The evaluation rubric (containing entity_graph, checkin_question, etc.).
+ * @param {object} options - Options such as microturn_used, attempt_count.
+ * @returns {object}
+ */
+export function resolveDiscourse(normalizedTranscript = '', rubric = {}, options = {}) {
+  let transcript = (normalizedTranscript || '').toLowerCase().trim();
+  const microturnUsed = options?.microturn_used === true || rubric?.microturn_used === true;
+  const entityGraph = rubric?.entity_graph;
+
+  const result = {
+    grounded_transcript: transcript,
+    is_ambiguous: false,
+    is_microturn: false,
+    microturn_used: microturnUsed,
+    candidate_names: [],
+    spoken_prompt: '',
+    character_confusion: false,
+    cognitive_diagnosis: null,
+  };
+
+  if (!transcript) {
+    return result;
+  }
+
+  // =========================================================================
+  // 1. Cross-Generational Mismatch Detection
+  // =========================================================================
+  if (CROSS_GEN_REGEX.test(transcript)) {
+    let isAllowedComposition = false;
+    if (entityGraph && Array.isArray(entityGraph.characters)) {
+      for (const char of entityGraph.characters) {
+        if (Array.isArray(char.kinship_compositions)) {
+          for (const comp of char.kinship_compositions) {
+            const normComp = comp.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
+            if (transcript.includes(normComp)) {
+              isAllowedComposition = true;
+              break;
+            }
+          }
+        }
+        if (isAllowedComposition) break;
+      }
+    }
+
+    if (!isAllowedComposition) {
+      result.character_confusion = true;
+      result.cognitive_diagnosis = 'CHARACTER_CONFUSION';
+      return result;
+    }
+  }
+
+  // Conflicting recipient detection against story_context.recipient
+  const storyRecipient = (rubric.story_context?.recipient || rubric.entity_graph?.discourse_referents?.him || '').toLowerCase().trim();
+  if (storyRecipient) {
+    const beneficiaryMatch = transcript.match(/\b(?:for)\s+(?:a\s+|the\s+|his\s+|her\s+|my\s+)?(dog|cat|pet|grampa|grandpa|friend|someone\s+else|sister|brother|dad|father)\b/i);
+    if (beneficiaryMatch) {
+      const statedBeneficiary = beneficiaryMatch[1].toLowerCase();
+      result.character_confusion = true;
+      result.cognitive_diagnosis = 'CHARACTER_CONFUSION';
+      result.spoken_prompt = `That was for ${rubric.story_context?.recipient || 'Leo'}, not ${statedBeneficiary}!`;
+      return result;
+    }
+  }
+
+  // =========================================================================
+  // 2. Kinship Compositional Mapping
+  // =========================================================================
+  if (entityGraph && Array.isArray(entityGraph.characters)) {
+    for (const char of entityGraph.characters) {
+      if (Array.isArray(char.kinship_compositions)) {
+        for (const comp of char.kinship_compositions) {
+          const normComp = comp.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
+          if (!normComp) continue;
+          const regex = new RegExp(`\\b${escapeRegex(normComp)}\\b`, 'gi');
+          if (regex.test(transcript)) {
+            const canonicalName = char.canonical_name || char.canonical_id;
+            transcript = transcript.replace(regex, canonicalName.toLowerCase());
+          }
+        }
+      }
+    }
+  } else {
+    // Fallback kinship normalization for rubrics without entity_graph
+    transcript = transcript
+      .replace(/\b(mothers?\s+mother|fathers?\s+mother|moms?\s+mom|dads?\s+mom|grand\s+mother)\b/gi, 'grandmother')
+      .replace(/\b(mothers?\s+father|fathers?\s+father|moms?\s+dad|dads?\s+dad|grand\s+father)\b/gi, 'grandfather')
+      .replace(/\bgrampa\b/gi, 'grandpa');
+  }
+
+  // =========================================================================
+  // 3. Social Relational Mapping
+  // =========================================================================
+  if (entityGraph && Array.isArray(entityGraph.social_relations)) {
+    for (const rel of entityGraph.social_relations) {
+      let targetName = rel.target_id;
+      if (Array.isArray(entityGraph.characters)) {
+        const found = entityGraph.characters.find(
+          (c) =>
+            c.canonical_id === rel.target_id ||
+            c.canonical_name?.toLowerCase() === rel.target_id?.toLowerCase()
+        );
+        if (found) {
+          targetName = found.canonical_name || found.canonical_id;
+        }
+      }
+
+      if (Array.isArray(rel.aliases)) {
+        for (const alias of rel.aliases) {
+          const normAlias = alias.toLowerCase().replace(/['’]/g, '').replace(/[^a-z0-9\s]/g, '').trim();
+          if (!normAlias) continue;
+          const regex = new RegExp(`\\b${escapeRegex(normAlias)}\\b`, 'gi');
+          if (regex.test(transcript)) {
+            transcript = transcript.replace(regex, targetName);
+          }
+        }
+      }
+    }
+  }
+
+  // =========================================================================
+  // 4. Anaphora / Pronoun Resolution & Hierarchical Ambiguity Cascade
+  // =========================================================================
+  const discourseReferents = entityGraph?.discourse_referents;
+
+  const femalePronouns = ['she', 'her'];
+  const malePronouns = ['he', 'him', 'his'];
+
+  const containsFemalePronoun = femalePronouns.some((p) => new RegExp(`\\b${p}\\b`, 'i').test(transcript));
+  const containsMalePronoun = malePronouns.some((p) => new RegExp(`\\b${p}\\b`, 'i').test(transcript));
+
+  let ambiguousPronounFound = false;
+  let activeCandidates = [];
+
+  if (discourseReferents) {
+    if (containsFemalePronoun && discourseReferents.she === null) {
+      ambiguousPronounFound = true;
+      activeCandidates = entityGraph.active_female_candidates || [];
+      if (activeCandidates.length === 0 && Array.isArray(entityGraph.characters)) {
+        activeCandidates = entityGraph.characters
+          .filter((c) => c.gender === 'female')
+          .map((c) => c.canonical_name || c.canonical_id);
+      }
+    } else if (containsMalePronoun && discourseReferents.he === null) {
+      ambiguousPronounFound = true;
+      activeCandidates = entityGraph.active_male_candidates || [];
+      if (activeCandidates.length === 0 && Array.isArray(entityGraph.characters)) {
+        activeCandidates = entityGraph.characters
+          .filter((c) => c.gender === 'male')
+          .map((c) => c.canonical_name || c.canonical_id);
+      }
+    }
+  }
+
+  if (ambiguousPronounFound && activeCandidates.length >= 2) {
+    // Cascade Tier 1: Salience / Discourse Focus
+    const question = (rubric.checkin_question || '').toLowerCase();
+    const mentionedCandidates = activeCandidates.filter((cand) =>
+      question.includes(cand.toLowerCase())
+    );
+
+    if (mentionedCandidates.length === 1) {
+      const resolvedName = mentionedCandidates[0];
+      femalePronouns.forEach((p) => {
+        transcript = transcript.replace(new RegExp(`\\b${p}\\b`, 'gi'), resolvedName);
+      });
+      malePronouns.forEach((p) => {
+        transcript = transcript.replace(new RegExp(`\\b${p}\\b`, 'gi'), resolvedName);
+      });
+    } else {
+      // Cascade Tier 2: Predicate & Action Exclusivity
+      let uniqueActionCandidate = null;
+      if (Array.isArray(entityGraph.characters)) {
+        const matchingActionCandidates = [];
+        for (const candName of activeCandidates) {
+          const char = entityGraph.characters.find(
+            (c) => (c.canonical_name || c.canonical_id).toLowerCase() === candName.toLowerCase()
+          );
+          if (char && Array.isArray(char.actions)) {
+            const hasAction = char.actions.some((act) => transcript.includes(act.toLowerCase()));
+            if (hasAction) {
+              matchingActionCandidates.push(candName);
+            }
+          }
+        }
+        if (matchingActionCandidates.length === 1) {
+          uniqueActionCandidate = matchingActionCandidates[0];
+        }
+      }
+
+      if (uniqueActionCandidate) {
+        femalePronouns.forEach((p) => {
+          transcript = transcript.replace(new RegExp(`\\b${p}\\b`, 'gi'), uniqueActionCandidate);
+        });
+        malePronouns.forEach((p) => {
+          transcript = transcript.replace(new RegExp(`\\b${p}\\b`, 'gi'), uniqueActionCandidate);
+        });
+      } else {
+        // Cascade Tier 3: Free Clarification Micro-Turn
+        result.is_ambiguous = true;
+        result.candidate_names = activeCandidates;
+
+        if (!microturnUsed) {
+          result.is_microturn = true;
+          result.microturn_used = true;
+          result.cognitive_diagnosis = 'AMBIGUOUS_REFERENT';
+          const cand1 = activeCandidates[0];
+          const cand2 = activeCandidates[1];
+          result.spoken_prompt = `Do you mean ${cand1} or ${cand2}? Tell me which one!`;
+          result.grounded_transcript = transcript;
+          return result;
+        } else {
+          result.is_microturn = false;
+          result.microturn_used = true;
+          result.grounded_transcript = transcript;
+          return result;
+        }
+      }
+    }
+  }
+
+  // Resolve unambiguous discourse referents
+  if (discourseReferents) {
+    for (const [pronoun, referent] of Object.entries(discourseReferents)) {
+      if (typeof referent === 'string' && referent.trim()) {
+        const regex = new RegExp(`\\b${escapeRegex(pronoun)}\\b`, 'gi');
+        transcript = transcript.replace(regex, referent);
+      }
+    }
+  }
+
+  // Normalize prepositional beneficiary phrases ("hat for [the] [X]" -> "[X]'s hat")
+  transcript = transcript.replace(/\b(?:a|the)?\s*hat\s+for\s+(?:the\s+|a\s+)?([a-z0-9]+)\b/gi, "$1's hat");
+
+  result.grounded_transcript = transcript.trim();
+  return result;
+}
+
+export default {
+  resolveDiscourse,
+};

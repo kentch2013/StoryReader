@@ -29,11 +29,11 @@ Each module must pass all 4 verification gates before the next module begins:
   - [x] Digital Samples: CLI harness against 3 synthetic Grade 2 book pages + 1 blurred page
   - [x] Human Gate: Validate chunk structure and Grade 2 prompts against physical pages
 
-- [ ] **Module 3: Socratic Answer Evaluation Engine**
-  - [ ] Pipeline: `POST /api/evaluate-answer`, Socratic feedback prompt, $\le 25$ word cap, attempt tracking
-  - [ ] Code Tests: Unit tests across `mastered`, `needs_scaffold`, `off_track`, retry resolution
-  - [ ] Digital Samples: Benchmark runner testing synthetic transcripts with child speech fillers
-  - [ ] Human Gate: Interactive terminal REPL testing edge-case child phrases for tone
+- [x] **Module 3: Socratic Answer Evaluation Engine**
+  - [x] Pipeline: `POST /api/evaluate-answer`, System 1 ONNX NLI, discourse resolver, $\le 25$ word cap, attempt tracking & free microturn
+  - [x] Code Tests: 55 unit/integration tests across 11 test suites with 100% contract immutability
+  - [x] Digital Samples: 50-item benchmark runner (`scripts/test_50_eval_cases.js`) passing 50/50 (100%)
+  - [x] Human Gate: Interactive terminal REPL (`scripts/interactive_eval_test.js`) testing edge-case child phrases for tone
 
 - [ ] **Module 4: Mobile Camera Tray & Canvas Compression Engine**
   - [ ] Pipeline: `public/js/camera_tray.js`, sequential capture, filmstrip tray, canvas downscaler ($\le 1600\text{px}$)

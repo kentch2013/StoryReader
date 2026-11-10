@@ -93,7 +93,7 @@ export async function evaluateSemanticMatch(normalizedTranscript, rubric = {}) {
   }
 
   const { tokenizer, model } = await getNLIModel();
-  const transcript = normalizeKinship(normalizedTranscript);
+  const transcript = (normalizedTranscript || '').trim();
 
   // 1. Gather positive mastery reference texts and deduplicate
   const positiveReferences = [];
@@ -247,7 +247,7 @@ export function synthesizeProbesFromRubric(rubric = {}) {
       feedback: 'Exactly right!',
     },
     superficial_attribute: {
-      hypothesis: 'A superficial color, size, or appearance detail.',
+      hypothesis: 'A superficial color, size, yarn, material, or appearance detail.',
       scaffold: rubric.hint_level_1 || rubric.scaffold_hint || 'Look closer at the details.',
     },
     premise_echo: {
@@ -309,18 +309,26 @@ export async function evaluateDiagnosticProbes(normalizedTranscript, rubric = {}
   }
 
   const { tokenizer, model } = await getNLIModel();
-  const transcript = normalizeKinship(normalizedTranscript);
+  const transcript = (normalizedTranscript || '').trim();
 
   // =========================================================================
   // LAYER 2: Semantic Slot & Component Decomposition (Single Parallel Batch)
   // =========================================================================
+  const actorName = rubric.story_context?.actor || rubric.entity_graph?.characters?.[0]?.canonical_name || 'grandma';
+  const recipientName = rubric.story_context?.recipient || rubric.entity_graph?.characters?.find((c) => c.gender === 'male')?.canonical_name || 'Leo';
+  const objectName = rubric.story_context?.object || 'warm red hat';
+
   const beneficiaryHyp = rubric.story_context?.recipient
-    ? `The hat was for ${rubric.story_context.recipient}.`
-    : 'The hat was for Leo.';
+    ? `${actorName} made ${rubric.story_context.recipient}'s hat.`
+    : null;
 
   const attributeHyp = rubric.story_context?.object
-    ? `The hat was ${rubric.story_context.object}.`
-    : 'The hat was red.';
+    ? `The hat was a ${rubric.story_context.object}.`
+    : null;
+
+  const wordTokens = transcript.split(/\s+/).filter(Boolean);
+  const wordCount = wordTokens.length;
+  const coreEntity = wordCount <= 3 ? (rubric.keyword_clusters?.[0]?.synonyms?.[0] || rubric.entity_graph?.characters?.[0]?.canonical_name) : null;
 
   const probeKeys = [
     'target_mastery',
@@ -329,14 +337,23 @@ export async function evaluateDiagnosticProbes(normalizedTranscript, rubric = {}
     'premise_echo',
     'character_confusion',
     'distractor_misconception',
-    'beneficiary_consistency',
-    'attribute_consistency',
   ];
+
+  if (coreEntity) {
+    probeKeys.push('core_entity');
+  }
+  if (beneficiaryHyp) {
+    probeKeys.push('beneficiary_consistency');
+  }
+  if (attributeHyp) {
+    probeKeys.push('attribute_consistency');
+  }
 
   const fullProbes = {
     ...probes,
-    beneficiary_consistency: { hypothesis: beneficiaryHyp },
-    attribute_consistency: { hypothesis: attributeHyp },
+    core_entity: { hypothesis: coreEntity || '' },
+    beneficiary_consistency: { hypothesis: beneficiaryHyp || '' },
+    attribute_consistency: { hypothesis: attributeHyp || '' },
   };
 
   const fwdA = [];
@@ -360,7 +377,7 @@ export async function evaluateDiagnosticProbes(normalizedTranscript, rubric = {}
     text_pair: pairB,
     padding: true,
     truncation: true,
-    max_length: 32,
+    max_length: 64,
   });
   const output = await model(inputs);
   const logitsData = output.logits.data;
@@ -382,10 +399,10 @@ export async function evaluateDiagnosticProbes(normalizedTranscript, rubric = {}
       logitsData[revOffset + 2],
     ]);
 
-    // Forward entailment strictly required for mastery targets.
-    // Descriptive scaffolds (superficial, echo) may accept bidirectional correlation.
-    const isMasteryKey = key === 'target_mastery' || key === 'minimal_core';
-    const effectiveE = isMasteryKey ? e_fwd : Math.max(e_fwd, e_rev);
+    // Forward entailment strictly required for mastery targets, character confusion, and distractors.
+    // Only descriptive echoes (superficial, premise_echo) may accept bidirectional correlation.
+    const isForwardOnly = key === 'target_mastery' || key === 'minimal_core' || key === 'character_confusion' || key === 'distractor_misconception';
+    const effectiveE = isForwardOnly ? e_fwd : Math.max(e_fwd, e_rev);
     const maxC = Math.max(c_fwd, c_rev);
     const bestN = effectiveE === e_fwd ? n_fwd : n_rev;
 
@@ -417,12 +434,24 @@ export async function evaluateDiagnosticProbes(normalizedTranscript, rubric = {}
   const targetE = probeScores.target_mastery?.fwd_e ?? 0;
   const targetC = probeScores.target_mastery?.fwd_c ?? 1;
 
-  const minimalE = probeScores.minimal_core?.fwd_e ?? 0;
-  const minimalC = probeScores.minimal_core?.fwd_c ?? 1;
+  let minimalE = probeScores.minimal_core?.fwd_e ?? 0;
+  let minimalC = probeScores.minimal_core?.fwd_c ?? 1;
 
+  if (coreEntity && probeScores.core_entity) {
+    const ceE = probeScores.core_entity.fwd_e ?? 0;
+    const ceC = probeScores.core_entity.fwd_c ?? 1;
+    if (ceE >= 0.50 && ceC < 0.35) {
+      if (ceE > minimalE) {
+        minimalE = ceE;
+        minimalC = ceC;
+      }
+    }
+  }
+
+  const hasVagueObject = /\b(something|anything|stuff)\b/i.test(transcript);
   const isMasteredCandidate =
     (targetE >= 0.50 && targetC < 0.35) ||
-    (minimalE >= 0.50 && minimalC < 0.35);
+    (minimalE >= 0.50 && minimalC < 0.35 && !hasVagueObject && (wordCount <= 6 || targetE >= 0.05));
 
   // 1. Direct Specific Error Modes
   if ((probeScores.distractor_misconception?.entailment ?? 0) >= 0.50) {
@@ -456,12 +485,12 @@ export async function evaluateDiagnosticProbes(normalizedTranscript, rubric = {}
       probeScores.target_mastery?.fwd_c ?? 0
     );
     topNeutral = probeScores.character_confusion?.neutral ?? 0;
-  } else if ((probeScores.beneficiary_consistency?.contradiction ?? 0) >= 0.70) {
+  } else if (beneficiaryHyp && (probeScores.beneficiary_consistency?.contradiction ?? 0) >= 0.70) {
     cognitive_diagnosis = 'CHARACTER_CONFUSION';
     spoken_feedback = 'That hat was for Leo, not someone else! Think about who made it for Leo.';
     topContradiction = probeScores.beneficiary_consistency.contradiction;
     topEntailment = 0;
-  } else if ((probeScores.attribute_consistency?.contradiction ?? 0) >= 0.70) {
+  } else if (attributeHyp && (probeScores.attribute_consistency?.contradiction ?? 0) >= 0.70) {
     cognitive_diagnosis = 'DISTRACTOR_MISCONCEPTION';
     spoken_feedback = fullProbes.distractor_misconception?.scaffold || 'Look at the picture! Was the hat blue, or was it a warm red hat?';
     topContradiction = probeScores.attribute_consistency.contradiction;

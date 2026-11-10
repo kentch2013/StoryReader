@@ -66,14 +66,16 @@
 ### Module 3: Socratic Answer Evaluation Engine (Completed & Verified)
 * **1. Pipeline Extension:**
   - Implemented Coarse-to-Fine Semantic Slot Diagnostic Funnel:
-    - Layer 1: Grounding & Intelligibility Filter (Inquiry detector, stutter detector, shrug fast-path).
-    - Layer 2: Single-pass ONNX Cross-Encoder NLI (`nli-deberta-v3-xsmall`) evaluating 8 parallel slot consistency hypotheses.
-    - Layer 3: Cognitive Resolution & Socratic Scaffolding Gate with forward-only causality for mastery.
+    - Layer 1: Grounding, Relational Resolution & Intelligibility Filter (`services/discourse_resolver.js` dynamic kinship composition, social graphs, pronoun anaphora, cross-generational mismatch detection, 3-tier Hierarchical Ambiguity Cascade with Free Clarification Micro-Turn, inquiry detector, stutter detector, shrug fast-path).
+    - Layer 2: Single-pass ONNX Cross-Encoder NLI (`nli-deberta-v3-xsmall`, `max_length: 64`) evaluating parallel slot consistency hypotheses with bound possessive beneficiary attribution.
+    - Layer 3: Cognitive Resolution & Socratic Scaffolding Gate with strict forward-only causality for mastery and error modes (`CHARACTER_CONFUSION`, `DISTRACTOR_MISCONCEPTION`), minimal core length bounds, and vague object guards.
   - Mounted `POST /api/evaluate-answer` in `routes/book_routes.js` with sub-30ms execution.
 * **2. Code Verification:**
-  - Comprehensive 45-test suite passing across all 9 test suites (`test/health.test.js`, `test/analyze_book.test.js`, `test/hardening_m1_m2.test.js`, `test/evaluate_answer.test.js`, `test/zero_lag_deterministic_fastpath.test.js`, `test/zero_lag_tier1.test.js`, `test/zero_lag_tier2.test.js`, `test/parallel_diagnostic_probing.test.js`, `test/coarse_to_fine_diagnostic_funnel.test.js`). Contract audit: 100% immutable.
+  - Comprehensive 55-test suite passing across all 11 test suites (`test/health.test.js`, `test/analyze_book.test.js`, `test/hardening_m1_m2.test.js`, `test/evaluate_answer.test.js`, `test/zero_lag_deterministic_fastpath.test.js`, `test/zero_lag_tier1.test.js`, `test/zero_lag_tier2.test.js`, `test/parallel_diagnostic_probing.test.js`, `test/coarse_to_fine_diagnostic_funnel.test.js`, `test/relational_kinship_benchmark.test.js`, `test/relational_discourse_resolution.test.js`).
+  - Contract audit: 100% immutable (`✅ Contract Audit: Test files remained 100% immutable.`).
 * **3. Digital Samples:**
   - Synthetic transcript benchmarks (`scripts/test_evaluate_sample.js`) verifying latencies between 2ms and 40ms.
+  - 50-Response Rigorous Evaluation Benchmark (`scripts/test_50_eval_cases.js`): **50/50 PASS (100%)** across all 6 cognitive error tiers in ~9.6s (~192ms/eval).
 * **4. Human Verification:**
   - Streamlined REPL (`scripts/interactive_eval_test.js`) and `launch_test_environment.bat` ready for rigorous human QA testing across all 6 cognitive error modes.
 

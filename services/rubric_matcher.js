@@ -90,9 +90,9 @@ export function scoreMultiReference(normalizedText, canonicalPrototypes = [], th
     }
   }
 
-  // 2. Check positive canonical prototypes in order
+  // 2. Check positive canonical prototypes in order (excluding distractor and partial_action)
   for (const prototype of canonicalPrototypes) {
-    if (!prototype || prototype.type === 'common_distractor' || typeof prototype.text !== 'string') {
+    if (!prototype || prototype.type === 'common_distractor' || prototype.type === 'partial_action' || typeof prototype.text !== 'string') {
       continue;
     }
 

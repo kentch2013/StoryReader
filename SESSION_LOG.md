@@ -69,6 +69,7 @@ To eliminate context loss between sessions, every handoff must maintain:
   - [x] **Zero-Lag Tier 1: Deterministic Multi-Prototype Matcher** (Completed & Verified)
   - [x] **Zero-Lag Tier 2: System 1 Local ONNX Semantic Evaluator** (Completed & Verified)
   - [x] **Coarse-to-Fine Semantic Slot Diagnostic Funnel** (Completed & Verified)
+  - [x] **Relational & Discourse Resolution Engine** (Completed & Verified)
 - [ ] **Module 4: Mobile Camera Tray & Canvas Compression Engine** (NEXT)
 - [ ] **Module 5: Safari Audio Coordinator (TTS & STT)**
 - [ ] **Module 6: Full SPA Orchestration & End-to-End Reading Flow**
@@ -88,8 +89,10 @@ To eliminate context loss between sessions, every handoff must maintain:
   - [test/zero_lag_tier2.test.js](test/zero_lag_tier2.test.js) (8 tests)
   - [test/parallel_diagnostic_probing.test.js](test/parallel_diagnostic_probing.test.js) (5 tests)
   - [test/coarse_to_fine_diagnostic_funnel.test.js](test/coarse_to_fine_diagnostic_funnel.test.js) (6 tests)
-  - **Full Regression Status:** **45/45 passing**, 0 failures (~13.8s). Contract audit: `✅ 100% immutable`.
-* **Gate 3 (Digital Samples Benchmark):** [scripts/test_evaluate_sample.js](scripts/test_evaluate_sample.js) (10/10 passing in 2ms–40ms).
+  - [test/relational_discourse_resolution.test.js](test/relational_discourse_resolution.test.js) (5 tests)
+  - [test/system1_input_optimization.test.js](test/system1_input_optimization.test.js) (5 tests)
+  - **Full Regression Status:** **55/55 passing**, 0 failures (~19.7s). Contract audit: `✅ 100% immutable`.
+* **Gate 3 (Digital Samples Benchmark):** [scripts/test_evaluate_sample.js](scripts/test_evaluate_sample.js) (10/10 passing) & [scripts/test_50_eval_cases.js](scripts/test_50_eval_cases.js) (**50/50 PASS (100%)** across all 6 cognitive error tiers).
 * **Gate 4 (Human Interactive REPL):** [scripts/interactive_eval_test.js](scripts/interactive_eval_test.js) streamlined with high-level cognitive diagnosis telemetry and `verbose` toggle.
 
 ---

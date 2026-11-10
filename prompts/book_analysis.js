@@ -47,6 +47,11 @@ Strict Generation Rules:
      - premise_echo: Echoing the question premise & scaffold.
      - character_confusion: Conflating characters or wrong agent & scaffold.
      - distractor_misconception: Plausible misconception & scaffold.
+12. "entity_graph":
+   - Character and relational entity network for discourse and kinship resolution:
+     - "characters": Array of character entities with canonical_id, canonical_name, gender, aliases, and kinship_compositions.
+     - "social_relations": Array of relations with subject_id, relation, target_id, and aliases.
+     - "discourse_referents": Map of pronouns (he, him, she, her, it) to canonical entity names.
 `.trim();
 
 export const BOOK_ANALYSIS_SCHEMA = {
@@ -167,6 +172,43 @@ export const BOOK_ANALYSIS_SCHEMA = {
           hint_level_1: { type: Type.STRING, description: 'Attempt 1 spatial eye-anchor' },
           hint_level_2: { type: Type.STRING, description: 'Attempt 2 leading question' },
           scaffold_hint: { type: Type.STRING, description: 'Primary hint' },
+          entity_graph: {
+            type: Type.OBJECT,
+            description: 'Relational entity network and discourse referents for the chunk',
+            properties: {
+              characters: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    canonical_id: { type: Type.STRING },
+                    canonical_name: { type: Type.STRING },
+                    gender: { type: Type.STRING, enum: ['male', 'female', 'nonbinary', 'unknown'] },
+                    aliases: { type: Type.ARRAY, items: { type: Type.STRING } },
+                    kinship_compositions: { type: Type.ARRAY, items: { type: Type.STRING } },
+                  },
+                  required: ['canonical_id', 'canonical_name'],
+                },
+              },
+              social_relations: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    subject_id: { type: Type.STRING },
+                    relation: { type: Type.STRING },
+                    target_id: { type: Type.STRING },
+                    aliases: { type: Type.ARRAY, items: { type: Type.STRING } },
+                  },
+                  required: ['subject_id', 'relation', 'target_id'],
+                },
+              },
+              discourse_referents: {
+                type: Type.OBJECT,
+                description: 'Mapping of pronouns to canonical entities or null if ambiguous',
+              },
+            },
+          },
         },
         required: [
           'chunk_id',

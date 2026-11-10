@@ -60,7 +60,21 @@ StoryScout is a local, lightweight web application designed for a parent and chi
       ],
       "hint_level_1": "Look at the text at the bottom of the second page.",
       "hint_level_2": "What action does the mother promise to take if he leaves?",
-      "scaffold_hint": "Look at the text at the bottom of the second page."
+      "scaffold_hint": "Look at the text at the bottom of the second page.",
+      "entity_graph": {
+        "characters": [
+          { "canonical_id": "char_mom", "canonical_name": "mother bunny", "gender": "female", "aliases": ["mom", "mother"], "kinship_compositions": ["mom's mom", "mother's mother"] }
+        ],
+        "social_relations": [
+          { "subject_id": "char_mom", "relation": "mother_of", "target_id": "char_bunny", "aliases": ["his mother"] }
+        ],
+        "discourse_referents": {
+          "she": "mother bunny",
+          "her": "mother bunny",
+          "he": "little bunny",
+          "him": "little bunny"
+        }
+      }
     }
   ]
 }
@@ -79,17 +93,31 @@ StoryScout is a local, lightweight web application designed for a parent and chi
   "canonical_prototypes": [
     { "type": "string", "text": "string" }
   ],
+  "diagnostic_probes": {
+    "target_mastery": { "hypothesis": "string", "feedback": "string" },
+    "minimal_core": { "hypothesis": "string", "feedback": "string" },
+    "superficial_attribute": { "hypothesis": "string", "scaffold": "string" },
+    "premise_echo": { "hypothesis": "string", "scaffold": "string" },
+    "character_confusion": { "hypothesis": "string", "scaffold": "string" },
+    "distractor_misconception": { "hypothesis": "string", "scaffold": "string" }
+  },
+  "entity_graph": {
+    "characters": [],
+    "social_relations": [],
+    "discourse_referents": {}
+  },
   "hint_level_1": "string (optional)",
   "hint_level_2": "string (optional)",
   "scaffold_hint": "string (optional)",
   "child_transcript": "string",
-  "attempt_count": 1
+  "attempt_count": 1,
+  "microturn_used": false
 }
 ```
 - **Execution Architecture (Coarse-to-Fine Semantic Slot Funnel):**
-  1. *Layer 1: Grounding & Intelligibility Gate (0ms):* Lowercases, normalizes kinship (`mother's nana` $\rightarrow$ `great-relative`), screens inquiry questions (`"who made the hat"`), screens word stutter (`"the hat the hat"`), and catches shrugs (`"i don't know"`, `""`).
-  2. *Layer 2: Parallel Slot Consistency Decomp. (ONNX Batch, ~25ms):* In a single forward pass via `Xenova/nli-deberta-v3-xsmall`, evaluates 8 parallel hypotheses covering actor, action, beneficiary consistency (`"The hat was for Leo"`), and attribute consistency (`"The hat was red"`).
-  3. *Layer 3: Cognitive Resolution & Socratic Gate:* Enforces forward-only causality for mastery ($E_{fwd} \ge 0.50, C_{fwd} < 0.35$). Maps diagnosed errors (`CHARACTER_CONFUSION`, `DISTRACTOR_MISCONCEPTION`, `SUPERFICIAL_ATTRIBUTE`, `PREMISE_ECHO`) to targeted scaffolds.
+  1. *Layer 1: Discourse & Relational Resolution & Intelligibility Gate (0ms):* Grounding through chunk `entity_graph` (kinship composition, cross-generational mismatch detection, social relations, pronoun anaphora). Executes 3-tier Hierarchical Ambiguity Cascade (Question Salience $\rightarrow$ Predicate Exclusivity $\rightarrow$ Free Clarification Micro-Turn with `is_microturn: true` without consuming attempt). Screens inquiry questions (`"who made the hat"`), word stutters, and catches shrugs (`"i don't know"`, `""`).
+  2. *Layer 2: Parallel Slot Consistency Decomp. (ONNX Batch, ~25ms):* In a single forward pass via `Xenova/nli-deberta-v3-xsmall` (with `max_length: 64`), evaluates parallel hypotheses covering actor, action, beneficiary attribution consistency (`${actor} made ${recipient}'s hat`), and attribute consistency (`"The hat was red"`).
+  3. *Layer 3: Cognitive Resolution & Socratic Gate:* Enforces forward-only causality for mastery ($E_{fwd} \ge 0.50, C_{fwd} < 0.35$) and forward-only causality for error modes (`CHARACTER_CONFUSION`, `DISTRACTOR_MISCONCEPTION`). Applies vague object guard and minimal core length bounds. Maps diagnosed errors (`CHARACTER_CONFUSION`, `DISTRACTOR_MISCONCEPTION`, `SUPERFICIAL_ATTRIBUTE`, `PREMISE_ECHO`, `AMBIGUOUS_REFERENT`) to targeted scaffolds.
   4. *Attempt 2 Auto-Reveal (0ms):* On Attempt 2 failure, cheerful reveal is emitted and `resolved: true` is returned to prevent infinite Socratic loops.
 - **Output JSON Schema:**
 ```json
@@ -99,9 +127,11 @@ StoryScout is a local, lightweight web application designed for a parent and chi
   "follow_up_prompt": null,
   "attempt_count": 1,
   "resolved": false,
+  "is_microturn": false,
+  "microturn_used": false,
   "diagnostics": {
     "tier_resolved": "PARALLEL_DIAGNOSTIC_PROBING",
-    "cognitive_diagnosis": "MASTERED" | "CHARACTER_CONFUSION" | "DISTRACTOR_MISCONCEPTION" | "SUPERFICIAL_ATTRIBUTE" | "PREMISE_ECHO" | "QUESTION_ECHO" | "UNGROUNDED_OFF_TRACK",
+    "cognitive_diagnosis": "MASTERED" | "CHARACTER_CONFUSION" | "DISTRACTOR_MISCONCEPTION" | "SUPERFICIAL_ATTRIBUTE" | "PREMISE_ECHO" | "QUESTION_ECHO" | "AMBIGUOUS_REFERENT" | "UNGROUNDED_OFF_TRACK",
     "probe_scores": {}
   }
 }
