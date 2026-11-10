@@ -17,13 +17,20 @@ export function normalizeTranscript(text = '') {
     return '';
   }
 
-  return text
+  let cleaned = text
     .toLowerCase()
     .replace(/['’]/g, '')
-    .replace(/[^a-z0-9\s]/g, ' ')
-    .replace(/\b(um|uh|like|well|wait|so|you\s+know)\b/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+    .replace(/[^a-z0-9\s]/g, ' ');
+
+  let prev;
+  do {
+    prev = cleaned;
+    cleaned = cleaned.replace(/^\s*(um+|uh+|well|so|you know)\b\s*/gi, '');
+  } while (cleaned !== prev);
+
+  cleaned = cleaned.replace(/\b(um+|uh+)\b/gi, ' ');
+
+  return cleaned.replace(/\s+/g, ' ').trim();
 }
 
 export function hasNegation(normalizedText = '') {

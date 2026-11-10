@@ -11,7 +11,45 @@ import { getPrebakedFeedback } from './feedback_synthesizer.js';
 import { classifyAnswerSemantic } from './gemini_service.js';
 import { resolveDiscourse } from './discourse_resolver.js';
 
+const ADVERSARIAL_INJECTION_REGEX = /\b(ignore\s+previous|system\s+prompt|jailbreak|disregard|you\s+are\s+now|developer\s+mode)\b/i;
+
+function makeEvalResult({
+  status,
+  spoken_feedback,
+  follow_up_prompt = null,
+  attempt_count = 1,
+  resolved = false,
+  is_microturn = false,
+  microturn_used = false,
+  diagnostics = {},
+}) {
+  return {
+    status,
+    spoken_feedback,
+    follow_up_prompt,
+    attempt_count,
+    resolved,
+    is_microturn,
+    microturn_used,
+    diagnostics,
+  };
+}
+
 export async function evaluateChildAnswer(data = {}) {
+  // System 1 Adversarial Gate: Intercept prompt injection attacks
+  if (data.child_transcript && ADVERSARIAL_INJECTION_REGEX.test(data.child_transcript)) {
+    return makeEvalResult({
+      status: 'needs_scaffold',
+      spoken_feedback: "Let's focus on our story! Tell me what happened in the book.",
+      follow_up_prompt: data.checkin_question,
+      attempt_count: data.attempt_count || 1,
+      resolved: false,
+      is_microturn: false,
+      microturn_used: false,
+      diagnostics: { adversarial_intercept: true },
+    });
+  }
+
   const attempt = Number(data.attempt_count) || 1;
   const feedback = getPrebakedFeedback(data);
   const normalized = normalizeTranscript(data.child_transcript);
@@ -47,7 +85,7 @@ export async function evaluateChildAnswer(data = {}) {
 
   // If Microturn Clarification was triggered
   if (discourseResult.is_microturn) {
-    return {
+    return makeEvalResult({
       status: 'needs_scaffold',
       spoken_feedback: discourseResult.spoken_prompt,
       follow_up_prompt: discourseResult.spoken_prompt,
@@ -60,7 +98,7 @@ export async function evaluateChildAnswer(data = {}) {
         cognitive_diagnosis: 'AMBIGUOUS_REFERENT',
         tier_resolved: 'HIERARCHICAL_AMBIGUITY_MICROTURN',
       },
-    };
+    });
   }
 
   // If Cross-Generational Mismatch (Character Confusion) was detected
@@ -69,7 +107,7 @@ export async function evaluateChildAnswer(data = {}) {
       data.diagnostic_probes?.character_confusion?.scaffold ||
       discourseResult.spoken_prompt ||
       feedback.hint_attempt_1;
-    return {
+    return makeEvalResult({
       status: 'needs_scaffold',
       spoken_feedback: confusionFeedback,
       follow_up_prompt: confusionFeedback,
@@ -82,7 +120,7 @@ export async function evaluateChildAnswer(data = {}) {
         cognitive_diagnosis: 'CHARACTER_CONFUSION',
         tier_resolved: 'DISCOURSE_CHARACTER_CONFUSION',
       },
-    };
+    });
   }
 
   // Layer 1 0ms Fast-Path: Shrug or Empty Transcript
@@ -92,7 +130,7 @@ export async function evaluateChildAnswer(data = {}) {
     diagnostics.cognitive_diagnosis = 'UNGROUNDED_OFF_TRACK';
 
     if (attempt >= 2) {
-      return {
+      return makeEvalResult({
         status: 'off_track',
         spoken_feedback: feedback.reveal_attempt_2,
         follow_up_prompt: null,
@@ -101,10 +139,10 @@ export async function evaluateChildAnswer(data = {}) {
         is_microturn: false,
         microturn_used: data.microturn_used === true,
         diagnostics,
-      };
+      });
     }
 
-    return {
+    return makeEvalResult({
       status: 'needs_scaffold',
       spoken_feedback: feedback.hint_attempt_1,
       follow_up_prompt: feedback.hint_attempt_1,
@@ -113,90 +151,68 @@ export async function evaluateChildAnswer(data = {}) {
       is_microturn: false,
       microturn_used: data.microturn_used === true,
       diagnostics,
-    };
+    });
   }
 
   // Parallel Diagnostic Probing Architecture (System 1 Single-Pass Diagnostic Evaluator)
   if (data.diagnostic_probes) {
-    const result = await evaluateDiagnosticProbes(grounded, data);
-    diagnostics.tier_resolved = 'PARALLEL_DIAGNOSTIC_PROBING';
-    diagnostics.cognitive_diagnosis = result.cognitive_diagnosis;
-    diagnostics.probe_scores = result.probeScores;
-    diagnostics.tier2_semantic = {
-      isMatch: result.isMatch,
-      cognitive_diagnosis: result.cognitive_diagnosis,
-      entailment: result.entailment,
-      contradiction: result.contradiction,
-      neutral: result.neutral,
-      scoreTable: result.probeScores,
-    };
+    let result = null;
+    try {
+      result = await evaluateDiagnosticProbes(grounded, data);
+    } catch (err) {
+      console.warn('⚠️ evaluateDiagnosticProbes failed, falling through:', err?.message);
+    }
 
-    if (result.isMatch) {
-      return {
-        status: 'mastered',
+    if (result) {
+      diagnostics.tier_resolved = 'PARALLEL_DIAGNOSTIC_PROBING';
+      diagnostics.cognitive_diagnosis = result.cognitive_diagnosis;
+      diagnostics.probe_scores = result.probeScores;
+      diagnostics.tier2_semantic = {
+        isMatch: result.isMatch,
+        cognitive_diagnosis: result.cognitive_diagnosis,
+        entailment: result.entailment,
+        contradiction: result.contradiction,
+        neutral: result.neutral,
+        scoreTable: result.probeScores,
+      };
+
+      if (result.isMatch) {
+        return makeEvalResult({
+          status: 'mastered',
+          spoken_feedback: result.spoken_feedback,
+          follow_up_prompt: null,
+          attempt_count: attempt,
+          resolved: true,
+          is_microturn: false,
+          microturn_used: data.microturn_used === true,
+          diagnostics,
+        });
+      }
+
+      if (attempt >= 2) {
+        return makeEvalResult({
+          status: 'off_track',
+          spoken_feedback: feedback.reveal_attempt_2,
+          follow_up_prompt: null,
+          attempt_count: attempt,
+          resolved: true,
+          is_microturn: false,
+          microturn_used: data.microturn_used === true,
+          diagnostics,
+        });
+      }
+
+      return makeEvalResult({
+        status: 'needs_scaffold',
         spoken_feedback: result.spoken_feedback,
-        follow_up_prompt: null,
+        follow_up_prompt: result.spoken_feedback,
         attempt_count: attempt,
-        resolved: true,
+        resolved: false,
         is_microturn: false,
         microturn_used: data.microturn_used === true,
         diagnostics,
-      };
+      });
     }
-
-    if (attempt >= 2) {
-      return {
-        status: 'off_track',
-        spoken_feedback: feedback.reveal_attempt_2,
-        follow_up_prompt: null,
-        attempt_count: attempt,
-        resolved: true,
-        is_microturn: false,
-        microturn_used: data.microturn_used === true,
-        diagnostics,
-      };
-    }
-
-    return {
-      status: 'needs_scaffold',
-      spoken_feedback: result.spoken_feedback,
-      follow_up_prompt: result.spoken_feedback,
-      attempt_count: attempt,
-      resolved: false,
-      is_microturn: false,
-      microturn_used: data.microturn_used === true,
-      diagnostics,
-    };
-  }
-
-  // Tier 1 Screener: Shrug or Empty Transcript
-  if (isShrugOrEmpty(grounded)) {
-    diagnostics.tier_resolved = 'TIER_1_SHRUG';
-    diagnostics.tier1.is_shrug = true;
-
-    if (attempt >= 2) {
-      return {
-        status: 'off_track',
-        spoken_feedback: feedback.reveal_attempt_2,
-        follow_up_prompt: null,
-        attempt_count: attempt,
-        resolved: true,
-        is_microturn: false,
-        microturn_used: data.microturn_used === true,
-        diagnostics,
-      };
-    }
-
-    return {
-      status: 'needs_scaffold',
-      spoken_feedback: feedback.hint_attempt_1,
-      follow_up_prompt: feedback.hint_attempt_1,
-      attempt_count: attempt,
-      resolved: false,
-      is_microturn: false,
-      microturn_used: data.microturn_used === true,
-      diagnostics,
-    };
   }
 
   // Tier 1 Fast-Path: Question Premise Echo
@@ -206,7 +222,7 @@ export async function evaluateChildAnswer(data = {}) {
   if (isEcho) {
     diagnostics.tier_resolved = 'TIER_1_QUESTION_ECHO_SCAFFOLD';
     if (attempt >= 2) {
-      return {
+      return makeEvalResult({
         status: 'off_track',
         spoken_feedback: feedback.reveal_attempt_2,
         follow_up_prompt: null,
@@ -215,9 +231,9 @@ export async function evaluateChildAnswer(data = {}) {
         is_microturn: false,
         microturn_used: data.microturn_used === true,
         diagnostics,
-      };
+      });
     }
-    return {
+    return makeEvalResult({
       status: 'needs_scaffold',
       spoken_feedback: feedback.hint_attempt_1,
       follow_up_prompt: feedback.hint_attempt_1,
@@ -226,7 +242,7 @@ export async function evaluateChildAnswer(data = {}) {
       is_microturn: false,
       microturn_used: data.microturn_used === true,
       diagnostics,
-    };
+    });
   }
 
   // Tier 1 Deterministic: Canonical Prototypes Token Matcher
@@ -237,7 +253,7 @@ export async function evaluateChildAnswer(data = {}) {
     if (protoResult.isDistractor) {
       diagnostics.tier_resolved = 'TIER_1_DISTRACTOR_TOKEN_MATCH';
       if (attempt >= 2) {
-        return {
+        return makeEvalResult({
           status: 'off_track',
           spoken_feedback: feedback.reveal_attempt_2,
           follow_up_prompt: null,
@@ -246,10 +262,10 @@ export async function evaluateChildAnswer(data = {}) {
           is_microturn: false,
           microturn_used: data.microturn_used === true,
           diagnostics,
-        };
+        });
       }
 
-      return {
+      return makeEvalResult({
         status: 'needs_scaffold',
         spoken_feedback: feedback.hint_attempt_1,
         follow_up_prompt: feedback.hint_attempt_1,
@@ -258,12 +274,12 @@ export async function evaluateChildAnswer(data = {}) {
         is_microturn: false,
         microturn_used: data.microturn_used === true,
         diagnostics,
-      };
+      });
     }
 
     if (protoResult.matched) {
       diagnostics.tier_resolved = `TIER_1_PROTOTYPE_${protoResult.prototypeType?.toUpperCase()}`;
-      return {
+      return makeEvalResult({
         status: 'mastered',
         spoken_feedback: feedback.praise,
         follow_up_prompt: null,
@@ -272,7 +288,7 @@ export async function evaluateChildAnswer(data = {}) {
         is_microturn: false,
         microturn_used: data.microturn_used === true,
         diagnostics,
-      };
+      });
     }
   }
 
@@ -283,7 +299,7 @@ export async function evaluateChildAnswer(data = {}) {
 
   if (clusterMatch || phrasingMatch) {
     diagnostics.tier_resolved = clusterMatch ? 'TIER_1_CLUSTER_ALL_MATCH' : 'TIER_1_PHRASING_MATCH';
-    return {
+    return makeEvalResult({
       status: 'mastered',
       spoken_feedback: feedback.praise,
       follow_up_prompt: null,
@@ -292,7 +308,7 @@ export async function evaluateChildAnswer(data = {}) {
       is_microturn: false,
       microturn_used: data.microturn_used === true,
       diagnostics,
-    };
+    });
   }
 
   // Record cluster counts in diagnostics for transparency
@@ -301,16 +317,21 @@ export async function evaluateChildAnswer(data = {}) {
   diagnostics.tier1.total_clusters = totalCount;
 
   // Tier 2: System 1 Local Cross-Encoder NLI Evaluator (<50ms, zero cloud network calls)
-  const semanticResult = await evaluateSemanticMatch(grounded, data);
+  let semanticResult = null;
+  try {
+    semanticResult = await evaluateSemanticMatch(grounded, data);
+  } catch (err) {
+    console.warn('⚠️ evaluateSemanticMatch failed, falling through:', err?.message);
+  }
   diagnostics.tier2_semantic = semanticResult;
 
-  if (semanticResult.isDistractor) {
+  if (semanticResult && semanticResult.isDistractor) {
     diagnostics.tier_resolved = semanticResult.contradiction >= 0.80
       ? 'TIER_2_NLI_CONTRADICTION_REJECTION'
       : 'TIER_2_NLI_DISTRACTOR_REJECTION';
 
     if (attempt >= 2) {
-      return {
+      return makeEvalResult({
         status: 'off_track',
         spoken_feedback: feedback.reveal_attempt_2,
         follow_up_prompt: null,
@@ -319,10 +340,10 @@ export async function evaluateChildAnswer(data = {}) {
         is_microturn: false,
         microturn_used: data.microturn_used === true,
         diagnostics,
-      };
+      });
     }
 
-    return {
+    return makeEvalResult({
       status: 'needs_scaffold',
       spoken_feedback: feedback.hint_attempt_1,
       follow_up_prompt: feedback.hint_attempt_1,
@@ -331,12 +352,12 @@ export async function evaluateChildAnswer(data = {}) {
       is_microturn: false,
       microturn_used: data.microturn_used === true,
       diagnostics,
-    };
+    });
   }
 
-  if (semanticResult.isMatch) {
+  if (semanticResult && semanticResult.isMatch) {
     diagnostics.tier_resolved = 'TIER_2_NLI_ENTAILMENT_MATCH';
-    return {
+    return makeEvalResult({
       status: 'mastered',
       spoken_feedback: feedback.praise,
       follow_up_prompt: null,
@@ -345,7 +366,7 @@ export async function evaluateChildAnswer(data = {}) {
       is_microturn: false,
       microturn_used: data.microturn_used === true,
       diagnostics,
-    };
+    });
   }
 
   diagnostics.tier_resolved = 'TIER_2_NLI_BELOW_THRESHOLD';
@@ -365,7 +386,7 @@ export async function evaluateChildAnswer(data = {}) {
 
     if (classification && classification.understands_concept) {
       diagnostics.tier_resolved = 'TIER_3_GEMINI_MASTERED';
-      return {
+      return makeEvalResult({
         status: 'mastered',
         spoken_feedback: feedback.praise,
         follow_up_prompt: null,
@@ -374,14 +395,14 @@ export async function evaluateChildAnswer(data = {}) {
         is_microturn: false,
         microturn_used: data.microturn_used === true,
         diagnostics,
-      };
+      });
     }
 
     diagnostics.tier_resolved = 'TIER_3_GEMINI_NEEDS_SCAFFOLD';
   }
 
   if (attempt >= 2) {
-    return {
+    return makeEvalResult({
       status: 'off_track',
       spoken_feedback: feedback.reveal_attempt_2,
       follow_up_prompt: null,
@@ -390,10 +411,10 @@ export async function evaluateChildAnswer(data = {}) {
       is_microturn: false,
       microturn_used: data.microturn_used === true,
       diagnostics,
-    };
+    });
   }
 
-  return {
+  return makeEvalResult({
     status: 'needs_scaffold',
     spoken_feedback: feedback.hint_attempt_1,
     follow_up_prompt: feedback.hint_attempt_1,
@@ -402,7 +423,7 @@ export async function evaluateChildAnswer(data = {}) {
     is_microturn: false,
     microturn_used: data.microturn_used === true,
     diagnostics,
-  };
+  });
 }
 
 export default {

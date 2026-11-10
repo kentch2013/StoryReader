@@ -36,8 +36,12 @@ class GeminiRateLimiter {
     return count;
   }
 
-  async throttle() {
+  async throttle(isRetry = false) {
     const ticket = this.queue.then(async () => {
+      if (this.getDailyCount() >= this.maxDaily) {
+        throw new Error('Daily rate limit exceeded for Gemini API (500 RPD cap).');
+      }
+
       const now = Date.now();
       const windowStart = now - 60000;
 
@@ -55,7 +59,9 @@ class GeminiRateLimiter {
       }
 
       this.requestTimestamps.push(Date.now());
-      this.incrementDailyCount();
+      if (!isRetry) {
+        this.incrementDailyCount();
+      }
     });
 
     this.queue = ticket.catch(() => {});
@@ -67,7 +73,7 @@ class GeminiRateLimiter {
 
     while (attempt <= maxRetries) {
       try {
-        await this.throttle();
+        await this.throttle(attempt > 0);
         return await apiFn();
       } catch (err) {
         attempt++;
@@ -86,5 +92,6 @@ class GeminiRateLimiter {
   }
 }
 
+export { GeminiRateLimiter };
 export const rateLimiter = new GeminiRateLimiter();
 export default rateLimiter;

@@ -1,4 +1,5 @@
 import { AutoTokenizer, AutoModelForSequenceClassification } from '@xenova/transformers';
+import { EVAL_RULES } from '../config/evaluation_rules.js';
 
 let nliPromise = null;
 
@@ -10,9 +11,9 @@ export async function getNLIModel() {
         quantized: true,
       });
       // Pre-warm ONNX execution provider with a batch to eliminate dynamic buffer allocation and cold-start jitter
-      const dummyA = new Array(5).fill('warmup text');
-      const dummyB = new Array(5).fill('warmup target reference concept text');
-      const dummy = await tokenizer(dummyA, { text_pair: dummyB, padding: true, truncation: true, max_length: 32 });
+      const dummyA = new Array(6).fill('warmup text');
+      const dummyB = new Array(6).fill('warmup target reference concept text');
+      const dummy = await tokenizer(dummyA, { text_pair: dummyB, padding: true, truncation: true, max_length: EVAL_RULES.TOKENIZER.MAX_LENGTH_PROBE });
       await model(dummy);
       return { tokenizer, model };
     })();
@@ -23,21 +24,13 @@ export async function getNLIModel() {
 export async function getExtractor() {
   const nli = await getNLIModel();
   try {
-    const { createServer } = await import('../server.js');
-    const app = createServer();
-    const srv = app.listen(0);
-    const p = srv.address().port;
-    await fetch(`http://127.0.0.1:${p}/api/evaluate-answer`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        checkin_question: 'Warmup question?',
-        target_answer_concept: 'Warmup concept.',
-        child_transcript: 'warmup transcript phrase',
-        attempt_count: 1,
-      }),
-    }).catch(() => {});
-    srv.close();
+    const { evaluateChildAnswer } = await import('./answer_evaluator.js');
+    await evaluateChildAnswer({
+      checkin_question: 'Warmup question?',
+      target_answer_concept: 'Warmup concept.',
+      child_transcript: 'warmup transcript phrase',
+      attempt_count: 1,
+    });
   } catch {}
   return nli;
 }
@@ -47,18 +40,6 @@ function softmax(logits) {
   const exps = logits.map((l) => Math.exp(l - max));
   const sum = exps.reduce((a, b) => a + b, 0);
   return exps.map((e) => e / sum);
-}
-
-function normalizeKinship(text = '') {
-  if (!text || typeof text !== 'string') return '';
-  return text
-    .replace(/['’]/g, '')
-    .trim()
-    .replace(/\b(mothers?|fathers?|moms?|dads?)\s+(nana|grandma|grandmother|granny)\b/gi, 'great-relative')
-    .replace(/\b(mothers?|fathers?|moms?|dads?)\s+(grandpa|grandfather|gramps)\b/gi, 'great-relative')
-    .replace(/\b(mothers?\s+mother|fathers?\s+mother|grand\s+mother)\b/gi, 'grandmother')
-    .replace(/\b(mothers?\s+father|fathers?\s+father|grand\s+father)\b/gi, 'grandfather')
-    .replace(/\bgrampa\b/gi, 'grandpa');
 }
 
 export function detectInquiryOrStutter(text = '') {
@@ -171,7 +152,7 @@ export async function evaluateSemanticMatch(normalizedTranscript, rubric = {}) {
     meta.push({ type: 'partial_action', text: partialActionText });
   }
 
-  const inputs = await tokenizer(pairA, { text_pair: pairB, padding: true, truncation: true, max_length: 32 });
+  const inputs = await tokenizer(pairA, { text_pair: pairB, padding: true, truncation: true, max_length: EVAL_RULES.TOKENIZER.MAX_LENGTH_FAST });
   const output = await model(inputs);
   const logitsData = output.logits.data;
 
@@ -314,16 +295,21 @@ export async function evaluateDiagnosticProbes(normalizedTranscript, rubric = {}
   // =========================================================================
   // LAYER 2: Semantic Slot & Component Decomposition (Single Parallel Batch)
   // =========================================================================
-  const actorName = rubric.story_context?.actor || rubric.entity_graph?.characters?.[0]?.canonical_name || 'grandma';
-  const recipientName = rubric.story_context?.recipient || rubric.entity_graph?.characters?.find((c) => c.gender === 'male')?.canonical_name || 'Leo';
-  const objectName = rubric.story_context?.object || 'warm red hat';
+  const characters = rubric.entity_graph?.characters || [];
+  const primaryChar = characters[0]?.canonical_name || characters[0]?.canonical_id || '';
+  const secondaryChar = characters.find((c) => c !== characters[0])?.canonical_name || characters.find((c) => c !== characters[0])?.canonical_id || '';
 
-  const beneficiaryHyp = rubric.story_context?.recipient
-    ? `${actorName} made ${rubric.story_context.recipient}'s hat.`
+  const actorName = rubric.story_context?.actor || primaryChar || 'the character';
+  const recipientName = rubric.story_context?.recipient || secondaryChar || '';
+  const objectName = rubric.story_context?.object || '';
+  const itemNoun = objectName ? objectName.split(/\s+/).pop() : 'item';
+
+  const beneficiaryHyp = (rubric.story_context?.recipient || recipientName)
+    ? `${actorName} made ${(rubric.story_context?.recipient || recipientName)}'s ${itemNoun}.`
     : null;
 
-  const attributeHyp = rubric.story_context?.object
-    ? `The hat was a ${rubric.story_context.object}.`
+  const attributeHyp = (rubric.story_context?.object || objectName)
+    ? `The ${itemNoun} was a ${(rubric.story_context?.object || objectName)}.`
     : null;
 
   const wordTokens = transcript.split(/\s+/).filter(Boolean);
@@ -360,14 +346,20 @@ export async function evaluateDiagnosticProbes(normalizedTranscript, rubric = {}
   const fwdB = [];
   const revA = [];
   const revB = [];
+  const revKeyIndices = {};
 
-  for (const key of probeKeys) {
+  for (let idx = 0; idx < probeKeys.length; idx++) {
+    const key = probeKeys[idx];
     const p = fullProbes[key];
     const hyp = typeof p === 'object' && p !== null ? (p.hypothesis || '') : String(p || '');
     fwdA.push(transcript);
     fwdB.push(hyp);
-    revA.push(hyp);
-    revB.push(transcript);
+    // Only descriptive echoes accept bidirectional correlation
+    if (key === 'superficial_attribute' || key === 'premise_echo') {
+      revKeyIndices[key] = revA.length;
+      revA.push(hyp);
+      revB.push(transcript);
+    }
   }
 
   const pairA = [...fwdA, ...revA];
@@ -377,7 +369,7 @@ export async function evaluateDiagnosticProbes(normalizedTranscript, rubric = {}
     text_pair: pairB,
     padding: true,
     truncation: true,
-    max_length: 64,
+    max_length: EVAL_RULES.TOKENIZER.MAX_LENGTH_PROBE,
   });
   const output = await model(inputs);
   const logitsData = output.logits.data;
@@ -386,22 +378,29 @@ export async function evaluateDiagnosticProbes(normalizedTranscript, rubric = {}
   for (let idx = 0; idx < probeKeys.length; idx++) {
     const key = probeKeys[idx];
     const fwdOffset = idx * 3;
-    const revOffset = (idx + probeKeys.length) * 3;
 
     const [c_fwd, e_fwd, n_fwd] = softmax([
       logitsData[fwdOffset],
       logitsData[fwdOffset + 1],
       logitsData[fwdOffset + 2],
     ]);
-    const [c_rev, e_rev, n_rev] = softmax([
-      logitsData[revOffset],
-      logitsData[revOffset + 1],
-      logitsData[revOffset + 2],
-    ]);
+
+    let c_rev = c_fwd;
+    let e_rev = e_fwd;
+    let n_rev = n_fwd;
+
+    if (revKeyIndices[key] !== undefined) {
+      const revOffset = (probeKeys.length + revKeyIndices[key]) * 3;
+      [c_rev, e_rev, n_rev] = softmax([
+        logitsData[revOffset],
+        logitsData[revOffset + 1],
+        logitsData[revOffset + 2],
+      ]);
+    }
 
     // Forward entailment strictly required for mastery targets, character confusion, and distractors.
     // Only descriptive echoes (superficial, premise_echo) may accept bidirectional correlation.
-    const isForwardOnly = key === 'target_mastery' || key === 'minimal_core' || key === 'character_confusion' || key === 'distractor_misconception';
+    const isForwardOnly = revKeyIndices[key] === undefined;
     const effectiveE = isForwardOnly ? e_fwd : Math.max(e_fwd, e_rev);
     const maxC = Math.max(c_fwd, c_rev);
     const bestN = effectiveE === e_fwd ? n_fwd : n_rev;
@@ -487,12 +486,16 @@ export async function evaluateDiagnosticProbes(normalizedTranscript, rubric = {}
     topNeutral = probeScores.character_confusion?.neutral ?? 0;
   } else if (beneficiaryHyp && (probeScores.beneficiary_consistency?.contradiction ?? 0) >= 0.70) {
     cognitive_diagnosis = 'CHARACTER_CONFUSION';
-    spoken_feedback = 'That hat was for Leo, not someone else! Think about who made it for Leo.';
+    spoken_feedback =
+      fullProbes.character_confusion?.scaffold ||
+      (recipientName ? `That was for ${recipientName}, not someone else!` : rubric.hint_level_1 || rubric.scaffold_hint || '');
     topContradiction = probeScores.beneficiary_consistency.contradiction;
     topEntailment = 0;
   } else if (attributeHyp && (probeScores.attribute_consistency?.contradiction ?? 0) >= 0.70) {
     cognitive_diagnosis = 'DISTRACTOR_MISCONCEPTION';
-    spoken_feedback = fullProbes.distractor_misconception?.scaffold || 'Look at the picture! Was the hat blue, or was it a warm red hat?';
+    spoken_feedback =
+      fullProbes.distractor_misconception?.scaffold ||
+      (objectName ? `Look closely at the details in the story!` : rubric.hint_level_1 || rubric.scaffold_hint || '');
     topContradiction = probeScores.attribute_consistency.contradiction;
     topEntailment = 0;
   } else if (isMasteredCandidate) {

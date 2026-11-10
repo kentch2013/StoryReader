@@ -152,10 +152,12 @@ export function resolveDiscourse(normalizedTranscript = '', rubric = {}, options
 
   let ambiguousPronounFound = false;
   let activeCandidates = [];
+  let activeGender = null;
 
   if (discourseReferents) {
     if (containsFemalePronoun && discourseReferents.she === null) {
       ambiguousPronounFound = true;
+      activeGender = 'female';
       activeCandidates = entityGraph.active_female_candidates || [];
       if (activeCandidates.length === 0 && Array.isArray(entityGraph.characters)) {
         activeCandidates = entityGraph.characters
@@ -164,12 +166,34 @@ export function resolveDiscourse(normalizedTranscript = '', rubric = {}, options
       }
     } else if (containsMalePronoun && discourseReferents.he === null) {
       ambiguousPronounFound = true;
+      activeGender = 'male';
       activeCandidates = entityGraph.active_male_candidates || [];
       if (activeCandidates.length === 0 && Array.isArray(entityGraph.characters)) {
         activeCandidates = entityGraph.characters
           .filter((c) => c.gender === 'male')
           .map((c) => c.canonical_name || c.canonical_id);
       }
+    }
+  }
+
+  // Resolve unambiguous single-candidate gender pronouns if not explicitly provided in discourseReferents
+  if (containsFemalePronoun && !discourseReferents?.she && discourseReferents?.she !== null) {
+    const femaleChars = entityGraph?.characters?.filter((c) => c.gender === 'female') || [];
+    if (femaleChars.length === 1) {
+      const name = femaleChars[0].canonical_name || femaleChars[0].canonical_id;
+      femalePronouns.forEach((p) => {
+        transcript = transcript.replace(new RegExp(`\\b${p}\\b`, 'gi'), name);
+      });
+    }
+  }
+
+  if (containsMalePronoun && !discourseReferents?.he && discourseReferents?.he !== null) {
+    const maleChars = entityGraph?.characters?.filter((c) => c.gender === 'male') || [];
+    if (maleChars.length === 1) {
+      const name = maleChars[0].canonical_name || maleChars[0].canonical_id;
+      malePronouns.forEach((p) => {
+        transcript = transcript.replace(new RegExp(`\\b${p}\\b`, 'gi'), name);
+      });
     }
   }
 
@@ -182,12 +206,18 @@ export function resolveDiscourse(normalizedTranscript = '', rubric = {}, options
 
     if (mentionedCandidates.length === 1) {
       const resolvedName = mentionedCandidates[0];
-      femalePronouns.forEach((p) => {
-        transcript = transcript.replace(new RegExp(`\\b${p}\\b`, 'gi'), resolvedName);
-      });
-      malePronouns.forEach((p) => {
-        transcript = transcript.replace(new RegExp(`\\b${p}\\b`, 'gi'), resolvedName);
-      });
+      const char = entityGraph.characters?.find(
+        (c) => (c.canonical_name || c.canonical_id).toLowerCase() === resolvedName.toLowerCase()
+      );
+      if (char?.gender === 'female' || activeGender === 'female') {
+        femalePronouns.forEach((p) => {
+          transcript = transcript.replace(new RegExp(`\\b${p}\\b`, 'gi'), resolvedName);
+        });
+      } else if (char?.gender === 'male' || activeGender === 'male') {
+        malePronouns.forEach((p) => {
+          transcript = transcript.replace(new RegExp(`\\b${p}\\b`, 'gi'), resolvedName);
+        });
+      }
     } else {
       // Cascade Tier 2: Predicate & Action Exclusivity
       let uniqueActionCandidate = null;
@@ -210,12 +240,18 @@ export function resolveDiscourse(normalizedTranscript = '', rubric = {}, options
       }
 
       if (uniqueActionCandidate) {
-        femalePronouns.forEach((p) => {
-          transcript = transcript.replace(new RegExp(`\\b${p}\\b`, 'gi'), uniqueActionCandidate);
-        });
-        malePronouns.forEach((p) => {
-          transcript = transcript.replace(new RegExp(`\\b${p}\\b`, 'gi'), uniqueActionCandidate);
-        });
+        const char = entityGraph.characters?.find(
+          (c) => (c.canonical_name || c.canonical_id).toLowerCase() === uniqueActionCandidate.toLowerCase()
+        );
+        if (char?.gender === 'female' || activeGender === 'female') {
+          femalePronouns.forEach((p) => {
+            transcript = transcript.replace(new RegExp(`\\b${p}\\b`, 'gi'), uniqueActionCandidate);
+          });
+        } else if (char?.gender === 'male' || activeGender === 'male') {
+          malePronouns.forEach((p) => {
+            transcript = transcript.replace(new RegExp(`\\b${p}\\b`, 'gi'), uniqueActionCandidate);
+          });
+        }
       } else {
         // Cascade Tier 3: Free Clarification Micro-Turn
         result.is_ambiguous = true;

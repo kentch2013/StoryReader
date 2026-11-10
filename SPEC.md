@@ -82,6 +82,8 @@ StoryScout is a local, lightweight web application designed for a parent and chi
 
 ### Endpoint 2: `POST /api/evaluate-answer` (The Zero-Lag Socratic Stack)
 - **Input JSON:**
+  - *Authentication:* When `AUTH_SECRET` is set in the environment, requests must include `Authorization: Bearer <AUTH_SECRET>`.
+  - *Input Safety Gate:* Transcripts pass through a System 1 adversarial input gate intercepting injection attacks prior to semantic evaluation.
 ```json
 {
   "checkin_question": "string (required)",

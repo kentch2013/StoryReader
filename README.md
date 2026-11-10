@@ -31,7 +31,7 @@ Each module must pass all 4 verification gates before the next module begins:
 
 - [x] **Module 3: Socratic Answer Evaluation Engine**
   - [x] Pipeline: `POST /api/evaluate-answer`, System 1 ONNX NLI, discourse resolver, $\le 25$ word cap, attempt tracking & free microturn
-  - [x] Code Tests: 55 unit/integration tests across 11 test suites with 100% contract immutability
+  - [x] Code Tests: 60 unit/integration tests across 12 test suites with 100% contract immutability
   - [x] Digital Samples: 50-item benchmark runner (`scripts/test_50_eval_cases.js`) passing 50/50 (100%)
   - [x] Human Gate: Interactive terminal REPL (`scripts/interactive_eval_test.js`) testing edge-case child phrases for tone
 

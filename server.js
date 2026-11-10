@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import bookRoutes from './routes/book_routes.js';
-import { getNLIModel, getExtractor } from './services/semantic_evaluator.js';
+import { getNLIModel } from './services/semantic_evaluator.js';
 
 dotenv.config();
 
@@ -14,7 +14,10 @@ const __dirname = path.dirname(__filename);
 export function createServer() {
   const app = express();
 
-  app.use(cors());
+  const corsOptions = process.env.ALLOWED_ORIGIN
+    ? { origin: process.env.ALLOWED_ORIGIN }
+    : {};
+  app.use(cors(corsOptions));
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true }));
   app.use(express.static(path.join(__dirname, 'public')));
@@ -26,6 +29,23 @@ export function createServer() {
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
     });
+  });
+
+  app.use((req, res, next) => {
+    if (!process.env.AUTH_SECRET) {
+      return next();
+    }
+    if (req.path === '/api/health') {
+      return next();
+    }
+    const authHeader = req.headers.authorization;
+    if (!authHeader || authHeader !== `Bearer ${process.env.AUTH_SECRET}`) {
+      return res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Valid authorization token required.',
+      });
+    }
+    next();
   });
 
   app.use('/api', bookRoutes);
@@ -54,8 +74,14 @@ export function createServer() {
     }
 
     console.error('Unhandled server error:', err);
-    res.status(err.status || 500).json({
-      error: err.message || 'Internal Server Error',
+    const status = err.status || 500;
+    const isProduction = process.env.NODE_ENV === 'production';
+    const message = (status >= 500 && isProduction)
+      ? 'Internal Server Error'
+      : (err.message || 'Internal Server Error');
+
+    res.status(status).json({
+      error: message,
       code: err.code,
     });
   });

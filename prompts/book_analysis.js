@@ -225,12 +225,10 @@ export const BOOK_ANALYSIS_SCHEMA = {
           'hint_level_1',
           'hint_level_2',
           'scaffold_hint',
+          'entity_graph',
         ],
       },
     },
   },
   required: ['is_legible', 'book_type', 'summary', 'chunks'],
 };
-
-export const bookAnalysisPrompt = BOOK_ANALYSIS_SYSTEM_PROMPT;
-export const bookAnalysisSchema = BOOK_ANALYSIS_SCHEMA;

@@ -3,20 +3,25 @@
 **Session Date:** 2026-11-10  
 **Repository:** `kentch2013/StoryReader`  
 **Current Branch:** `main` (Synchronized, clean)  
-**Milestone:** Complete Module 3 Coarse-to-Fine Semantic Slot Diagnostic Funnel (45/45 Tests Passing, 100% Contract Immutability)
+**Milestone:** Complete Module 3 Coarse-to-Fine Semantic Slot Diagnostic Funnel & System Hardening (60/60 Tests Passing, 100% Contract Immutability)
 
 ---
 
 ## 1. Crucial Components for a Seamless Agent Handoff
 
 To eliminate context loss between sessions, every handoff must maintain:
-1. **Target Architecture & Hardware Reality:** Client device (iPhone 14 Plus Safari), host OS (Windows 11), model endpoint targets (Gemini 2.5/3.1 Flash for ingestion, local quantized `nli-deberta-v3-xsmall` ONNX for real-time sub-30ms evaluation), and network transport (HTTPS tunnel).
-2. **Current State & Progress Gate:** Modules 1, 2, and 3 are 100% complete, hardened, and verified across 45 automated tests with 0 failures and 100% contract immutability. Module 4 (Camera Tray & Canvas Downsampler) is next.
+1. **Target Architecture & Hardware Reality:** Client device (iPhone 14 Plus Safari), host OS (Windows 11), model endpoint targets (Gemini 3.1 Flash Lite for ingestion, local quantized `nli-deberta-v3-xsmall` ONNX for real-time sub-30ms evaluation), and network transport (HTTPS tunnel).
+2. **Current State & Progress Gate:** Modules 1, 2, and 3 are 100% complete, hardened, and verified across 60 automated tests (12 suites) with 0 failures and 100% contract immutability. Module 4 (Camera Tray & Canvas Downsampler) is next.
 3. **Known Gotchas & Solutions:**
    - *Reverse Entailment Trap:* Checking whether the model answer entails the child transcript causes word repetitions and echoes to pass. Mastery strictly requires forward causality ($Child \implies Target$).
    - *Dangling Pronoun Leak:* Minimal core hypotheses (`"Grandma made it"`) without entity anchors can match wrong recipients (*"grampa's hat"*) or wrong attributes (*"blue hat"*). Solved via Layer 2 Parallel Ground-Truth Slot Consistency Probes.
    - *Kinship Subtoken Bleed:* Multi-generational terms (`"mother's nana"`) share substrings with `"grandma"`. Solved via compound generational kinship normalization to `great-relative`.
    - *Question Inquiries & Stutter:* Child questions (*"who made the hat"*) and token repetition (*"the hat the hat"*) are caught by Layer 1 Intelligibility Screener.
+   - *Grade 2 Vocabulary Stripping Protection:* Speech filler normalization strictly protects "like" as a verb (*"I like the hat"*) and "well" as a noun (*"The well was deep"*).
+   - *Pronoun Scope Isolation:* Ambiguity resolution strictly bounds replacement to the target gender, preventing cross-gender bleed (*"she made it for him"*).
+   - *Adversarial Prompt Injection Gate:* System 1 pre-screener intercepts injection directives before reaching semantic evaluation.
+   - *Rate Limiter Hard Cap:* Daily limit strictly enforces the 500 RPD cap and deduplicates retry counts.
+   - *Bearer Token Transport Protection:* All API endpoints (except `/api/health`) require `Authorization: Bearer <AUTH_SECRET>` when set.
 4. **Environment & Secrets Placement:** Local `.env` holding `GEMINI_API_KEY`. When offline, `MOCK_AI=true` or Tier 1/2 local ONNX handles evaluation with 0 cloud dependencies.
 5. **Exact Next Command / Red State Action:** Run extensive human testing via `launch_test_environment.bat` (Option 4 / REPL) or execute Module 4 Camera Tray.
 
