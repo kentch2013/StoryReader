@@ -1,8 +1,8 @@
 # Architecture & Engineering Blueprint: StoryScout
 
-**Version:** 1.0.0  
+**Version:** 1.1.0  
 **Target Environment:** Local Node.js Express server on Windows 11 host + iPhone 14 Plus (iOS Safari 17/18) client via secure HTTPS tunnel  
-**AI Engine:** Google Gemini (`@google/genai` SDK, `gemini-3.1-flash` default; supports `gemini-3.5-flash` / `gemma4`)  
+**AI Engine:** Google Gemini (`@google/genai` SDK, `gemini-3.1-flash-lite` default; supports `gemini-3.5-flash-lite` fallback)  
 **Target User:** Grade 2 Reader (ages 7–8) + Parent (co-reader / operator)
 
 ---
@@ -88,21 +88,16 @@ Before writing code, the following six core failure modes have been analyzed and
   2. **Gesture-Gated Audio Unlocking:** An initial "Let's Read!" or "Start Chunk" tap fires a zero-volume audio pulse to unlock Safari's Web Audio / Speech subsystem.
   3. Asynchronous voice selection: Listen to `speechSynthesis.onvoiceschanged` with fallback to default system voice if English voices load lazily.
 
-### Risk 5: Google AI Studio Model Access & Vision Schema Edge Cases
-* **Root Cause:** The Google AI Studio account has active access to `gemini-3.1-flash`, `gemini-3.5-flash`, and `gemma4` (without `gemini-2.5-flash`). Additionally, if a parent uploads a blurry or non-book image, strict parsing could crash or hallucinate questions.
+### Risk 5: Google AI Studio Quota Constraints (15 RPM, 500 RPD) & Rate Limit Bounces
+* **Root Cause:** Free tier API quota enforces 15 requests/minute, 250,000 tokens/minute, and 500 requests/day. Uncoordinated rapid calls or transient capacity spikes could bounce 429/503 errors back to the user.
 * **Architectural Solution:**
-  1. Standardize on **`gemini-3.1-flash`** as the default production model, parameterized via `process.env.GEMINI_MODEL`, with seamless fallback to `gemini-3.5-flash` or `gemma4`.
-  2. Vision Schema Resilience: The `/api/analyze-book` schema includes validation flags:
-     ```json
-     {
-       "is_legible": true,
-       "error_message": null,
-       "book_type": "fiction",
-       "summary": "...",
-       "chunks": [...]
-     }
-     ```
-  3. If `is_legible === false`, the API returns HTTP 422 with actionable guidance: *"Page 2 is a bit blurry. Please snap it again in brighter light."*
+  1. Standardize on **`gemini-3.1-flash-lite`** as primary engine with sub-2-second latency and 100% structured schema compliance.
+  2. **Sliding Window Rate Limiter (`services/rate_limiter.js`):** Enforces a strict ceiling of $\le 14$ RPM across a 60-second sliding window, proactively delaying requests if needed to prevent 429 bounces.
+  3. **Automatic Exponential Backoff & Jitter:** Automatically retries transient 429 or 503 errors up to 3 times before surfacing an error.
+  4. **Daily Request Counter:** Tracks requests within the current UTC day and emits alerts if approaching 500 RPD.
+  5. **Large Batch Ceiling:** Express/Multer supports up to 20 pages per batch upload, allowing full chapters to be analyzed in a single request.
+  6. **Client-Side Session & Book Caching:** Previously analyzed chapters and books are cached in `localStorage`, consuming 0 API requests for re-reads.
+  7. **Vision Schema Resilience:** The `/api/analyze-book` schema includes validation flags (`is_legible === false` returns 422).
 
 ### Risk 6: Infinite Socratic Scaffolding Frustration Loop
 * **Root Cause:** If a child answers incorrectly multiple times and the system endlessly repeats `"needs_scaffold"`, the child loses confidence and disengages.
@@ -118,7 +113,7 @@ Before writing code, the following six core failure modes have been analyzed and
 ### 3.1 Endpoint: `POST /api/analyze-book`
 
 * **Request Format:** `multipart/form-data`
-  * Field: `images` (array of `image/jpeg` file buffers)
+  * Field: `images` (array of `image/jpeg` file buffers, up to 20 pages per batch)
 * **Response Status:** `200 OK` or `422 Unprocessable Content`
 * **Response JSON Schema (Enforced via Gemini `responseSchema`):**
 
@@ -141,9 +136,23 @@ Before writing code, the following six core failure modes have been analyzed and
           "lookout_prompt": { "type": "STRING", "description": "Pre-reading prompt for child focus" },
           "checkin_question": { "type": "STRING", "description": "Grade 2 comprehension question" },
           "target_answer_concept": { "type": "STRING", "description": "Core pedagogical takeaway" },
+          "keyword_clusters": {
+            "type": "ARRAY",
+            "items": {
+              "type": "OBJECT",
+              "properties": {
+                "concept_name": { "type": "STRING" },
+                "synonyms": { "type": "ARRAY", "items": { "type": "STRING" } }
+              },
+              "required": ["concept_name", "synonyms"]
+            }
+          },
+          "acceptable_phrasings": { "type": "ARRAY", "items": { "type": "STRING" } },
+          "hint_level_1": { "type": "STRING", "description": "Attempt 1 spatial eye-anchor" },
+          "hint_level_2": { "type": "STRING", "description": "Attempt 2 leading question" },
           "scaffold_hint": { "type": "STRING", "description": "Gentle hint if child struggles" }
         },
-        "required": ["chunk_id", "page_range", "chunk_type", "lookout_prompt", "checkin_question", "target_answer_concept", "scaffold_hint"]
+        "required": ["chunk_id", "page_range", "chunk_type", "lookout_prompt", "checkin_question", "target_answer_concept", "keyword_clusters", "acceptable_phrasings", "hint_level_1", "hint_level_2", "scaffold_hint"]
       }
     }
   },

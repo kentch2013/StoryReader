@@ -23,11 +23,11 @@ Each module must pass all 4 verification gates before the next module begins:
   - [x] Digital Samples: Scripted HTTP header & origin reflection test
   - [x] Human Gate: Verify `http://localhost:3000/api/health` in browser
 
-- [ ] **Module 2: Multimodal Book Analysis Engine**
-  - [ ] Pipeline: `@google/genai` (`gemini-3.1-flash`), vision schema, `POST /api/analyze-book`, blur guardrail
-  - [ ] Code Tests: Mocked Gemini schema compliance & 422 error trapping
-  - [ ] Digital Samples: CLI harness against 3 synthetic Grade 2 book pages + 1 blurred page
-  - [ ] Human Gate: Validate chunk structure and Grade 2 prompts against physical pages
+- [x] **Module 2: Multimodal Book Analysis Engine**
+  - [x] Pipeline: `@google/genai` (`gemini-3.1-flash`), vision schema, `POST /api/analyze-book`, blur guardrail
+  - [x] Code Tests: Mocked Gemini schema compliance & 422 error trapping
+  - [x] Digital Samples: CLI harness against 3 synthetic Grade 2 book pages + 1 blurred page
+  - [x] Human Gate: Validate chunk structure and Grade 2 prompts against physical pages
 
 - [ ] **Module 3: Socratic Answer Evaluation Engine**
   - [ ] Pipeline: `POST /api/evaluate-answer`, Socratic feedback prompt, $\le 25$ word cap, attempt tracking

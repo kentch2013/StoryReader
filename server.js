@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import bookRoutes from './routes/book_routes.js';
 
 dotenv.config();
 
@@ -25,6 +26,8 @@ export function createServer() {
       uptime: process.uptime(),
     });
   });
+
+  app.use('/api', bookRoutes);
 
   app.use('/api', (req, res) => {
     res.status(404).json({

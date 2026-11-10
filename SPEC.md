@@ -24,13 +24,15 @@ StoryScout is a local, lightweight web application designed for a parent and chi
 ## 3. Core Architecture & API Endpoints
 
 ### Endpoint 1: `POST /api/analyze-book`
-- **Input:** Multi-part form data containing an array of image files (book pages in sequence).
+- **Input:** Multi-part form data containing an array of image files (book pages in sequence, up to 20 pages per batch).
 - **Gemini Processing:**
   - Gemini receives the images in order.
-  - Uses `gemini-3.1-flash` (or `gemini-3.5-flash` / `gemma4`) with multimodal vision and a strict JSON schema.
+  - Uses `gemini-3.1-flash-lite` (with `gemini-3.5-flash-lite` fallback) with multimodal vision and a strict JSON schema.
 - **Output JSON Schema:**
 ```json
 {
+  "is_legible": true,
+  "error_message": null,
   "book_type": "fiction" | "nonfiction",
   "summary": "Brief 2-sentence summary for context",
   "chunks": [
@@ -38,10 +40,20 @@ StoryScout is a local, lightweight web application designed for a parent and chi
       "chunk_id": 1,
       "page_range": "Pages 1-3",
       "chunk_type": "scene" | "page",
-      "lookout_prompt": "Before you read, keep an eye out for how Leo feels when he loses his hat.",
-      "checkin_question": "Why did Leo get upset when his hat blew away?",
-      "target_answer_concept": "He was upset because his grandmother made it for him and it was special.",
-      "scaffold_hint": "Think about who gave Leo that hat!"
+      "lookout_prompt": "Before you read, watch for what the little bunny imagines doing.",
+      "checkin_question": "What does the mother say she will do if the bunny runs away?",
+      "target_answer_concept": "She will run after him because he is her little bunny.",
+      "keyword_clusters": [
+        { "concept_name": "action", "synonyms": ["run after", "chase", "follow"] },
+        { "concept_name": "reason", "synonyms": ["little bunny", "her bunny", "loves him"] }
+      ],
+      "acceptable_phrasings": [
+        "She will run after him.",
+        "She follows him because he is her little bunny."
+      ],
+      "hint_level_1": "Look at the text at the bottom of the second page.",
+      "hint_level_2": "What action does the mother promise to take if he leaves?",
+      "scaffold_hint": "Look at the text at the bottom of the second page."
     }
   ]
 }
