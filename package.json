@@ -1,0 +1,29 @@
+{
+  "name": "storyreader",
+  "version": "1.0.0",
+  "description": "Grade 2 reading comprehension web application powered by Gemini and iOS Safari Web Speech",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test test/**/*.test.js",
+    "verify": "node scripts/audit-contract.js && node --test test/**/*.test.js"
+  },
+  "keywords": [
+    "reading",
+    "gemini",
+    "speech-recognition",
+    "text-to-speech",
+    "education"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@google/genai": "^3.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "multer": "^1.4.5-lts.1"
+  }
+}

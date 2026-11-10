@@ -17,11 +17,11 @@
 Each module must pass all 4 verification gates before the next module begins:
 `Pipeline Extension` ➔ `Code Tests` ➔ `Digital Samples` ➔ `Human Gate`
 
-- [ ] **Module 1: Server Foundation & Health Gateway**
-  - [ ] Pipeline: Express server, CORS, error middleware, `.env` config, `GET /api/health`
-  - [ ] Code Tests: Automated health check and 404 test assertions
-  - [ ] Digital Samples: Scripted HTTP header & origin reflection test
-  - [ ] Human Gate: Verify `http://localhost:3000/api/health` in browser
+- [x] **Module 1: Server Foundation & Health Gateway**
+  - [x] Pipeline: Express server, CORS, error middleware, `.env` config, `GET /api/health`
+  - [x] Code Tests: Automated health check and 404 test assertions
+  - [x] Digital Samples: Scripted HTTP header & origin reflection test
+  - [x] Human Gate: Verify `http://localhost:3000/api/health` in browser
 
 - [ ] **Module 2: Multimodal Book Analysis Engine**
   - [ ] Pipeline: `@google/genai` (`gemini-3.1-flash`), vision schema, `POST /api/analyze-book`, blur guardrail
