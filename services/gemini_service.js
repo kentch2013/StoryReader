@@ -1,5 +1,6 @@
 import { GoogleGenAI, Type } from '@google/genai';
 import { BOOK_ANALYSIS_SYSTEM_PROMPT, BOOK_ANALYSIS_SCHEMA } from '../prompts/book_analysis.js';
+import { ANSWER_EVALUATION_SYSTEM_PROMPT, ANSWER_EVALUATION_SCHEMA } from '../prompts/answer_evaluation.js';
 import { rateLimiter } from './rate_limiter.js';
 
 export function safeJsonParse(text) {
@@ -106,8 +107,52 @@ export async function analyzeBookPages(files) {
   return safeJsonParse(response.text);
 }
 
+export function getMockAnswerClassification(data = {}) {
+  const text = (data.child_transcript || '').toLowerCase();
+  if (text.includes('special') || text.includes('grandma') || text.includes('made')) {
+    return { understands_concept: true, confidence: 'high' };
+  }
+  return { understands_concept: false, confidence: 'high' };
+}
+
+export async function classifyAnswerSemantic(data = {}) {
+  const isMock = process.env.MOCK_AI === 'true' || !process.env.GEMINI_API_KEY;
+  if (isMock) {
+    if (!process.env.GEMINI_API_KEY && process.env.MOCK_AI !== 'true') {
+      console.warn('⚠️ [GEMINI WARNING] GEMINI_API_KEY is missing or empty. Falling back to offline mock mode.');
+    }
+    return getMockAnswerClassification(data);
+  }
+
+  const apiKey = process.env.GEMINI_API_KEY;
+  const ai = new GoogleGenAI({ apiKey });
+  const model = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite';
+  const prompt = `Question: "${data.checkin_question}"\nTarget Concept: "${data.target_answer_concept}"\nChild Spoke: "${data.child_transcript}"\nDid the child express the target concept?`;
+
+  try {
+    const response = await rateLimiter.executeWithRetry(() =>
+      ai.models.generateContent({
+        model,
+        contents: [prompt],
+        config: {
+          systemInstruction: ANSWER_EVALUATION_SYSTEM_PROMPT,
+          responseMimeType: 'application/json',
+          responseSchema: ANSWER_EVALUATION_SCHEMA,
+        },
+      })
+    );
+
+    return safeJsonParse(response.text);
+  } catch (err) {
+    console.warn(`⚠️ [GEMINI FALLBACK] classifyAnswerSemantic error: ${err.message}. Falling back to mock classifier.`);
+    return getMockAnswerClassification(data);
+  }
+}
+
 export default {
   analyzeBookPages,
+  classifyAnswerSemantic,
+  getMockAnswerClassification,
   getMockBookAnalysis,
   safeJsonParse,
 };

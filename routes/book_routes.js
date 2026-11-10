@@ -1,6 +1,7 @@
 import express from 'express';
 import multer from 'multer';
 import { analyzeBookPages } from '../services/gemini_service.js';
+import { evaluateChildAnswer } from '../services/answer_evaluator.js';
 
 const router = express.Router();
 
@@ -44,6 +45,25 @@ router.post('/analyze-book', upload.array('images'), async (req, res, next) => {
     }
 
     return res.status(200).json(analysis);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/evaluate-answer', express.json(), async (req, res, next) => {
+  try {
+    if (!req.body || !req.body.checkin_question || !req.body.target_answer_concept) {
+      return res.status(400).json({
+        error: 'Missing required fields: checkin_question and target_answer_concept are required.',
+      });
+    }
+
+    const result = await evaluateChildAnswer(req.body);
+    if (req.socket?.destroyed) {
+      return;
+    }
+
+    return res.status(200).json(result);
   } catch (err) {
     next(err);
   }

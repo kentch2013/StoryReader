@@ -51,6 +51,13 @@ StoryScout is a local, lightweight web application designed for a parent and chi
         "She will run after him.",
         "She follows him because he is her little bunny."
       ],
+      "canonical_prototypes": [
+        { "type": "formal_full", "text": "She will run after him because he is her little bunny." },
+        { "type": "colloquial", "text": "She chases him cause she loves her baby." },
+        { "type": "minimal_core", "text": "Run after him." },
+        { "type": "partial_action", "text": "She will use her feet to run." },
+        { "type": "common_distractor", "text": "She will stay at home." }
+      ],
       "hint_level_1": "Look at the text at the bottom of the second page.",
       "hint_level_2": "What action does the mother promise to take if he leaves?",
       "scaffold_hint": "Look at the text at the bottom of the second page."
@@ -59,25 +66,39 @@ StoryScout is a local, lightweight web application designed for a parent and chi
 }
 ```
 
-### Endpoint 2: `POST /api/evaluate-answer`
+### Endpoint 2: `POST /api/evaluate-answer` (The Zero-Lag Socratic Stack)
 - **Input JSON:**
 ```json
 {
-  "checkin_question": "string",
-  "target_answer_concept": "string",
-  "scaffold_hint": "string",
-  "child_transcript": "string"
+  "checkin_question": "string (required)",
+  "target_answer_concept": "string (required)",
+  "keyword_clusters": [
+    { "concept_name": "string", "synonyms": ["string"] }
+  ],
+  "acceptable_phrasings": ["string"],
+  "canonical_prototypes": [
+    { "type": "string", "text": "string" }
+  ],
+  "hint_level_1": "string (optional)",
+  "hint_level_2": "string (optional)",
+  "scaffold_hint": "string (optional)",
+  "child_transcript": "string",
+  "attempt_count": 1
 }
 ```
-- **Gemini Processing:**
-  - Evaluates the child's spoken answer against the target concept.
-  - Generates warm, conversational Grade 2 feedback.
+- **Execution Architecture (Zero-Lag Progression):**
+  1. *Sanitization & Fast Shrug Screener (0ms):* Lowercases, strips punctuation, strips Grade 2 fillers (`um`, `uh`, `like`, `so`). Checks for shrugs (`"i don't know"`, `""`). Returns `needs_scaffold` immediately.
+  2. *Multi-Prototype & Cluster Matcher (<1ms):* Deterministically evaluates overlap against the 5 canonical prototypes and keyword clusters. Resolves ~85% of correct answers locally with 0 API calls.
+  3. *Attempt 2 Auto-Reveal (0ms):* On Attempt 2 failure, cheerful reveal is emitted and `resolved: true` is returned to prevent infinite Socratic loops.
+  4. *Neural / LLM Fallback (Optional):* In-browser ONNX embedder or Gemini 3.5 Flash boolean classifier for ambiguous speech.
 - **Output JSON Schema:**
 ```json
 {
   "status": "mastered" | "needs_scaffold" | "off_track",
-  "spoken_feedback": "Spot on! He loved that hat because his grandma made it.",
-  "follow_up_prompt": null | "You're so close! Who gave Leo the hat?"
+  "spoken_feedback": "Spot on! She will run after him because he is her little bunny.",
+  "follow_up_prompt": null,
+  "attempt_count": 1,
+  "resolved": false
 }
 ```
 

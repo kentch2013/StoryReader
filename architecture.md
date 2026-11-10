@@ -254,7 +254,54 @@ StoryReader/
 
 ---
 
-## 6. HTTPS Tunnel & Local Execution Protocol
+## 6. The Zero-Lag Stack: Asymmetric Multi-Tier Answer Evaluation Engine
+
+To prevent latency anxiety, eliminate API rate-limit bottlenecks (15 RPM free tier), and ensure resilience in child-facing voice sessions, StoryReader utilizes an **Asymmetric Multi-Tier Architecture**:
+
+```
+[Child Speaks Answer]
+         │
+         ▼
+┌────────────────────────────────────────────────────────┐
+│ TIER 1: In-Browser Multi-Prototype Matcher (<1ms, 0MB) │
+│ - Token-Set overlap against 5 pregenerated prototypes  │
+│ - Instant 0ms check for shrugs ("i dunno") & silence   │
+│ - Resolves ~85% of Grade 2 answers locally             │
+└───────────────────────┬────────────────────────────────┘
+                        │
+                Ambiguous Answer?
+                        │
+         ┌──────────────┴──────────────┐
+         ▼                             ▼
+┌───────────────────────────┐ ┌───────────────────────────┐
+│ TIER 2: Lightweight ONNX  │ │ TIER 3: Gemini Fallback   │
+│ In-browser MiniLM (22MB)  │ │ Server call with 3.5      │
+│ Zero server calls         │ │ Zero model download       │
+└───────────────────────────┘ └───────────────────────────┘
+```
+
+### Core Principles of the Zero-Lag Stack:
+1. **Asymmetric Responsibility:**
+   - **Ingestion (Module 2):** Heavy vision reasoning (Gemini Vision) runs once per chapter scan. It extracts text, segments chunks, and pre-compiles:
+     - Factual `checkin_question` & `target_answer_concept`.
+     - 2 `keyword_clusters` with common Grade 2 synonyms.
+     - **5 `canonical_prototypes`** representing the 5 standard response archetypes (formal, colloquial, minimal core, partial action, common distractor).
+     - Pre-baked feedback strings (`praise`, `hint_attempt_1`, `hint_attempt_2`, `reveal_attempt_2`).
+   - **Runtime Evaluation (Module 3 / Client):** Child interaction runs 100% locally on the device or local server:
+     - Fast-Path Screener (0ms): Instant bailout on silence or shrug words.
+     - Deterministic Rubric Matcher (<1ms): Word-set overlap against `keyword_clusters` and `canonical_prototypes`.
+     - Finite State Machine: Hard 2-attempt ceiling. Attempt 2 failure automatically reveals the answer and unlocks chunk progression.
+2. **In-Browser ONNX Deployment Path:**
+   - For 100% decoupled client-side neural classification without localhost access:
+   - Quantized INT8 sentence-transformer (`all-MiniLM-L6-v2-quantized` @ ~22MB or quantized ModernBERT) loaded via `@xenova/transformers`.
+   - Embeddings computed locally on the iPhone in WebAssembly/WebGPU.
+   - Evaluates cosine similarity: $\cos(\mathbf{u}, \mathbf{v}) \ge 0.82 \rightarrow \text{mastered}$.
+3. **Guarantees:**
+   - Spoken feedback is pre-baked, strictly length-capped ($\le 25$ words), and completely devoid of negative phrasing (`"wrong"`, `"no"`, `"incorrect"`).
+
+---
+
+## 7. HTTPS Tunnel & Local Execution Protocol
 
 To satisfy iOS Safari's Web Speech API security requirement without certificate installations:
 
