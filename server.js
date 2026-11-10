@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import bookRoutes from './routes/book_routes.js';
+import { getNLIModel, getExtractor } from './services/semantic_evaluator.js';
 
 dotenv.config();
 
@@ -67,5 +68,8 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
   const PORT = process.env.PORT || 3000;
   app.listen(PORT, () => {
     console.log(`StoryReader host listening on port ${PORT}`);
+    getNLIModel()
+      .then(() => console.log('✅ [TIER 2] System 1 Cross-Encoder NLI model pre-warmed in RAM.'))
+      .catch((err) => console.warn('⚠️ [TIER 2] Could not pre-warm evaluator:', err.message));
   });
 }

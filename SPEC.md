@@ -86,11 +86,11 @@ StoryScout is a local, lightweight web application designed for a parent and chi
   "attempt_count": 1
 }
 ```
-- **Execution Architecture (Zero-Lag Progression):**
-  1. *Sanitization & Fast Shrug Screener (0ms):* Lowercases, strips punctuation, strips Grade 2 fillers (`um`, `uh`, `like`, `so`). Checks for shrugs (`"i don't know"`, `""`). Returns `needs_scaffold` immediately.
-  2. *Multi-Prototype & Cluster Matcher (<1ms):* Deterministically evaluates overlap against the 5 canonical prototypes and keyword clusters. Resolves ~85% of correct answers locally with 0 API calls.
-  3. *Attempt 2 Auto-Reveal (0ms):* On Attempt 2 failure, cheerful reveal is emitted and `resolved: true` is returned to prevent infinite Socratic loops.
-  4. *Neural / LLM Fallback (Optional):* In-browser ONNX embedder or Gemini 3.5 Flash boolean classifier for ambiguous speech.
+- **Execution Architecture (Coarse-to-Fine Semantic Slot Funnel):**
+  1. *Layer 1: Grounding & Intelligibility Gate (0ms):* Lowercases, normalizes kinship (`mother's nana` $\rightarrow$ `great-relative`), screens inquiry questions (`"who made the hat"`), screens word stutter (`"the hat the hat"`), and catches shrugs (`"i don't know"`, `""`).
+  2. *Layer 2: Parallel Slot Consistency Decomp. (ONNX Batch, ~25ms):* In a single forward pass via `Xenova/nli-deberta-v3-xsmall`, evaluates 8 parallel hypotheses covering actor, action, beneficiary consistency (`"The hat was for Leo"`), and attribute consistency (`"The hat was red"`).
+  3. *Layer 3: Cognitive Resolution & Socratic Gate:* Enforces forward-only causality for mastery ($E_{fwd} \ge 0.50, C_{fwd} < 0.35$). Maps diagnosed errors (`CHARACTER_CONFUSION`, `DISTRACTOR_MISCONCEPTION`, `SUPERFICIAL_ATTRIBUTE`, `PREMISE_ECHO`) to targeted scaffolds.
+  4. *Attempt 2 Auto-Reveal (0ms):* On Attempt 2 failure, cheerful reveal is emitted and `resolved: true` is returned to prevent infinite Socratic loops.
 - **Output JSON Schema:**
 ```json
 {
@@ -98,7 +98,12 @@ StoryScout is a local, lightweight web application designed for a parent and chi
   "spoken_feedback": "Spot on! She will run after him because he is her little bunny.",
   "follow_up_prompt": null,
   "attempt_count": 1,
-  "resolved": false
+  "resolved": false,
+  "diagnostics": {
+    "tier_resolved": "PARALLEL_DIAGNOSTIC_PROBING",
+    "cognitive_diagnosis": "MASTERED" | "CHARACTER_CONFUSION" | "DISTRACTOR_MISCONCEPTION" | "SUPERFICIAL_ATTRIBUTE" | "PREMISE_ECHO" | "QUESTION_ECHO" | "UNGROUNDED_OFF_TRACK",
+    "probe_scores": {}
+  }
 }
 ```
 

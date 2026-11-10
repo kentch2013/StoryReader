@@ -48,6 +48,7 @@ export function getMockBookAnalysis(files = []) {
         lookout_prompt:
           'Before you read, keep an eye out for how Leo feels when he loses his favorite hat.',
         checkin_question: 'Why did Leo get upset when his hat blew away?',
+        question_type: 'cause_and_effect',
         target_answer_concept:
           'He was upset because his grandmother made it for him and it was special.',
         keyword_clusters: [
@@ -58,6 +59,39 @@ export function getMockBookAnalysis(files = []) {
           'His grandma made it for him.',
           'It was special because his grandmother knitted it.',
         ],
+        canonical_prototypes: [
+          { type: 'formal_full', text: 'He was upset because his grandma made it for him and it was special.' },
+          { type: 'colloquial', text: 'His granny knitted it so he really loved it.' },
+          { type: 'minimal_core', text: 'Grandma made it.' },
+          { type: 'partial_action', text: 'His grandma knitted the warm red hat.' },
+          { type: 'common_distractor', text: 'He bought it at the store.' },
+        ],
+        diagnostic_probes: {
+          target_mastery: {
+            hypothesis: 'Grandma made the hat and it was special.',
+            feedback: 'Spot on! His grandma knitted that warm red hat just for him!',
+          },
+          minimal_core: {
+            hypothesis: 'Grandma made it.',
+            feedback: 'Exactly right! His grandma made it!',
+          },
+          superficial_attribute: {
+            hypothesis: 'The hat is red and warm.',
+            scaffold: 'Yes, it was a warm red hat! But think about who made that hat for Leo.',
+          },
+          premise_echo: {
+            hypothesis: 'The hat blew away and got lost in the wind.',
+            scaffold: 'Yes, his hat blew away! But why was that hat so special to Leo?',
+          },
+          character_confusion: {
+            hypothesis: 'His grandpa or mother made the hat.',
+            scaffold: 'Check the picture! Did his grandpa make it, or was it someone else?',
+          },
+          distractor_misconception: {
+            hypothesis: 'He bought it at a store or shop.',
+            scaffold: 'He didn\'t buy it at a store! Look at who knitted it for him!',
+          },
+        },
         hint_level_1: 'Look at who made the hat for Leo.',
         hint_level_2: 'Who knitted that warm red hat?',
         scaffold_hint: 'Think about who made that warm red hat for Leo!',

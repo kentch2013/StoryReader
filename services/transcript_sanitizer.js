@@ -10,6 +10,8 @@ const SHRUG_RESPONSES = new Set([
   'not sure',
 ]);
 
+const NEGATION_REGEX = /\b(not|no|didnt|did\s+not|never|wasnt|was\s+not|isnt|is\s+not|dont|do\s+not|cant|cannot|wont|wouldnt|aint)\b/i;
+
 export function normalizeTranscript(text = '') {
   if (!text || typeof text !== 'string') {
     return '';
@@ -22,6 +24,13 @@ export function normalizeTranscript(text = '') {
     .replace(/\b(um|uh|like|well|wait|so|you\s+know)\b/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+export function hasNegation(normalizedText = '') {
+  if (!normalizedText || typeof normalizedText !== 'string') {
+    return false;
+  }
+  return NEGATION_REGEX.test(normalizedText);
 }
 
 export function isShrugOrEmpty(normalizedText = '') {
@@ -39,5 +48,6 @@ export function isShrugOrEmpty(normalizedText = '') {
 
 export default {
   normalizeTranscript,
+  hasNegation,
   isShrugOrEmpty,
 };

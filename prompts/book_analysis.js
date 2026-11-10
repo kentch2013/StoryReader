@@ -30,6 +30,23 @@ Strict Generation Rules:
    - A simpler leading question to prompt the child on Attempt 2. Under 14 words.
 8. "scaffold_hint":
    - Concise primary hint (matches hint_level_1). Under 15 words.
+9. "canonical_prototypes":
+   - Exactly 5 standardized response archetypes for deterministic speech matching:
+     1. "formal_full": Complete, well-structured answer.
+     2. "colloquial": Natural informal child phrasing.
+     3. "minimal_core": Shortest 2-4 word factual kernel.
+     4. "partial_action": Key verb/action without full context.
+     5. "common_distractor": A plausible misunderstanding to catch and scaffold.
+10. "question_type":
+   - One of 'cause_and_effect', 'character_motivation', 'literal_fact', 'sequential_action'.
+11. "diagnostic_probes":
+   - Parallel probing hypotheses and scaffolds/feedback for 6 diagnostic conditions:
+     - target_mastery: Full concept hypothesis & praise feedback.
+     - minimal_core: Minimal key detail hypothesis & praise feedback.
+     - superficial_attribute: Irrelevant visual/perceptual attribute hypothesis & scaffold.
+     - premise_echo: Echoing the question premise & scaffold.
+     - character_confusion: Conflating characters or wrong agent & scaffold.
+     - distractor_misconception: Plausible misconception & scaffold.
 `.trim();
 
 export const BOOK_ANALYSIS_SCHEMA = {
@@ -64,6 +81,10 @@ export const BOOK_ANALYSIS_SCHEMA = {
           chunk_type: { type: Type.STRING, enum: ['scene', 'page'] },
           lookout_prompt: { type: Type.STRING },
           checkin_question: { type: Type.STRING },
+          question_type: {
+            type: Type.STRING,
+            enum: ['cause_and_effect', 'character_motivation', 'literal_fact', 'sequential_action'],
+          },
           target_answer_concept: { type: Type.STRING },
           keyword_clusters: {
             type: Type.ARRAY,
@@ -85,6 +106,64 @@ export const BOOK_ANALYSIS_SCHEMA = {
             items: { type: Type.STRING },
             description: 'Natural spoken examples from a 7-year-old',
           },
+          canonical_prototypes: {
+            type: Type.ARRAY,
+            description: '5 standardized response archetypes for deterministic matching',
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                type: {
+                  type: Type.STRING,
+                  enum: ['formal_full', 'colloquial', 'minimal_core', 'partial_action', 'common_distractor'],
+                },
+                text: { type: Type.STRING },
+              },
+              required: ['type', 'text'],
+            },
+          },
+          diagnostic_probes: {
+            type: Type.OBJECT,
+            properties: {
+              target_mastery: {
+                type: Type.OBJECT,
+                properties: { hypothesis: { type: Type.STRING }, feedback: { type: Type.STRING } },
+                required: ['hypothesis', 'feedback'],
+              },
+              minimal_core: {
+                type: Type.OBJECT,
+                properties: { hypothesis: { type: Type.STRING }, feedback: { type: Type.STRING } },
+                required: ['hypothesis', 'feedback'],
+              },
+              superficial_attribute: {
+                type: Type.OBJECT,
+                properties: { hypothesis: { type: Type.STRING }, scaffold: { type: Type.STRING } },
+                required: ['hypothesis', 'scaffold'],
+              },
+              premise_echo: {
+                type: Type.OBJECT,
+                properties: { hypothesis: { type: Type.STRING }, scaffold: { type: Type.STRING } },
+                required: ['hypothesis', 'scaffold'],
+              },
+              character_confusion: {
+                type: Type.OBJECT,
+                properties: { hypothesis: { type: Type.STRING }, scaffold: { type: Type.STRING } },
+                required: ['hypothesis', 'scaffold'],
+              },
+              distractor_misconception: {
+                type: Type.OBJECT,
+                properties: { hypothesis: { type: Type.STRING }, scaffold: { type: Type.STRING } },
+                required: ['hypothesis', 'scaffold'],
+              },
+            },
+            required: [
+              'target_mastery',
+              'minimal_core',
+              'superficial_attribute',
+              'premise_echo',
+              'character_confusion',
+              'distractor_misconception',
+            ],
+          },
           hint_level_1: { type: Type.STRING, description: 'Attempt 1 spatial eye-anchor' },
           hint_level_2: { type: Type.STRING, description: 'Attempt 2 leading question' },
           scaffold_hint: { type: Type.STRING, description: 'Primary hint' },
@@ -95,9 +174,12 @@ export const BOOK_ANALYSIS_SCHEMA = {
           'chunk_type',
           'lookout_prompt',
           'checkin_question',
+          'question_type',
           'target_answer_concept',
           'keyword_clusters',
           'acceptable_phrasings',
+          'canonical_prototypes',
+          'diagnostic_probes',
           'hint_level_1',
           'hint_level_2',
           'scaffold_hint',

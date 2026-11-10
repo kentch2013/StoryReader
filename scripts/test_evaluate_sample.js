@@ -1,4 +1,5 @@
 import { createServer } from '../server.js';
+import { getExtractor } from '../services/semantic_evaluator.js';
 
 const sampleRubric = {
   checkin_question: 'Why did Leo get upset when his hat blew away?',
@@ -10,6 +11,13 @@ const sampleRubric = {
   acceptable_phrasings: [
     'His grandma made it for him.',
     'It was special because his grandmother knitted it.',
+  ],
+  canonical_prototypes: [
+    { type: 'formal_full', text: 'He was upset because his grandma made it for him and it was special.' },
+    { type: 'colloquial', text: 'His granny knitted it so he really loved it.' },
+    { type: 'minimal_core', text: 'Grandma made it.' },
+    { type: 'partial_action', text: 'His grandma knitted the warm red hat.' },
+    { type: 'common_distractor', text: 'He bought it at the store.' },
   ],
   hint_level_1: 'Look at who made the hat for Leo.',
   hint_level_2: 'Who knitted that warm red hat?',
@@ -50,6 +58,46 @@ const trials = [
     maxLatencyMs: 150,
   },
   {
+    name: 'Tier 1 Canonical Prototype Match - Colloquial',
+    transcript: 'his granny knitted it so he really loved it',
+    attempt: 1,
+    expectedStatus: 'mastered',
+    expectedResolved: true,
+    maxLatencyMs: 50,
+  },
+  {
+    name: 'Tier 1 Canonical Prototype Match - Minimal Core',
+    transcript: 'grandma made it',
+    attempt: 1,
+    expectedStatus: 'mastered',
+    expectedResolved: true,
+    maxLatencyMs: 50,
+  },
+  {
+    name: 'Tier 1 Canonical Prototype Match - Common Distractor Rejection',
+    transcript: 'he bought it at the store',
+    attempt: 1,
+    expectedStatus: 'needs_scaffold',
+    expectedResolved: false,
+    maxLatencyMs: 50,
+  },
+  {
+    name: 'Tier 2 System 1 Semantic Match - Novel Paraphrase ("his nana knitted it with love")',
+    transcript: 'his nana knitted it with love',
+    attempt: 1,
+    expectedStatus: 'mastered',
+    expectedResolved: true,
+    maxLatencyMs: 100,
+  },
+  {
+    name: 'Tier 2 System 1 Semantic Match - Distractor Paraphrase ("he got it at walmart")',
+    transcript: 'he got it at walmart',
+    attempt: 1,
+    expectedStatus: 'needs_scaffold',
+    expectedResolved: false,
+    maxLatencyMs: 100,
+  },
+  {
     name: 'Attempt 2 Auto-Reveal on Shrug',
     transcript: 'idk',
     attempt: 2,
@@ -61,6 +109,7 @@ const trials = [
 
 async function runBenchmark() {
   console.log('🧪 Starting Module 3 Digital Samples Benchmark...\n');
+  await getExtractor();
   const app = createServer();
   const server = app.listen(0);
   const port = server.address().port;

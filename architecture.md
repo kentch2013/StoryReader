@@ -254,50 +254,54 @@ StoryReader/
 
 ---
 
-## 6. The Zero-Lag Stack: Asymmetric Multi-Tier Answer Evaluation Engine
+## 6. The Zero-Lag Stack: Coarse-to-Fine Semantic Slot Diagnostic Funnel
 
-To prevent latency anxiety, eliminate API rate-limit bottlenecks (15 RPM free tier), and ensure resilience in child-facing voice sessions, StoryReader utilizes an **Asymmetric Multi-Tier Architecture**:
+To prevent latency anxiety, eliminate brittle keyword dictionaries, avoid cloud rate-limit bottlenecks, and accurately diagnose Grade 2 cognitive misconceptions, StoryReader utilizes a **Coarse-to-Fine Semantic Slot Diagnostic Funnel** powered by local quantized Cross-Encoder NLI (`Xenova/nli-deberta-v3-xsmall` @ ~40MB in ONNX runtime):
 
 ```
-[Child Speaks Answer]
-         │
-         ▼
-┌────────────────────────────────────────────────────────┐
-│ TIER 1: In-Browser Multi-Prototype Matcher (<1ms, 0MB) │
-│ - Token-Set overlap against 5 pregenerated prototypes  │
-│ - Instant 0ms check for shrugs ("i dunno") & silence   │
-│ - Resolves ~85% of Grade 2 answers locally             │
-└───────────────────────┬────────────────────────────────┘
-                        │
-                Ambiguous Answer?
-                        │
-         ┌──────────────┴──────────────┐
-         ▼                             ▼
-┌───────────────────────────┐ ┌───────────────────────────┐
-│ TIER 2: Lightweight ONNX  │ │ TIER 3: Gemini Fallback   │
-│ In-browser MiniLM (22MB)  │ │ Server call with 3.5      │
-│ Zero server calls         │ │ Zero model download       │
-└───────────────────────────┘ └───────────────────────────┘
+                       [Child Transcript]
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────┐
+│ LAYER 1: Grounding & Intelligibility Filter                 │
+│ • Inquiry detector: "who made the hat" ──► QUESTION_ECHO    │
+│ • Stutter detector: "the hat the hat"  ──► SUPERFICIAL_ATTR │
+│ • Shrug fast-path:  "i don't know", "" ──► Instant scaffold │
+└──────────────────────────────┬──────────────────────────────┘
+                               │ (Passes: Grounded speech)
+                               ▼
+┌─────────────────────────────────────────────────────────────┐
+│ LAYER 2: Semantic Slot & Consistency Decomp. (ONNX Batch)   │
+│ Single forward pass (~25ms) across 8 parallel hypotheses:   │
+│ • [Actor Slot]     Grandma vs. Grandpa/Friend/Cat           │
+│ • [Recipient Slot] "The hat was for Leo" (vs. grandpa's hat)│
+│ • [Attribute Slot] "The hat was red" (vs. blue hat)         │
+│ • [Action Slot]    Knitted/Made vs. Bought at store         │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────┐
+│ LAYER 3: Cognitive Resolution & Socratic Scaffolding Gate   │
+│ Resolves diagnosed error mode to targeted spoken audio:     │
+│ • Beneficiary Contradiction (C >= 0.70) ──► CHARACTER_CONF. │
+│ • Attribute Contradiction (C >= 0.70)   ──► DISTRACTOR_MISC.│
+│ • Forward Entailment (Efwd >= 0.50)     ──► MASTERED        │
+│ • Hard attempt cap: Attempt 2 auto-reveal (resolved: true)  │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-### Core Principles of the Zero-Lag Stack:
-1. **Asymmetric Responsibility:**
-   - **Ingestion (Module 2):** Heavy vision reasoning (Gemini Vision) runs once per chapter scan. It extracts text, segments chunks, and pre-compiles:
-     - Factual `checkin_question` & `target_answer_concept`.
-     - 2 `keyword_clusters` with common Grade 2 synonyms.
-     - **5 `canonical_prototypes`** representing the 5 standard response archetypes (formal, colloquial, minimal core, partial action, common distractor).
-     - Pre-baked feedback strings (`praise`, `hint_attempt_1`, `hint_attempt_2`, `reveal_attempt_2`).
-   - **Runtime Evaluation (Module 3 / Client):** Child interaction runs 100% locally on the device or local server:
-     - Fast-Path Screener (0ms): Instant bailout on silence or shrug words.
-     - Deterministic Rubric Matcher (<1ms): Word-set overlap against `keyword_clusters` and `canonical_prototypes`.
-     - Finite State Machine: Hard 2-attempt ceiling. Attempt 2 failure automatically reveals the answer and unlocks chunk progression.
-2. **In-Browser ONNX Deployment Path:**
-   - For 100% decoupled client-side neural classification without localhost access:
-   - Quantized INT8 sentence-transformer (`all-MiniLM-L6-v2-quantized` @ ~22MB or quantized ModernBERT) loaded via `@xenova/transformers`.
-   - Embeddings computed locally on the iPhone in WebAssembly/WebGPU.
-   - Evaluates cosine similarity: $\cos(\mathbf{u}, \mathbf{v}) \ge 0.82 \rightarrow \text{mastered}$.
-3. **Guarantees:**
-   - Spoken feedback is pre-baked, strictly length-capped ($\le 25$ words), and completely devoid of negative phrasing (`"wrong"`, `"no"`, `"incorrect"`).
+### Core Principles of the Coarse-to-Fine Funnel:
+1. **Unidirectional Forward Causality:**
+   - Mastery is awarded *only* when the child transcript forward-entails the target concept ($Child \implies Target$).
+   - Reverse entailment ($Target \implies Child$) is strictly forbidden for mastery, eliminating false positives on question premise repetitions or single-word fragments.
+2. **Parallel Consistency Slot Probing:**
+   - Rather than checking only positive similarity, parallel negative consistency probes test whether the child contradicts known story facts:
+     - Beneficiary consistency: `"grandma made grampa's hat"` contradicts `"The hat was for Leo"` with 83.4% contradiction.
+     - Attribute consistency: `"his nana made the blue hat"` contradicts `"The hat was red"` with 99.8% contradiction.
+3. **Compound Generational Normalization:**
+   - Pre-tokenization normalizer maps compound generational terms (`"mother's nana"`, `"mom's grandma"`) into `great-relative`, preventing DeBERTa from matching the subtoken `"nana"` to `"grandma"`.
+4. **Single-Pass Tensor Execution (<30ms):**
+   - All 8 diagnostic hypotheses are batched into a single tensor evaluation pass, maintaining sub-30ms edge latency without GPU requirements.
 
 ---
 
