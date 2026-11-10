@@ -12,6 +12,7 @@ class GeminiRateLimiter {
     this.maxDaily = options.maxDaily || 500;
     this.requestTimestamps = [];
     this.dailyCounts = { date: this.getTodayUtc(), count: 0 };
+    this.queue = Promise.resolve();
   }
 
   getTodayUtc() {
@@ -36,24 +37,29 @@ class GeminiRateLimiter {
   }
 
   async throttle() {
-    const now = Date.now();
-    const windowStart = now - 60000;
+    const ticket = this.queue.then(async () => {
+      const now = Date.now();
+      const windowStart = now - 60000;
 
-    // Prune timestamps older than 60 seconds
-    this.requestTimestamps = this.requestTimestamps.filter((t) => t > windowStart);
+      // Prune timestamps older than 60 seconds
+      this.requestTimestamps = this.requestTimestamps.filter((t) => t > windowStart);
 
-    // If at or above limit, wait until oldest call exits window
-    if (this.requestTimestamps.length >= this.maxRpm) {
-      const oldest = this.requestTimestamps[0];
-      const waitMs = oldest + 60050 - now;
-      if (waitMs > 0) {
-        console.log(`[RATE LIMIT] Throttling request for ${(waitMs / 1000).toFixed(2)}s to respect 15 RPM limit...`);
-        await new Promise((resolve) => setTimeout(resolve, waitMs));
+      // If at or above limit, wait until oldest call exits window
+      if (this.requestTimestamps.length >= this.maxRpm) {
+        const oldest = this.requestTimestamps[0];
+        const waitMs = oldest + 60050 - now;
+        if (waitMs > 0) {
+          console.log(`[RATE LIMIT] Throttling request for ${(waitMs / 1000).toFixed(2)}s to respect 15 RPM limit...`);
+          await new Promise((resolve) => setTimeout(resolve, waitMs));
+        }
       }
-    }
 
-    this.requestTimestamps.push(Date.now());
-    this.incrementDailyCount();
+      this.requestTimestamps.push(Date.now());
+      this.incrementDailyCount();
+    });
+
+    this.queue = ticket.catch(() => {});
+    return ticket;
   }
 
   async executeWithRetry(apiFn, maxRetries = 3) {

@@ -37,9 +37,25 @@ export function createServer() {
   });
 
   app.use((err, req, res, next) => {
+    if (err && err.name === 'MulterError') {
+      const status = err.code === 'LIMIT_FILE_SIZE' ? 413 : 400;
+      return res.status(status).json({
+        error: err.message,
+        code: err.code,
+      });
+    }
+
+    if (err && err.code === 'INVALID_FILE_TYPE') {
+      return res.status(400).json({
+        error: err.message,
+        code: err.code,
+      });
+    }
+
     console.error('Unhandled server error:', err);
     res.status(err.status || 500).json({
       error: err.message || 'Internal Server Error',
+      code: err.code,
     });
   });
 

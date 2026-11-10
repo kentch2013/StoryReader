@@ -106,6 +106,19 @@ Before writing code, the following six core failure modes have been analyzed and
   2. On Attempt 1 failure: Give gentle encouragement and the AI's `scaffold_hint`.
   3. On Attempt 2 failure: Provide the positive resolution, praise effort, explain the concept warmly, and automatically enable the **"Next Pages"** button to preserve forward momentum.
 
+### Risk 7: Adversarial Multipart Ingestion & Unmapped Error Traps
+* **Root Cause:** When an upload exceeds file size limits (>10MB), file count limits (>20 files), or uses unexpected form field names, Multer throws errors without an `err.status` property, collapsing into HTTP 500 internal server crashes. Additionally, unvalidated MIME types passed to Gemini API cause SDK execution faults.
+* **Architectural Solution:**
+  1. **Strict Multer Filter:** Ingest only `image/jpeg`, `image/png`, and `image/webp` via `fileFilter`. Reject all others with HTTP 400 `INVALID_FILE_TYPE`.
+  2. **Deterministic Error Mapping:** Express error middleware strictly intercepts `MulterError`, mapping `LIMIT_FILE_SIZE` to HTTP 413, and `LIMIT_FILE_COUNT` / `LIMIT_UNEXPECTED_FILE` to HTTP 400.
+  3. **Client Disconnect Trap:** Check `req.socket?.destroyed` to prevent dangling responses if Safari disconnects mid-analysis.
+
+### Risk 8: LLM Markdown Syntax Faults & Rate Limiter Concurrency Race
+* **Root Cause:** LLM completions wrapped in markdown code blocks (` ```json `) or truncated by token ceilings cause uncaught `JSON.parse` SyntaxErrors. Furthermore, concurrent burst requests into `rate_limiter.js` can evaluate sliding windows simultaneously before timestamps are pushed, bypassing the 14 RPM quota.
+* **Architectural Solution:**
+  1. **`safeJsonParse`:** Robust parser automatically strips markdown fences and wraps syntax errors in structured domain rejections.
+  2. **Promise Queue Mutex:** `GeminiRateLimiter` serializes all incoming throttle requests through `this.queue`, ensuring atomic evaluation and preventing race condition bursts against Google AI Studio.
+
 ---
 
 ## 3. Data Contracts & API Schemas
@@ -114,7 +127,7 @@ Before writing code, the following six core failure modes have been analyzed and
 
 * **Request Format:** `multipart/form-data`
   * Field: `images` (array of `image/jpeg` file buffers, up to 20 pages per batch)
-* **Response Status:** `200 OK` or `422 Unprocessable Content`
+* **Response Status:** `200 OK`, `400 Bad Request`, `413 Payload Too Large`, or `422 Unprocessable Content`
 * **Response JSON Schema (Enforced via Gemini `responseSchema`):**
 
 ```json

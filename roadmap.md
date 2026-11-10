@@ -45,8 +45,10 @@
   - Implement `prompts/book_analysis.js` with Grade 2 Common Core reading standards and strict JSON schema.
   - Implement `routes/book_routes.js` with `multer` memory storage handling `POST /api/analyze-book`.
   - Add `is_legible` safety valves returning HTTP `422` on blurry/blank images.
+  - **Adversarial Hardening:** Strict MIME type validation (JPEG/PNG/WebP), Multer HTTP 413/400 error status mapping, `safeJsonParse` markdown stripping, and RateLimiter mutex queue serialization.
 * **2. Code Verification:**
-  - Unit tests with mocked Gemini responses validating schema parsing, fallback model switching, and 422 error trapping on corrupt images.
+  - Unit tests with mocked Gemini responses validating schema parsing, fallback model switching, and 422 error trapping on corrupt images (`test/analyze_book.test.js`).
+  - Boundary and adversarial torture suite (`test/hardening_m1_m2.test.js`): 413 oversized file trapping, 400 file overflow trapping, 400 invalid field name trapping, 400 invalid MIME rejection, and safe JSON extraction.
 * **3. Digital Samples:**
   - Fixture directory `test/fixtures/book_pages/` containing:
     - 3 synthetic Grade 2 reading book pages (mixture of fiction and nonfiction).
@@ -55,6 +57,7 @@
     - Fiction/nonfiction classification is accurate.
     - Chunks contain non-empty `lookout_prompt`, `checkin_question`, `target_answer_concept`, `scaffold_hint`.
     - Blurred page triggers `is_legible: false`.
+  - Adversarial fuzz torture runner `scripts/test_adversarial_fuzz.js` asserting all 7 boundary failure modes pass.
 * **4. Human Verification:**
   - Review generated questions and lookout prompts against the physical sample text to confirm Grade 2 pedagogical quality.
 

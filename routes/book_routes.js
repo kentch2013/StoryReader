@@ -4,12 +4,22 @@ import { analyzeBookPages } from '../services/gemini_service.js';
 
 const router = express.Router();
 
+const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+
 const storage = multer.memoryStorage();
 const upload = multer({
   storage,
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB per file
     files: 20, // 20 files max (supports full multi-page chapters)
+  },
+  fileFilter: (req, file, cb) => {
+    if (!ALLOWED_MIME_TYPES.has(file.mimetype)) {
+      const err = new Error(`Unsupported file type: ${file.mimetype}. Only JPEG, PNG, and WebP are allowed.`);
+      err.code = 'INVALID_FILE_TYPE';
+      return cb(err);
+    }
+    cb(null, true);
   },
 });
 
@@ -20,6 +30,9 @@ router.post('/analyze-book', upload.array('images'), async (req, res, next) => {
     }
 
     const analysis = await analyzeBookPages(req.files);
+    if (req.socket?.destroyed) {
+      return;
+    }
 
     if (!analysis || !analysis.is_legible) {
       return res.status(422).json({

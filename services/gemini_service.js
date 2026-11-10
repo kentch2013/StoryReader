@@ -2,6 +2,25 @@ import { GoogleGenAI, Type } from '@google/genai';
 import { BOOK_ANALYSIS_SYSTEM_PROMPT, BOOK_ANALYSIS_SCHEMA } from '../prompts/book_analysis.js';
 import { rateLimiter } from './rate_limiter.js';
 
+export function safeJsonParse(text) {
+  if (!text || typeof text !== 'string') {
+    throw new Error('Invalid JSON received from model: empty response text');
+  }
+
+  let cleaned = text.trim();
+  if (cleaned.startsWith('```json')) {
+    cleaned = cleaned.replace(/^```json\s*/i, '').replace(/\s*```$/, '');
+  } else if (cleaned.startsWith('```')) {
+    cleaned = cleaned.replace(/^```\s*/, '').replace(/\s*```$/, '');
+  }
+
+  try {
+    return JSON.parse(cleaned);
+  } catch (err) {
+    throw new Error(`Invalid JSON received from model: ${err.message}`);
+  }
+}
+
 export function getMockBookAnalysis(files = []) {
   const hasBlurry = files.some((file) =>
     (file.originalname || '').toLowerCase().includes('blurry')
@@ -53,6 +72,9 @@ export async function analyzeBookPages(files) {
 
   const isMock = process.env.MOCK_AI === 'true' || !process.env.GEMINI_API_KEY;
   if (isMock) {
+    if (!process.env.GEMINI_API_KEY && process.env.MOCK_AI !== 'true') {
+      console.warn('⚠️ [GEMINI WARNING] GEMINI_API_KEY is missing or empty. Falling back to offline mock mode.');
+    }
     return getMockBookAnalysis(files);
   }
 
@@ -81,10 +103,11 @@ export async function analyzeBookPages(files) {
     })
   );
 
-  return JSON.parse(response.text);
+  return safeJsonParse(response.text);
 }
 
 export default {
   analyzeBookPages,
   getMockBookAnalysis,
+  safeJsonParse,
 };

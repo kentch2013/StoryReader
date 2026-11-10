@@ -1,6 +1,6 @@
 # StoryScout Session Handoff Log
 
-**Session Date:** 2026-11-09  
+**Session Date:** 2026-11-10  
 **Repository:** `kentch2013/StoryReader`  
 **Current Branch:** `main` (Clean, synchronized with `origin/main`)  
 **Commit Milestone:** `8c7a97f` ("feat: complete Module 1 server foundation and health gateway")
@@ -64,6 +64,16 @@ To eliminate context loss between sessions, every handoff must maintain:
   - **Gate 4 (Human QA Sign-off):**
     - Human QA tester reviewed and approved question quality, non-subjective keyword rubrics, and Grade 2 pedagogical depth.
 * Squash-merged `task/m2-book-analysis` into `main`, deleted task branch, and synchronized remote.
+
+### E. Modules 1 & 2 Adversarial Hardening & Proofing Milestone
+* Identified and resolved 7 critical failure modes:
+  1. *Multer Error Masking:* Global error handler now maps `LIMIT_FILE_SIZE` to HTTP 413 and `LIMIT_FILE_COUNT` / `LIMIT_UNEXPECTED_FILE` to HTTP 400 (preventing 500 crashes).
+  2. *Unvalidated File Ingestion:* Added strict `fileFilter` in `book_routes.js` restricting uploads to `image/jpeg`, `image/png`, and `image/webp`.
+  3. *Model Markdown & Syntax Faults:* Implemented `safeJsonParse` in `gemini_service.js` to strip markdown fences (` ```json `) and trap malformed JSON.
+  4. *Rate Limiter Concurrency Race:* Introduced promise queue mutex in `rate_limiter.js` to ensure atomic throttling across parallel requests.
+  5. *Client Abort Safety:* Added `req.socket?.destroyed` verification to prevent writing to closed streams.
+  6. *Missing API Key Warning:* Explicit console warning issued if `GEMINI_API_KEY` is unset while `MOCK_AI` is not explicit.
+  7. *Adversarial Verification Suite:* Created [test/hardening_m1_m2.test.js](test/hardening_m1_m2.test.js) (5 unit tests) and [scripts/test_adversarial_fuzz.js](scripts/test_adversarial_fuzz.js) (7 adversarial torture passes). Total test suite expanded to 11/11 passing tests. Contract audit: 100% immutable.
 
 ---
 
