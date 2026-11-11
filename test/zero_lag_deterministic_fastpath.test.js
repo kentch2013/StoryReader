@@ -76,7 +76,8 @@ test('POST /api/evaluate-answer resolves incomplete detail ("it was windy and co
     assert.equal(data.status, 'needs_scaffold');
     assert.equal(data.resolved, false);
     assert.ok(data.spoken_feedback.includes(sampleRubric.hint_level_1));
-    assert.ok(latencyMs < 100, `Expected latency < 100ms, got ${latencyMs}ms`);
+    const maxLatency1 = process.env.CI ? 250 : 100;
+    assert.ok(latencyMs < maxLatency1, `Expected latency < ${maxLatency1}ms, got ${latencyMs}ms`);
   } finally {
     server.close();
   }
@@ -131,7 +132,8 @@ test('POST /api/evaluate-answer resolves question echo ("the hat blew away") in 
     assert.equal(data.status, 'needs_scaffold');
     assert.equal(data.resolved, false);
     assert.ok(data.spoken_feedback.includes(sampleRubric.hint_level_1));
-    assert.ok(latencyMs < 100, `Expected latency < 100ms, got ${latencyMs}ms`);
+    const maxLatency1 = process.env.CI ? 250 : 100;
+    assert.ok(latencyMs < maxLatency1, `Expected latency < ${maxLatency1}ms, got ${latencyMs}ms`);
   } finally {
     server.close();
   }

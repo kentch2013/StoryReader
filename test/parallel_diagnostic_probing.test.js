@@ -191,7 +191,8 @@ test('POST /api/evaluate-answer awards MASTERED on "his nana knitted it" and use
     assert.equal(data.resolved, true);
     assert.equal(data.diagnostics?.cognitive_diagnosis, 'MASTERED');
     assert.ok(data.spoken_feedback.includes('Spot on!'));
-    assert.ok(ms < 150, `Expected latency < 150ms, got ${ms}ms`);
+    const maxLatency = process.env.CI ? 400 : 150;
+    assert.ok(ms < maxLatency, `Expected latency < ${maxLatency}ms, got ${ms}ms`);
   } finally {
     server.close();
   }

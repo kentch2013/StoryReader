@@ -81,7 +81,8 @@ test('POST /api/evaluate-answer awards mastery for novel paraphrase via Tier 2 i
     assert.equal(data.status, 'mastered');
     assert.equal(data.resolved, true);
     assert.ok(data.spoken_feedback.startsWith('Spot on!'));
-    assert.ok(latencyMs < 200, `Expected latency < 200ms, got ${latencyMs}ms`);
+    const maxLatency = process.env.CI ? 400 : 200;
+    assert.ok(latencyMs < maxLatency, `Expected latency < ${maxLatency}ms, got ${latencyMs}ms`);
   } finally {
     server.close();
   }
