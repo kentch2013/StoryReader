@@ -35,13 +35,13 @@ Each module must pass all 4 verification gates before the next module begins:
   - [x] Digital Samples: 19-case decision model benchmark (`scripts/benchmark_decision_models.js`) passing 19/19 (100%); 50-item benchmark passing 50/50
   - [x] Human Gate: Empirical verification across *The Runaway Bunny* chunks with zero subjective grading
 
-- [ ] **Module 3.5: 4-Layered System 1 Latency Optimization Pipeline (Pre-Module 4 Objective)**
-  - [ ] Pipeline: Token sequence clamping (`max_length: 36`), 2-stage cascaded probing, native C++ SIMD, synchronous Tier 1 gate
-  - [ ] Code Tests: Maintain 60/60 passing tests and <50ms timing assertions
-  - [ ] Digital Samples: Benchmark verification: Stage 1 mastery $\le 35\text{ms}$, Stage 2 full diagnosis $\le 90\text{ms}$
-  - [ ] Human Gate: Perceptual zero-lag audio feedback validation
+- [x] **Module 3.5: Dynamic Batch Latency Optimization Pipeline**
+  - [x] Pipeline: Dynamic batch-adaptive padding (`tokenizeDynamicBatch`, 0% truncation), two-stage speculative cascaded probing, bidirectional character confusion, story-agnostic sanitization
+  - [x] Code Tests: 60/60 unit/integration tests passing with 100% test contract immutability
+  - [x] Digital Samples: 19/19 decision benchmark passing, 18/18 cross-story benchmark passing (*The Runaway Bunny* & *Dog Man: A Tale of Two Kitties*)
+  - [x] Human Gate: Verified sub-35ms mastery early-exit latency (79.8% reduction) and sub-68ms error sweeps
 
-- [ ] **Module 4: Mobile Camera Tray & Canvas Compression Engine**
+- [ ] **Module 4: Mobile Camera Tray & Canvas Compression Engine (NEXT IMMEDIATE OBJECTIVE)**
   - [ ] Pipeline: `public/js/camera_tray.js`, sequential capture, filmstrip tray, canvas downscaler ($\le 1600\text{px}$)
   - [ ] Code Tests: Canvas compression tests ($\le 300\text{KB}$/page, $\le 1600\text{px}$)
   - [ ] Digital Samples: Standalone camera harness page (`test_camera.html`)

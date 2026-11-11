@@ -79,7 +79,8 @@ export function resolveDiscourse(normalizedTranscript = '', rubric = {}, options
       const statedBeneficiary = beneficiaryMatch[1].toLowerCase();
       result.character_confusion = true;
       result.cognitive_diagnosis = 'CHARACTER_CONFUSION';
-      result.spoken_prompt = `That was for ${rubric.story_context?.recipient || 'Leo'}, not ${statedBeneficiary}!`;
+      const recipientLabel = rubric.story_context?.recipient || storyRecipient || 'them';
+      result.spoken_prompt = `That was for ${recipientLabel}, not ${statedBeneficiary}!`;
       return result;
     }
   }

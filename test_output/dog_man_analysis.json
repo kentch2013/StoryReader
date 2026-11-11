@@ -1,0 +1,268 @@
+{
+  "is_legible": true,
+  "book_type": "fiction",
+  "summary": "Dog Man secretively brings roses to the hospital to cheer up the patients. Meanwhile, Petey explains during an interview why he returned to a life of crime.",
+  "chunks": [
+    {
+      "chunk_id": 1,
+      "page_range": "88-89",
+      "chunk_type": "scene",
+      "lookout_prompt": "Before you read, watch for what Dog Man leaves at the hospital door.",
+      "checkin_question": "What does Dog Man leave at the hospital door?",
+      "question_type": "literal_fact",
+      "target_answer_concept": "Dog Man leaves a pile of slobbery roses at the hospital door.",
+      "keyword_clusters": [
+        {
+          "concept_name": "roses",
+          "synonyms": [
+            "roses",
+            "flowers",
+            "pile of roses",
+            "red flowers"
+          ]
+        },
+        {
+          "concept_name": "hospital",
+          "synonyms": [
+            "hospital door",
+            "hospital",
+            "the hospital",
+            "front door"
+          ]
+        }
+      ],
+      "acceptable_phrasings": [
+        "He left a pile of slobbery roses at the hospital.",
+        "Dog Man brought roses to the hospital door."
+      ],
+      "canonical_prototypes": [
+        {
+          "type": "formal_full",
+          "text": "Dog Man leaves a pile of slobbery roses at the hospital door."
+        },
+        {
+          "type": "colloquial",
+          "text": "He dropped off some slobbery roses."
+        },
+        {
+          "type": "minimal_core",
+          "text": "slobbery roses"
+        },
+        {
+          "type": "functional_circumlocution",
+          "text": "red flowers that he chewed on"
+        },
+        {
+          "type": "partial_action",
+          "text": "leaving flowers"
+        },
+        {
+          "type": "common_distractor",
+          "text": "He leaves a sign from the garden."
+        }
+      ],
+      "diagnostic_probes": {
+        "target_mastery": {
+          "hypothesis": "Dog Man leaves a pile of slobbery roses at the hospital door.",
+          "feedback": "Great job! Dog Man brought roses to cheer up the hospital patients."
+        },
+        "minimal_core": {
+          "hypothesis": "Dog Man leaves roses.",
+          "feedback": "That's right! He left roses at the hospital door."
+        },
+        "superficial_attribute": {
+          "hypothesis": "Dog Man is wearing a cone on his head.",
+          "scaffold": "Look at what Dog Man dropped right near the door."
+        },
+        "premise_echo": {
+          "hypothesis": "Dog Man leaves something at the hospital door.",
+          "scaffold": "Check page 88 to see what flowers Dog Man picked."
+        },
+        "character_confusion": {
+          "hypothesis": "The nurse leaves roses at the hospital door.",
+          "scaffold": "Look at page 88. Who ran from the garden to the hospital?"
+        },
+        "distractor_misconception": {
+          "hypothesis": "Dog Man leaves the keep out sign at the hospital door.",
+          "scaffold": "Look closely at the bottom panel on page 88."
+        }
+      },
+      "hint_level_1": "Look at the bottom panels of page 88 near the green door.",
+      "hint_level_2": "What red flowers did Dog Man drop on the ground?",
+      "scaffold_hint": "Look at the bottom panel of page 88 near the green door.",
+      "entity_graph": {
+        "characters": [
+          {
+            "canonical_id": "dog_man",
+            "canonical_name": "Dog Man",
+            "aliases": [
+              "Dog Man"
+            ],
+            "gender": "male",
+            "kinship_compositions": []
+          },
+          {
+            "canonical_id": "nurse",
+            "canonical_name": "Nurse",
+            "aliases": [
+              "nurse"
+            ],
+            "gender": "female",
+            "kinship_compositions": []
+          }
+        ],
+        "social_relations": [
+          {
+            "subject_id": "dog_man",
+            "relation": "helps",
+            "target_id": "nurse",
+            "aliases": [
+              "gives flowers to"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "chunk_id": 2,
+      "page_range": "90-91",
+      "chunk_type": "scene",
+      "lookout_prompt": "Before you read, watch for why Petey returned to a life of crime.",
+      "checkin_question": "Why did Petey return to a life of crime?",
+      "question_type": "character_motivation",
+      "target_answer_concept": "Nobody would let Petey forget who he used to be.",
+      "keyword_clusters": [
+        {
+          "concept_name": "forget",
+          "synonyms": [
+            "forget",
+            "let him forget",
+            "remember",
+            "forget his past"
+          ]
+        },
+        {
+          "concept_name": "past identity",
+          "synonyms": [
+            "who he used to be",
+            "his past",
+            "he was bad",
+            "an evil villain"
+          ]
+        }
+      ],
+      "acceptable_phrasings": [
+        "Because nobody would let him forget who he used to be.",
+        "People kept remembering that he used to be bad."
+      ],
+      "canonical_prototypes": [
+        {
+          "type": "formal_full",
+          "text": "Petey returned to crime because nobody let him forget who he used to be."
+        },
+        {
+          "type": "colloquial",
+          "text": "People wouldn't let him forget his past."
+        },
+        {
+          "type": "minimal_core",
+          "text": "forget who he was"
+        },
+        {
+          "type": "functional_circumlocution",
+          "text": "people kept bringing up the bad things he did before"
+        },
+        {
+          "type": "partial_action",
+          "text": "not letting him forget"
+        },
+        {
+          "type": "common_distractor",
+          "text": "Petey wants to steal money from the robot."
+        }
+      ],
+      "diagnostic_probes": {
+        "target_mastery": {
+          "hypothesis": "Petey returned to crime because nobody would let him forget who he used to be.",
+          "feedback": "Spot on! Petey felt hurt because people only saw his past."
+        },
+        "minimal_core": {
+          "hypothesis": "People would not let Petey forget.",
+          "feedback": "Yes! They wouldn't let him forget his past."
+        },
+        "superficial_attribute": {
+          "hypothesis": "Petey is talking into a black microphone.",
+          "scaffold": "Read what Petey says in the bottom panel on page 90."
+        },
+        "premise_echo": {
+          "hypothesis": "Petey returned to a life of crime.",
+          "scaffold": "Look at page 90 to see what Petey tells the reporter."
+        },
+        "character_confusion": {
+          "hypothesis": "Sarah Hatoff returned to a life of crime.",
+          "scaffold": "Who is speaking in the bottom panel on page 90?"
+        },
+        "distractor_misconception": {
+          "hypothesis": "Petey returned to crime because he wanted to fight the robot.",
+          "scaffold": "Read Petey's speech bubble at the bottom of page 90."
+        }
+      },
+      "hint_level_1": "Look at the speech bubble at the bottom of page 90.",
+      "hint_level_2": "What did people refuse to let Petey forget?",
+      "scaffold_hint": "Look at the speech bubble at the bottom of page 90.",
+      "entity_graph": {
+        "characters": [
+          {
+            "canonical_id": "petey",
+            "canonical_name": "Petey",
+            "aliases": [
+              "Petey",
+              "cat"
+            ],
+            "gender": "male",
+            "kinship_compositions": []
+          },
+          {
+            "canonical_id": "sarah_hatoff",
+            "canonical_name": "Sarah Hatoff",
+            "aliases": [
+              "reporter",
+              "Sarah"
+            ],
+            "gender": "female",
+            "kinship_compositions": []
+          },
+          {
+            "canonical_id": "robot",
+            "canonical_name": "Robot",
+            "aliases": [
+              "robot"
+            ],
+            "gender": "unknown",
+            "kinship_compositions": []
+          },
+          {
+            "canonical_id": "big_jim",
+            "canonical_name": "Big Jim",
+            "aliases": [
+              "Big Jim"
+            ],
+            "gender": "male",
+            "kinship_compositions": []
+          }
+        ],
+        "social_relations": [
+          {
+            "subject_id": "sarah_hatoff",
+            "relation": "interviews",
+            "target_id": "petey",
+            "aliases": [
+              "asks questions to"
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "error_message": null
+}
