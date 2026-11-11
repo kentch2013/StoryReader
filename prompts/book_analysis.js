@@ -11,26 +11,28 @@ Pedagogical Framework:
 Output must be objectively gradeable by an automated speech judge in Module 3. Subjectivity is strictly forbidden. Every answer must be verifiable directly from printed text or illustration details.
 
 Strict Generation Rules:
-1. "lookout_prompt":
+1. "verbatim_page_text":
+   - Exact verbatim transcription of all printed story text present on the page or pages of the chunk. Transcribe this first to ground all subsequent questions and answers.
+2. "lookout_prompt":
    - Format: "Before you read, watch for [character action/clue]."
    - Under 15 words. NO spoilers.
-2. "checkin_question":
+3. "checkin_question":
    - Factual question directly resolving the lookout clue. Focus on cause-and-effect or key actions.
    - Under 13 words.
-3. "target_answer_concept":
+4. "target_answer_concept":
    - The necessary and sufficient factual kernel for full credit. Under 14 words.
-4. "keyword_clusters":
+5. "keyword_clusters":
    - Exactly 2 concept clusters required for mastery.
    - Each cluster has a "concept_name" and 2-4 acceptable synonyms, common inflections, or functional action phrases a 7-year-old might naturally speak (e.g. for gardener: "gardener", "garden worker", "watering plants", "plant keeper").
-5. "acceptable_phrasings":
+6. "acceptable_phrasings":
    - Exactly 2 natural spoken examples of how a real Grade 2 child would answer.
-6. "hint_level_1" (Spatial Anchor):
+7. "hint_level_1" (Spatial Anchor):
    - Directs the child's eyes to the exact location on the page. Under 15 words.
-7. "hint_level_2" (Socratic Leading Question):
+8. "hint_level_2" (Socratic Leading Question):
    - A simpler leading question to prompt the child on Attempt 2. Under 14 words.
-8. "scaffold_hint":
+9. "scaffold_hint":
    - Concise primary hint (matches hint_level_1). Under 15 words.
-9. "canonical_prototypes":
+10. "canonical_prototypes":
    - Exactly 6 standardized response archetypes for deterministic speech matching:
      1. "formal_full": Complete, well-structured answer.
      2. "colloquial": Natural informal child phrasing.
@@ -38,9 +40,9 @@ Strict Generation Rules:
      4. "functional_circumlocution": Describing what the character does, uses, or looks like without naming the key noun (e.g. "someone who catches fish with a net or pole", "the lady who waters plants", "the air that blows").
      5. "partial_action": Key verb/action without full context.
      6. "common_distractor": A plausible misunderstanding to catch and scaffold.
-10. "question_type":
+11. "question_type":
    - One of 'cause_and_effect', 'character_motivation', 'literal_fact', 'sequential_action'.
-11. "diagnostic_probes":
+12. "diagnostic_probes":
    - Parallel probing hypotheses and scaffolds/feedback for 6 diagnostic conditions.
    - CRITICAL REQUIREMENT FOR HYPOTHESES: Every hypothesis MUST be stated as a direct factual story proposition or concrete event/action description (e.g. "The mother will catch fish with a net or pole", "The mother is a gardener who waters plants"). NEVER use meta-commentary about the child (e.g. NEVER write "Child understands...", "Child identified the word...", or "Child confused...").
      - target_mastery: Full concept statement & praise feedback.
@@ -49,7 +51,7 @@ Strict Generation Rules:
      - premise_echo: Exact repetition of the question premise & scaffold.
      - character_confusion: Statement where wrong character/agent performs the action & scaffold.
      - distractor_misconception: Plausible incorrect story event/misconception & scaffold.
-12. "entity_graph":
+13. "entity_graph":
    - Character and relational entity network for discourse and kinship resolution:
      - "characters": Array of character entities with canonical_id, canonical_name, gender, aliases, and kinship_compositions.
      - "social_relations": Array of relations with subject_id, relation, target_id, and aliases.
@@ -86,6 +88,10 @@ export const BOOK_ANALYSIS_SCHEMA = {
           chunk_id: { type: Type.INTEGER },
           page_range: { type: Type.STRING },
           chunk_type: { type: Type.STRING, enum: ['scene', 'page'] },
+          verbatim_page_text: {
+            type: Type.STRING,
+            description: 'Exact verbatim transcription of all printed story text across the chunk page range',
+          },
           lookout_prompt: { type: Type.STRING },
           checkin_question: { type: Type.STRING },
           question_type: {
@@ -216,6 +222,7 @@ export const BOOK_ANALYSIS_SCHEMA = {
           'chunk_id',
           'page_range',
           'chunk_type',
+          'verbatim_page_text',
           'lookout_prompt',
           'checkin_question',
           'question_type',

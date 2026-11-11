@@ -59,6 +59,7 @@ StoryScout is a local, lightweight web application designed for a parent and chi
         { "type": "partial_action", "text": "She will use her feet to run." },
         { "type": "common_distractor", "text": "She will stay at home." }
       ],
+      "verbatim_page_text": "If you run away, said his mother, I will run after you. For you are my little bunny.",
       "hint_level_1": "Look at the text at the bottom of the second page.",
       "hint_level_2": "What action does the mother promise to take if he leaves?",
       "scaffold_hint": "Look at the text at the bottom of the second page.",
@@ -118,6 +119,7 @@ StoryScout is a local, lightweight web application designed for a parent and chi
 }
 ```
 - **Execution Architecture (Coarse-to-Fine Semantic Slot Funnel & 4-Layer Latency Stack):**
+  0. *Grounding Fidelity Gate (Server-Side, Pre-Delivery):* When pages are analyzed via `POST /api/analyze-book`, each chunk's `verbatim_page_text` is verified against `target_answer_concept` and `checkin_question` via lexical entity overlap and ONNX DeBERTa NLI ($E \ge 0.50, C < 0.25$). Context bounding limits chunks to $\le 3$ pages. Ungrounded entities or factual contradictions trigger automatic review flags.
   1. *Layer 1: Discourse & Relational Resolution & Intelligibility Gate (0ms):* Grounding through chunk `entity_graph` (kinship composition, cross-generational mismatch detection, social relations, pronoun anaphora). Executes 3-tier Hierarchical Ambiguity Cascade (Question Salience $\rightarrow$ Predicate Exclusivity $\rightarrow$ Free Clarification Micro-Turn with `is_microturn: true` without consuming attempt). Screens inquiry questions (`"who made the hat"`), word stutters, and catches shrugs (`"i don't know"`, `""`).
   2. *Layer 2: Parallel Slot Consistency Decomp. (ONNX Batch, ~25ms):* In a single forward pass via `Xenova/nli-deberta-v3-xsmall`, evaluates parallel hypotheses covering actor, action, beneficiary attribution consistency (`${actor} made ${recipient}'s hat`), and attribute consistency (`"The hat was red"`).
   3. *Layer 3: Dynamic Argmax & Circumlocution Resolution:* Enforces forward-only causality for mastery ($E_{fwd} \ge 0.50, C_{fwd} < 0.35$), minimal core, partial actions, and functional circumlocutions (e.g. *"the lady who puts water on the flowers so they grow"*). Vector argmax arbitrates competing error modes (`DISTRACTOR_MISCONCEPTION`, `CHARACTER_CONFUSION`, `SUPERFICIAL_ATTRIBUTE`, `PREMISE_ECHO`, `AMBIGUOUS_REFERENT`).

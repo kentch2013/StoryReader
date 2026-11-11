@@ -41,6 +41,12 @@ Each module must pass all 4 verification gates before the next module begins:
   - [x] Digital Samples: 19/19 decision benchmark passing, 18/18 cross-story benchmark passing (*The Runaway Bunny* & *Dog Man: A Tale of Two Kitties*)
   - [x] Human Gate: Verified sub-35ms mastery early-exit latency (79.8% reduction) and sub-68ms error sweeps
 
+- [x] **Module 3.6: Grounding Fidelity Gate & Transcription Verification**
+  - [x] Pipeline: `services/grounding_verifier.js`, verbatim page text extraction (`verbatim_page_text`), context bounding ceiling ($\le 3$ pages), lexical entity-overlap filter, local ONNX DeBERTa-v3 premise-entailment verification pass
+  - [x] Code Tests: 64/64 unit/integration tests across 13 test suites with 100% contract immutability
+  - [x] Digital Samples: Factual entailment vs contradiction/ungrounded entity verification (`test/grounding_verifier.test.js`)
+  - [x] Human Gate: Verified automated rejection of hallucinated entities and contradictory concepts with zero manual grading
+
 - [ ] **Module 4: Mobile Camera Tray & Canvas Compression Engine (NEXT IMMEDIATE OBJECTIVE)**
   - [ ] Pipeline: `public/js/camera_tray.js`, sequential capture, filmstrip tray, canvas downscaler ($\le 1600\text{px}$)
   - [ ] Code Tests: Canvas compression tests ($\le 300\text{KB}$/page, $\le 1600\text{px}$)

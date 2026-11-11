@@ -16,6 +16,7 @@
 | **M2** | Book Analysis Engine | `services/gemini_service.js`, `prompts/book_analysis.js`, `routes/book_routes.js` (`POST /api/analyze-book`) | Schema parsing, unreadable photo handling, multipart limits | Run CLI harness with 3 sample book pages, verify Grade 2 chunking |
 | **M3** | Answer Evaluation Engine (Zero-Lag Stack) | `services/answer_evaluator.js`, `services/semantic_evaluator.js`, `services/discourse_resolver.js`, `services/rubric_matcher.js` | 60/60 tests passing, 19/19 decision benchmark passing, dynamic argmax & circumlocutions | Terminal REPL testing edge-case phrases and circumlocutions |
 | **M3.5** | Latency Optimization & Cross-Story Eval (Completed) | Dynamic batch padding, 2-stage cascaded probing, bidirectional character confusion, story-agnostic sanitization | Sub-35ms mastery benchmark, sub-70ms full diagnosis, 19/19 decision benchmark, 18/18 cross-story benchmark | Terminal REPL testing latency & multi-story chunks with zero subjective grading |
+| **M3.6** | Grounding Fidelity Gate (Completed) | `services/grounding_verifier.js`, `verbatim_page_text` transcription, context bounding ($\le 3$ pages), lexical entity overlap, ONNX NLI premise-entailment pass | 64/64 tests passing, 4/4 grounding contract tests, automated rejection of ungrounded entities & contradictions | Scripted verification of factual entailment vs hallucinations |
 | **M4** | Camera & Canvas Tray (NEXT ACTIVE GATE) | `public/js/camera_tray.js`, thumbnail tray, canvas downscaler | Resolution capping ($\le 1600\text{px}$), payload compression ($\le 300\text{KB}$/page) | iPhone 14 Plus camera capture: snap 3 pages, verify tray order and sharpness |
 | **M5** | Safari Audio Coordinator | `public/js/audio_manager.js`, gesture unlock, TTS synthesizer, STT Push-to-Talk | Audio state lockouts, collision safety (`speechSynthesis.cancel()` before mic) | iPhone 14 Plus Safari: speak sentence, check for no silence cutoff and clean audio output |
 | **M6** | Full SPA Orchestration | `public/index.html`, `public/style.css`, `public/js/app.js`, Cloudflare Tunnel runbook | FSM state transitions, attempt limit counter ($\le 2$), chunk progression | Full parent-child reading test with physical book over HTTPS tunnel |
@@ -102,6 +103,26 @@
     - **18/18 cases passing (100%)** across *The Runaway Bunny* (4 chunks) and *Dog Man: A Tale of Two Kitties* (2 camera scan chunks).
 * **4. Human Verification:**
   - Verified edge cases across multiple stories with zero perceptible latency and zero story-specific hardcoding.
+
+---
+
+### Module 3.6: Grounding Fidelity Gate & Transcription Verification (Completed & Verified)
+* **1. Pipeline Extension:**
+  - Author `services/grounding_verifier.js` containing `verifyGroundingFidelity`, `checkLexicalEntityOverlap`, and `checkNliEntailment`.
+  - Add required `verbatim_page_text` field to `BOOK_ANALYSIS_SCHEMA` and `BOOK_ANALYSIS_SYSTEM_PROMPT` in `prompts/book_analysis.js`.
+  - Enforce context bounding ceiling ($\le 3$ pages per chunk).
+  - Expand `sanitizeAnalysisProbes` in `services/gemini_service.js` to strip cognitive prefixes (`believes`, `thinks`, `recalls`) and leading interrogatives.
+  - Wire `verifyGroundingFidelity` into `services/gemini_service.js` across generated chunks.
+* **2. Code Verification:**
+  - Immutable test specification contract `test/grounding_verifier.test.js` validating:
+    - Entailment pass for factual target concepts grounded in verbatim text.
+    - Automated rejection (`UNGROUNDED_ENTITY`) for hallucinated actors/entities.
+    - Automated rejection (`FACTUAL_CONTRADICTION_OR_UNENTAILED`) for factual contradictions.
+    - Automated rejection (`CONTEXT_BOUNDING_EXCEEDED`) when chunk span exceeds 3 pages.
+* **3. Digital Samples:**
+  - Synthetic test chunks based on *The Runaway Bunny* validated with 100% test immutability audit pass.
+* **4. Human Verification:**
+  - Zero-subjectivity automated grounding audit verified locally.
 
 ---
 

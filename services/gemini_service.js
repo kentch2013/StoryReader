@@ -2,6 +2,7 @@ import { GoogleGenAI, Type } from '@google/genai';
 import { BOOK_ANALYSIS_SYSTEM_PROMPT, BOOK_ANALYSIS_SCHEMA } from '../prompts/book_analysis.js';
 import { ANSWER_EVALUATION_SYSTEM_PROMPT, ANSWER_EVALUATION_SCHEMA } from '../prompts/answer_evaluation.js';
 import { rateLimiter } from './rate_limiter.js';
+import { verifyGroundingFidelity } from './grounding_verifier.js';
 
 export function safeJsonParse(text) {
   if (!text || typeof text !== 'string') {
@@ -45,6 +46,8 @@ export function getMockBookAnalysis(files = []) {
         chunk_id: 1,
         page_range: 'Pages 1-2',
         chunk_type: 'scene',
+        verbatim_page_text:
+          'Leo was upset when his hat blew away in the park because his grandmother knitted the warm red hat for him and it was special.',
         lookout_prompt:
           'Before you read, keep an eye out for how Leo feels when he loses his favorite hat.',
         checkin_question: 'Why did Leo get upset when his hat blew away?',
@@ -95,6 +98,12 @@ export function getMockBookAnalysis(files = []) {
         hint_level_1: 'Look at who made the hat for Leo.',
         hint_level_2: 'Who knitted that warm red hat?',
         scaffold_hint: 'Think about who made that warm red hat for Leo!',
+        entity_graph: {
+          characters: [
+            { canonical_id: 'char_leo', canonical_name: 'Leo', aliases: ['Leo'] },
+            { canonical_id: 'char_grandma', canonical_name: 'grandmother', aliases: ['grandma', 'granny', 'nana'] },
+          ],
+        },
       },
     ],
   };
@@ -102,15 +111,23 @@ export function getMockBookAnalysis(files = []) {
 
 export function sanitizeAnalysisProbes(analysis) {
   if (!analysis || !Array.isArray(analysis.chunks)) return analysis;
-  const META_COGNITIVE_REGEX = /^(child|student|user)\s+(understands|identifies|identified|knows|confuses|confused|repeats|repeated|focused\s+on)\s+/i;
+  const META_COGNITIVE_REGEX = /^(?:(?:child|student|user)\s+)?(understands|identifies|identified|knows|confuses|confused|repeats|repeated|focused\s+on|believes|thinks|recalls)\s+(?:that\s+)?/i;
+  const LEADING_INTERROGATIVE_REGEX = /^(?:who|what|why|where|when|how|did|does|do|is|are|was|were|can|could|would)\s+(?:did\s+|does\s+|will\s+|was\s+|is\s+)?/i;
 
   for (const chunk of analysis.chunks) {
     if (chunk.diagnostic_probes) {
       for (const [key, probe] of Object.entries(chunk.diagnostic_probes)) {
-        if (probe && typeof probe.hypothesis === 'string' && META_COGNITIVE_REGEX.test(probe.hypothesis)) {
-          probe.hypothesis = probe.hypothesis.replace(META_COGNITIVE_REGEX, '').trim();
-          if (probe.hypothesis.length > 0) {
-            probe.hypothesis = probe.hypothesis.charAt(0).toUpperCase() + probe.hypothesis.slice(1);
+        if (probe && typeof probe.hypothesis === 'string') {
+          let hyp = probe.hypothesis.trim();
+          if (META_COGNITIVE_REGEX.test(hyp)) {
+            hyp = hyp.replace(META_COGNITIVE_REGEX, '').trim();
+          }
+          if (LEADING_INTERROGATIVE_REGEX.test(hyp)) {
+            hyp = hyp.replace(LEADING_INTERROGATIVE_REGEX, '').trim();
+            hyp = hyp.replace(/\?+$/, '').trim();
+          }
+          if (hyp.length > 0) {
+            probe.hypothesis = hyp.charAt(0).toUpperCase() + hyp.slice(1);
           }
         }
       }
@@ -129,7 +146,13 @@ export async function analyzeBookPages(files) {
     if (!process.env.GEMINI_API_KEY && process.env.MOCK_AI !== 'true') {
       console.warn('⚠️ [GEMINI WARNING] GEMINI_API_KEY is missing or empty. Falling back to offline mock mode.');
     }
-    return getMockBookAnalysis(files);
+    const analysis = sanitizeAnalysisProbes(getMockBookAnalysis(files));
+    if (analysis && Array.isArray(analysis.chunks)) {
+      for (const chunk of analysis.chunks) {
+        chunk.grounding_verification = await verifyGroundingFidelity(chunk);
+      }
+    }
+    return analysis;
   }
 
   const apiKey = process.env.GEMINI_API_KEY;
@@ -157,7 +180,13 @@ export async function analyzeBookPages(files) {
     })
   );
 
-  return sanitizeAnalysisProbes(safeJsonParse(response.text));
+  const analysis = sanitizeAnalysisProbes(safeJsonParse(response.text));
+  if (analysis && Array.isArray(analysis.chunks)) {
+    for (const chunk of analysis.chunks) {
+      chunk.grounding_verification = await verifyGroundingFidelity(chunk);
+    }
+  }
+  return analysis;
 }
 
 export function getMockAnswerClassification(data = {}) {
