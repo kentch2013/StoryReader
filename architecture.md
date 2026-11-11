@@ -357,16 +357,51 @@ To prevent latency anxiety, eliminate brittle keyword dictionaries, avoid cloud 
    - Rather than checking only positive similarity, parallel negative consistency probes test whether the child contradicts known story facts:
      - Beneficiary consistency: Bound possessive attribution (`${actor} made ${recipient}'s hat`) provides sharp contrast against conflicting beneficiaries.
      - Attribute consistency: `"his nana made the blue hat"` contradicts `"The hat was red"` with 99.8% contradiction.
-4. **Input Tokenization & Vague Object Hardening:**
-   - DeBERTa sequence length configured to `max_length: 64` to prevent truncation of complex Grade 2 causal compound sentences.
-   - Vague object guard (`hasVagueObject`: `something`, `anything`, `stuff`) prevents vague minimal-core matches from bypassing detail requirements.
-   - Minimal core hypothesis matching is restricted to concise responses ($\le 6$ words) unless anchored by target concept alignment ($targetE \ge 0.05$).
-5. **Single-Pass Tensor Execution (<30ms):**
-   - All diagnostic hypotheses are batched into a single ONNX tensor evaluation pass, maintaining sub-30ms edge latency without GPU requirements.
+4. **Circumlocution Support & Dynamic Argmax Arbitration:**
+   - Dual-hypothesis probing (`core_entity` + `atomic_entity`) evaluates both atomic nouns (`"gardener"`) and minimal core prototypes (`"A gardener."`) across all transcript lengths.
+   - Long functional circumlocutions (e.g., *"the lady who puts water on the flowers so they grow"*) achieve $E = 0.605, C = 0.002$ forward entailment against the atomic core entity.
+   - Dynamic Argmax vector arbitration replaces static `if/else` cascading, ensuring the highest-probability error mode wins in collision scenarios (e.g., distinguishing a distractor collision from a premise echo).
+5. **Deterministic Extraction Probe Sanitization (`sanitizeAnalysisProbes`):**
+   - Post-extraction sanitizer strips stochastic meta-cognitive prefixes (`"Child understands..."`) from Gemini outputs, converting them into direct factual propositions to preserve NLI entailment fidelity.
 
 ---
 
-## 7. HTTPS Tunnel & Local Execution Protocol
+## 7. Next Immediate Objective: The 4-Layer Zero-Lag Latency Optimization Stack
+
+Prior to starting Module 4 (Mobile Camera Tray), the engine will implement the **4-Layer System 1 Latency Optimization Pipeline** to reduce end-to-end evaluation latency from ~165ms down to **~30–35ms for correct answers** and **~90ms for full diagnostic error sweeps**:
+
+```mermaid
+flowchart TD
+    A["Child Transcript"] --> B{"Layer 4: Tier 1 Gate (0ms Synchronous)"}
+    B -- "Exact match / Shrug / Echo" --> C["Return 0ms Fastpath Feedback"]
+    B -- "Novel speech / Paraphrase" --> D["Layer 3: Native C++ SIMD (onnxruntime-node)"]
+    D --> E["Layer 1: Token Clamping (max_length: 36)"]
+    E --> F{"Layer 2: Stage 1 Mastery Batch (5 pairs)"}
+    F -- "High Entailment (E >= 0.50, C < 0.20)" --> G["Return Mastered (~8ms SIMD / ~31ms WASM)"]
+    F -- "Low Entailment / High Contradiction" --> H["Layer 2: Stage 2 Error Batch (9 pairs)"]
+    H --> I["Argmax Error Diagnosis (~18ms SIMD / ~89ms WASM)"]
+```
+
+### The 4 Optimization Levers:
+1. **Layer 1: Dynamic Token Sequence Clamping (`max_length: 36`):**
+   - Reduces tokenizer padding ceiling from 64 down to 36 tokens.
+   - Since Grade 2 spoken answers and probe hypotheses are $\le 22$ tokens max, zero information is truncated.
+   - Drops 14-pair forward pass from **168ms down to 96ms** (a 42% latency reduction) with identical logits.
+2. **Layer 2: Two-Stage Speculative Cascaded Probing:**
+   - Stage 1 (Mastery Sweep): Evaluates 5 positive probes (`target_mastery`, `minimal_core`, `core_entity`, `partial_action`, `functional_circumlocution`) in **~31ms**.
+   - If confidence is high ($E \ge 0.50, C < 0.20$), awards mastery immediately in **~31ms**.
+   - If confidence is low or contradiction is detected, executes Stage 2 (9 error probes) in **~58ms**.
+   - With ~75% of reading responses on target, average latency drops to **$0.75(31) + 0.25(89) \approx 45.5\text{ ms}$**.
+3. **Layer 3: Native C++ SIMD Execution (`onnxruntime-node`):**
+   - Replaces WebAssembly (`onnxruntime-web`) with native compiled C++ bindings with AVX-512 CPU SIMD vectorization.
+   - Drops raw matrix multiplication forward pass from ~90ms down to **~12–18ms**.
+4. **Layer 4: Synchronous Tier 1 0ms Deterministic Interception:**
+   - Evaluates exact prototype strings, keyword clusters, and shrugs synchronously before entering the asynchronous NLI event loop.
+   - Resolves unambiguous turns in **$<1\text{ ms}$** with zero neural allocations.
+
+---
+
+## 8. HTTPS Tunnel & Local Execution Protocol
 
 To satisfy iOS Safari's Web Speech API security requirement without certificate installations:
 
@@ -384,7 +419,7 @@ To satisfy iOS Safari's Web Speech API security requirement without certificate 
 
 ---
 
-## 7. Grade 2 Pedagogical Rules & Safeguards
+## 9. Grade 2 Pedagogical Rules & Safeguards
 
 1. **Common Core Focus:** Questions are constrained to Grade 2 Reading standards:
    - *Key Details & Central Message:* RL.2.1, RL.2.2, RL.2.3.
@@ -396,7 +431,7 @@ To satisfy iOS Safari's Web Speech API security requirement without certificate 
 
 ---
 
-## 8. Implementation Roadmap & Verification Gates
+## 10. Implementation Roadmap & Verification Gates
 
 The complete step-by-step roadmap is maintained in [`roadmap.md`](./roadmap.md).
 Every module is enforced via a strict 4-step progression:

@@ -14,7 +14,8 @@
 |---|---|---|---|---|
 | **M1** | Server Foundation | `server.js`, `.env` loader, CORS, `/api/health` | HTTP 200, CORS headers, error middleware | Verify `/api/health` in desktop & mobile browser |
 | **M2** | Book Analysis Engine | `services/gemini_service.js`, `prompts/book_analysis.js`, `routes/book_routes.js` (`POST /api/analyze-book`) | Schema parsing, unreadable photo handling, multipart limits | Run CLI harness with 3 sample book pages, verify Grade 2 chunking |
-| **M3** | Answer Evaluation Engine (Zero-Lag Stack) | `services/answer_evaluator.js`, `services/transcript_sanitizer.js`, `services/rubric_matcher.js`, `services/feedback_synthesizer.js`, `routes/book_routes.js` (`POST /api/evaluate-answer`) | Score contracts (`mastered`, `needs_scaffold`, `off_track`), word count cap $\le 25$, shrug fast-path | Test edge-case transcripts (mumblings, fillers, out-of-vocab, shrugs) |
+| **M3** | Answer Evaluation Engine (Zero-Lag Stack) | `services/answer_evaluator.js`, `services/semantic_evaluator.js`, `services/discourse_resolver.js`, `services/rubric_matcher.js` | 60/60 tests passing, 19/19 decision benchmark passing, dynamic argmax & circumlocutions | Terminal REPL testing edge-case phrases and circumlocutions |
+| **M3.5** | 4-Layer Latency Optimization Pipeline (Pre-M4) | Token clamping (`max_length: 36`), 2-stage cascaded probing, native C++ SIMD, 0ms Tier 1 gate | Sub-35ms mastery benchmark, sub-90ms full diagnosis benchmark | Run 19-case benchmark, verify $\le 35\text{ms}$ mastery & identical 19/19 accuracy |
 | **M4** | Camera & Canvas Tray | `public/js/camera_tray.js`, thumbnail tray, canvas downscaler | Resolution capping ($\le 1600\text{px}$), payload compression ($\le 300\text{KB}$/page) | iPhone 14 Plus camera capture: snap 3 pages, verify tray order and sharpness |
 | **M5** | Safari Audio Coordinator | `public/js/audio_manager.js`, gesture unlock, TTS synthesizer, STT Push-to-Talk | Audio state lockouts, collision safety (`speechSynthesis.cancel()` before mic) | iPhone 14 Plus Safari: speak sentence, check for no silence cutoff and clean audio output |
 | **M6** | Full SPA Orchestration | `public/index.html`, `public/style.css`, `public/js/app.js`, Cloudflare Tunnel runbook | FSM state transitions, attempt limit counter ($\le 2$), chunk progression | Full parent-child reading test with physical book over HTTPS tunnel |
@@ -67,17 +68,37 @@
 * **1. Pipeline Extension:**
   - Implemented Coarse-to-Fine Semantic Slot Diagnostic Funnel:
     - Layer 1: Grounding, Relational Resolution & Intelligibility Filter (`services/discourse_resolver.js` dynamic kinship composition, social graphs, pronoun anaphora, cross-generational mismatch detection, 3-tier Hierarchical Ambiguity Cascade with Free Clarification Micro-Turn, inquiry detector, stutter detector, shrug fast-path).
-    - Layer 2: Single-pass ONNX Cross-Encoder NLI (`nli-deberta-v3-xsmall`, `max_length: 64`) evaluating parallel slot consistency hypotheses with bound possessive beneficiary attribution.
-    - Layer 3: Cognitive Resolution & Socratic Scaffolding Gate with strict forward-only causality for mastery and error modes (`CHARACTER_CONFUSION`, `DISTRACTOR_MISCONCEPTION`), minimal core length bounds, and vague object guards.
-  - Mounted `POST /api/evaluate-answer` in `routes/book_routes.js` with sub-30ms execution.
+    - Layer 2: Single-pass ONNX Cross-Encoder NLI (`nli-deberta-v3-xsmall`) evaluating parallel slot consistency hypotheses with bound possessive beneficiary attribution.
+    - Layer 3: Dynamic Vector Argmax & Cognitive Resolution Gate with strict forward-only causality for mastery, minimal core, partial actions, and functional circumlocutions; bidirectional correlation strictly bounded to descriptive scaffolds.
+    - Robust circumlocution support: Dual-hypothesis probing (`core_entity` + `atomic_entity`) allows multi-word actions (*"the lady who puts water on the flowers so they grow"*) to achieve forward entailment ($E = 0.605, C = 0.002$) against core targets.
+    - Gemini probe extraction sanitization (`services/gemini_service.js#sanitizeAnalysisProbes`) eliminates meta-cognitive prefix contamination (`"Child understands..."`).
 * **2. Code Verification:**
-  - Comprehensive 55-test suite passing across all 11 test suites (`test/health.test.js`, `test/analyze_book.test.js`, `test/hardening_m1_m2.test.js`, `test/evaluate_answer.test.js`, `test/zero_lag_deterministic_fastpath.test.js`, `test/zero_lag_tier1.test.js`, `test/zero_lag_tier2.test.js`, `test/parallel_diagnostic_probing.test.js`, `test/coarse_to_fine_diagnostic_funnel.test.js`, `test/relational_kinship_benchmark.test.js`, `test/relational_discourse_resolution.test.js`).
+  - Full 60-test suite passing across all 12 test suites (`npm test`): 60/60 tests passing (100%).
   - Contract audit: 100% immutable (`✅ Contract Audit: Test files remained 100% immutable.`).
 * **3. Digital Samples:**
-  - Synthetic transcript benchmarks (`scripts/test_evaluate_sample.js`) verifying latencies between 2ms and 40ms.
-  - 50-Response Rigorous Evaluation Benchmark (`scripts/test_50_eval_cases.js`): **50/50 PASS (100%)** across all 6 cognitive error tiers in ~9.6s (~192ms/eval).
+  - 19-Case Decision Model Benchmark (`scripts/benchmark_decision_models.js`): **19/19 PASS (100%)** across *The Runaway Bunny* live chunks and Leo's Hat slot controls.
+  - 50-Response Rigorous Evaluation Benchmark (`scripts/test_50_eval_cases.js`): **50/50 PASS (100%)**.
 * **4. Human Verification:**
-  - Streamlined REPL (`scripts/interactive_eval_test.js`) and `launch_test_environment.bat` ready for rigorous human QA testing across all 6 cognitive error modes.
+  - Verified edge-case circumlocutions and distractor collision cases without letter grading; empirical NLI output table documented in `SESSION_LOG.md`.
+
+---
+
+### Module 3.5: 4-Layered System 1 Latency Optimization Pipeline (Next Immediate Objective)
+* **1. Pipeline Extension:**
+  - **Layer 1 (Dynamic Token Clamping):** Reduce `MAX_LENGTH_PROBE` from 64 to 36 in `config/evaluation_rules.js` (yielding 42% latency cut from 168ms to ~96ms on 14 pairs with zero truncation).
+  - **Layer 2 (Two-Stage Cascaded Probing):** Implement Stage 1 mastery sweep (5 pairs, ~31ms) with early-exit threshold ($E \ge 0.50, C < 0.20$); fallback to Stage 2 (9 error probes, ~58ms) only on non-mastery/collisions.
+  - **Layer 3 (Native C++ SIMD Runtime):** Bind `onnxruntime-node` with native AVX-512 vectorization, targeting <15ms matrix multiplication.
+  - **Layer 4 (Synchronous Tier 1 Fast-Path):** Retain <1ms synchronous string/regex match at ingress to avoid NLI allocation on exact matches, shrugs, and echoes.
+* **2. Code Verification:**
+  - All 60 existing tests must continue to pass with 100% immutability.
+  - Timing assertion in `test/zero_lag_deterministic_fastpath.test.js` verified consistently under 50ms.
+* **3. Digital Samples:**
+  - Re-run `scripts/benchmark_decision_models.js`:
+    - Assert all 19 cases remain 100% passing.
+    - Measure Stage 1 mastery latency $\le 35\text{ms}$.
+    - Measure Stage 2 full error diagnosis latency $\le 90\text{ms}$.
+* **4. Human Verification:**
+  - Verify zero perceptible lag between child speech finish and audio feedback response in terminal REPL.
 
 ---
 

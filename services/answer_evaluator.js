@@ -221,6 +221,7 @@ export async function evaluateChildAnswer(data = {}) {
 
   if (isEcho) {
     diagnostics.tier_resolved = 'TIER_1_QUESTION_ECHO_SCAFFOLD';
+    diagnostics.cognitive_diagnosis = 'PREMISE_ECHO';
     if (attempt >= 2) {
       return makeEvalResult({
         status: 'off_track',
@@ -245,13 +246,14 @@ export async function evaluateChildAnswer(data = {}) {
     });
   }
 
-  // Tier 1 Deterministic: Canonical Prototypes Token Matcher
+  // Tier 1 Deterministic: Canonical Prototypes Token Matcher (0ms)
   if (Array.isArray(data.canonical_prototypes) && data.canonical_prototypes.length > 0) {
     const protoResult = scoreMultiReference(grounded, data.canonical_prototypes);
     diagnostics.tier1.prototype_token_match = protoResult;
 
     if (protoResult.isDistractor) {
       diagnostics.tier_resolved = 'TIER_1_DISTRACTOR_TOKEN_MATCH';
+      diagnostics.cognitive_diagnosis = 'DISTRACTOR_MISCONCEPTION';
       if (attempt >= 2) {
         return makeEvalResult({
           status: 'off_track',
@@ -277,8 +279,10 @@ export async function evaluateChildAnswer(data = {}) {
       });
     }
 
-    if (protoResult.matched) {
+    const hasSlotContext = Boolean(data.story_context?.recipient || data.story_context?.object);
+    if (!hasSlotContext && protoResult.matched) {
       diagnostics.tier_resolved = `TIER_1_PROTOTYPE_${protoResult.prototypeType?.toUpperCase()}`;
+      diagnostics.cognitive_diagnosis = 'MASTERED';
       return makeEvalResult({
         status: 'mastered',
         spoken_feedback: feedback.praise,
@@ -292,13 +296,16 @@ export async function evaluateChildAnswer(data = {}) {
     }
   }
 
-  // Tier 1 Deterministic: Exact Keyword Clusters or Acceptable Phrasings Match
+  // Tier 1 Deterministic: Exact Keyword Clusters or Acceptable Phrasings Match (0ms)
+  // Gated: When story_context slot constraints exist (e.g. recipient/object), bypass to Layer 2 for slot validation
+  const hasSlotContext = Boolean(data.story_context?.recipient || data.story_context?.object);
   const clusterMatch = matchKeywordClusters(grounded, data.keyword_clusters);
   const phrasingMatch = matchAcceptablePhrasings(grounded, data.acceptable_phrasings);
   diagnostics.tier1.phrasing_match = phrasingMatch;
 
-  if (clusterMatch || phrasingMatch) {
+  if (!hasSlotContext && (clusterMatch || phrasingMatch)) {
     diagnostics.tier_resolved = clusterMatch ? 'TIER_1_CLUSTER_ALL_MATCH' : 'TIER_1_PHRASING_MATCH';
+    diagnostics.cognitive_diagnosis = 'MASTERED';
     return makeEvalResult({
       status: 'mastered',
       spoken_feedback: feedback.praise,

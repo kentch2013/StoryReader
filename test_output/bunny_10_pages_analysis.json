@@ -1,0 +1,515 @@
+{
+  "is_legible": true,
+  "book_type": "fiction",
+  "summary": "A little bunny tells his mother all the imaginary ways he will run away from home. His mother tenderly explains how she will always find and care for him no matter where he goes.",
+  "chunks": [
+    {
+      "chunk_id": 1,
+      "page_range": "2-3",
+      "chunk_type": "scene",
+      "lookout_prompt": "Before you read, watch for what mother bunny does if bunny runs away.",
+      "checkin_question": "What will the mother bunny do if the little bunny runs away?",
+      "question_type": "cause_and_effect",
+      "target_answer_concept": "The mother bunny will run after her little bunny.",
+      "keyword_clusters": [
+        {
+          "concept_name": "mother",
+          "synonyms": [
+            "mother",
+            "mom",
+            "mother bunny",
+            "mama"
+          ]
+        },
+        {
+          "concept_name": "run after",
+          "synonyms": [
+            "run after",
+            "chase",
+            "follow",
+            "run after him"
+          ]
+        }
+      ],
+      "acceptable_phrasings": [
+        "She will run after him.",
+        "His mom will chase after the bunny."
+      ],
+      "canonical_prototypes": [
+        {
+          "type": "formal_full",
+          "text": "The mother bunny will run after her little bunny."
+        },
+        {
+          "type": "colloquial",
+          "text": "She's gonna run right after him."
+        },
+        {
+          "type": "minimal_core",
+          "text": "Run after him."
+        },
+        {
+          "type": "functional_circumlocution",
+          "text": "The big bunny will chase where he goes."
+        },
+        {
+          "type": "partial_action",
+          "text": "She will run."
+        },
+        {
+          "type": "common_distractor",
+          "text": "The mother will let him run away."
+        }
+      ],
+      "diagnostic_probes": {
+        "target_mastery": {
+          "hypothesis": "The mother bunny will run after her little bunny.",
+          "feedback": "Great reading! She will run after him wherever he goes."
+        },
+        "minimal_core": {
+          "hypothesis": "The mother bunny will run after him.",
+          "feedback": "That's right! She follows him."
+        },
+        "superficial_attribute": {
+          "hypothesis": "The white bunny runs through the grass.",
+          "scaffold": "Look at the text at the bottom. What will the mother do if he runs away?"
+        },
+        "premise_echo": {
+          "hypothesis": "The little bunny says he is running away.",
+          "scaffold": "Check what his mother says right after he speaks."
+        },
+        "character_confusion": {
+          "hypothesis": "The little bunny will run after his mother.",
+          "scaffold": "Who is running away and who is following?"
+        },
+        "distractor_misconception": {
+          "hypothesis": "The mother bunny will stay home alone.",
+          "scaffold": "Read the third line to see what mother promises to do."
+        }
+      },
+      "hint_level_1": "Look at the text lines on page 3.",
+      "hint_level_2": "What does mother say she will do right after he runs?",
+      "scaffold_hint": "Look at the text lines on page 3.",
+      "entity_graph": {
+        "characters": [
+          {
+            "canonical_id": "little_bunny",
+            "canonical_name": "Little Bunny",
+            "aliases": [
+              "bunny",
+              "little bunny"
+            ],
+            "gender": "male",
+            "kinship_compositions": [
+              "child of mother_bunny"
+            ]
+          },
+          {
+            "canonical_id": "mother_bunny",
+            "canonical_name": "Mother Bunny",
+            "aliases": [
+              "mother",
+              "his mother",
+              "mother bunny"
+            ],
+            "gender": "female",
+            "kinship_compositions": [
+              "mother of little_bunny"
+            ]
+          }
+        ],
+        "social_relations": [
+          {
+            "subject_id": "mother_bunny",
+            "relation": "parent_of",
+            "target_id": "little_bunny",
+            "aliases": [
+              "mother of"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "chunk_id": 2,
+      "page_range": "4-5",
+      "chunk_type": "scene",
+      "lookout_prompt": "Before you read, watch for what mother becomes if bunny swims away.",
+      "checkin_question": "What will mother become if bunny becomes a fish?",
+      "question_type": "character_motivation",
+      "target_answer_concept": "The mother bunny will become a fisherman to fish for him.",
+      "keyword_clusters": [
+        {
+          "concept_name": "fisherman",
+          "synonyms": [
+            "fisherman",
+            "fisher",
+            "person fishing",
+            "angler"
+          ]
+        },
+        {
+          "concept_name": "fish for him",
+          "synonyms": [
+            "fish for him",
+            "catch him",
+            "catch the fish",
+            "fish"
+          ]
+        }
+      ],
+      "acceptable_phrasings": [
+        "She will become a fisherman.",
+        "Mother will be a fisherman to catch him."
+      ],
+      "canonical_prototypes": [
+        {
+          "type": "formal_full",
+          "text": "The mother bunny will become a fisherman to fish for him."
+        },
+        {
+          "type": "colloquial",
+          "text": "She'll turn into a fisherman."
+        },
+        {
+          "type": "minimal_core",
+          "text": "A fisherman."
+        },
+        {
+          "type": "functional_circumlocution",
+          "text": "Someone who catches fish with a net or pole."
+        },
+        {
+          "type": "partial_action",
+          "text": "She will fish."
+        },
+        {
+          "type": "common_distractor",
+          "text": "She will become a fish too."
+        }
+      ],
+      "diagnostic_probes": {
+        "target_mastery": {
+          "hypothesis": "The mother bunny will become a fisherman to catch him.",
+          "feedback": "Spot on! She becomes a fisherman to stay close to him."
+        },
+        "minimal_core": {
+          "hypothesis": "The mother will become a fisherman.",
+          "feedback": "Exactly right!"
+        },
+        "superficial_attribute": {
+          "hypothesis": "There are black boots hanging on the wall.",
+          "scaffold": "Look at the text on the right page. What will she become?"
+        },
+        "premise_echo": {
+          "hypothesis": "The little bunny becomes a fish in a stream.",
+          "scaffold": "Read what the mother says she will become on the right page."
+        },
+        "character_confusion": {
+          "hypothesis": "The little bunny will become a fisherman.",
+          "scaffold": "The little bunny is the fish. What does the mother become?"
+        },
+        "distractor_misconception": {
+          "hypothesis": "The mother will become a bird.",
+          "scaffold": "Check the words on the right page next to the boots."
+        }
+      },
+      "hint_level_1": "Look at the text under the boots on page 5.",
+      "hint_level_2": "What kind of person catches fish in a stream?",
+      "scaffold_hint": "Look at the text under the boots on page 5.",
+      "entity_graph": {
+        "characters": [
+          {
+            "canonical_id": "little_bunny",
+            "canonical_name": "Little Bunny",
+            "aliases": [
+              "bunny",
+              "little bunny",
+              "fish"
+            ],
+            "gender": "male",
+            "kinship_compositions": [
+              "child of mother_bunny"
+            ]
+          },
+          {
+            "canonical_id": "mother_bunny",
+            "canonical_name": "Mother Bunny",
+            "aliases": [
+              "his mother",
+              "fisherman"
+            ],
+            "gender": "female",
+            "kinship_compositions": [
+              "mother of little_bunny"
+            ]
+          }
+        ],
+        "social_relations": [
+          {
+            "subject_id": "mother_bunny",
+            "relation": "parent_of",
+            "target_id": "little_bunny",
+            "aliases": [
+              "mother of"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "chunk_id": 3,
+      "page_range": "8-9",
+      "chunk_type": "scene",
+      "lookout_prompt": "Before you read, watch for what mother becomes in the garden.",
+      "checkin_question": "What will mother become if bunny becomes a crocus flower?",
+      "question_type": "literal_fact",
+      "target_answer_concept": "The mother bunny will become a gardener to find him.",
+      "keyword_clusters": [
+        {
+          "concept_name": "gardener",
+          "synonyms": [
+            "gardener",
+            "garden worker",
+            "plant keeper",
+            "gardner"
+          ]
+        },
+        {
+          "concept_name": "find him",
+          "synonyms": [
+            "find him",
+            "water him",
+            "look for him",
+            "find the flower"
+          ]
+        }
+      ],
+      "acceptable_phrasings": [
+        "She will be a gardener.",
+        "His mother will become a gardener and find him."
+      ],
+      "canonical_prototypes": [
+        {
+          "type": "formal_full",
+          "text": "The mother bunny will become a gardener and find him."
+        },
+        {
+          "type": "colloquial",
+          "text": "She will turn into a gardener."
+        },
+        {
+          "type": "minimal_core",
+          "text": "A gardener."
+        },
+        {
+          "type": "functional_circumlocution",
+          "text": "The lady who waters plants with a can."
+        },
+        {
+          "type": "partial_action",
+          "text": "She will find him."
+        },
+        {
+          "type": "common_distractor",
+          "text": "She will become a flower."
+        }
+      ],
+      "diagnostic_probes": {
+        "target_mastery": {
+          "hypothesis": "The mother bunny will become a gardener to find him.",
+          "feedback": "Wonderful job! She will be a gardener."
+        },
+        "minimal_core": {
+          "hypothesis": "The mother becomes a gardener.",
+          "feedback": "Correct! She is the gardener."
+        },
+        "superficial_attribute": {
+          "hypothesis": "The rabbit holds a dark watering can.",
+          "scaffold": "Look at the bottom text on the right. What job will mother take?"
+        },
+        "premise_echo": {
+          "hypothesis": "The bunny becomes a crocus in a hidden garden.",
+          "scaffold": "Notice what mother says she will be in response."
+        },
+        "character_confusion": {
+          "hypothesis": "The little bunny will become a gardener.",
+          "scaffold": "The little bunny is the crocus. Who is the gardener?"
+        },
+        "distractor_misconception": {
+          "hypothesis": "The mother will become a mountain climber.",
+          "scaffold": "Read the sentence on page 9 right under the watering can illustration."
+        }
+      },
+      "hint_level_1": "Look at the text on page 9 under the watering can.",
+      "hint_level_2": "Who takes care of flowers in a garden?",
+      "scaffold_hint": "Look at the text on page 9 under the watering can.",
+      "entity_graph": {
+        "characters": [
+          {
+            "canonical_id": "little_bunny",
+            "canonical_name": "Little Bunny",
+            "aliases": [
+              "crocus",
+              "little bunny"
+            ],
+            "gender": "male",
+            "kinship_compositions": [
+              "child of mother_bunny"
+            ]
+          },
+          {
+            "canonical_id": "mother_bunny",
+            "canonical_name": "Mother Bunny",
+            "aliases": [
+              "his mother",
+              "gardener"
+            ],
+            "gender": "female",
+            "kinship_compositions": [
+              "mother of little_bunny"
+            ]
+          }
+        ],
+        "social_relations": [
+          {
+            "subject_id": "mother_bunny",
+            "relation": "parent_of",
+            "target_id": "little_bunny",
+            "aliases": [
+              "mother of"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "chunk_id": 4,
+      "page_range": "18-19",
+      "chunk_type": "scene",
+      "lookout_prompt": "Before you read, watch for what bunny decides at the end.",
+      "checkin_question": "What does the little bunny decide to do at the end?",
+      "question_type": "sequential_action",
+      "target_answer_concept": "The little bunny decides to stay home with his mother.",
+      "keyword_clusters": [
+        {
+          "concept_name": "stay",
+          "synonyms": [
+            "stay",
+            "stay home",
+            "remain",
+            "not run away",
+            "stay where he is"
+          ]
+        },
+        {
+          "concept_name": "little bunny",
+          "synonyms": [
+            "little bunny",
+            "her bunny",
+            "mother's bunny",
+            "home"
+          ]
+        }
+      ],
+      "acceptable_phrasings": [
+        "He decides to stay where he is.",
+        "The bunny will stay and be her little bunny."
+      ],
+      "canonical_prototypes": [
+        {
+          "type": "formal_full",
+          "text": "The little bunny decides to stay where he is and be her bunny."
+        },
+        {
+          "type": "colloquial",
+          "text": "He just stays home with his mom."
+        },
+        {
+          "type": "minimal_core",
+          "text": "Stay where he is."
+        },
+        {
+          "type": "functional_circumlocution",
+          "text": "He stops running away and stays put."
+        },
+        {
+          "type": "partial_action",
+          "text": "He stays."
+        },
+        {
+          "type": "common_distractor",
+          "text": "He runs away to the circus."
+        }
+      ],
+      "diagnostic_probes": {
+        "target_mastery": {
+          "hypothesis": "The little bunny decides to stay home with his mother.",
+          "feedback": "Excellent! He realizes his mother will always love and care for him."
+        },
+        "minimal_core": {
+          "hypothesis": "The little bunny will stay.",
+          "feedback": "Yes! He stays right where he is."
+        },
+        "superficial_attribute": {
+          "hypothesis": "The bunny sits under a big tree eating.",
+          "scaffold": "Look at the words on page 18. What does bunny decide to do?"
+        },
+        "premise_echo": {
+          "hypothesis": "The mother bunny gives him a carrot.",
+          "scaffold": "Read what the bunny says first on page 18."
+        },
+        "character_confusion": {
+          "hypothesis": "The mother bunny decides to run away.",
+          "scaffold": "Who changes their mind about running away?"
+        },
+        "distractor_misconception": {
+          "hypothesis": "The bunny runs away to the woods.",
+          "scaffold": "Read the first sentence on page 18 to see what he says."
+        }
+      },
+      "hint_level_1": "Look at the text spoken by the bunny on page 18.",
+      "hint_level_2": "Does the bunny run away or stay where he is?",
+      "scaffold_hint": "Look at the text spoken by the bunny on page 18.",
+      "entity_graph": {
+        "characters": [
+          {
+            "canonical_id": "little_bunny",
+            "canonical_name": "Little Bunny",
+            "aliases": [
+              "bunny",
+              "little bunny"
+            ],
+            "gender": "male",
+            "kinship_compositions": [
+              "child of mother_bunny"
+            ]
+          },
+          {
+            "canonical_id": "mother_bunny",
+            "canonical_name": "Mother Bunny",
+            "aliases": [
+              "mother bunny",
+              "his mother"
+            ],
+            "gender": "female",
+            "kinship_compositions": [
+              "mother of little_bunny"
+            ]
+          }
+        ],
+        "social_relations": [
+          {
+            "subject_id": "mother_bunny",
+            "relation": "parent_of",
+            "target_id": "little_bunny",
+            "aliases": [
+              "mother of"
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "error_message": null
+}

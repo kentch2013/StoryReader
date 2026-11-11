@@ -1,0 +1,1262 @@
+{
+  "total": 19,
+  "passed": 16,
+  "failed": 3,
+  "results": [
+    {
+      "id": "fish_direct",
+      "category": "Direct Keyword",
+      "text": "she will be a fisherman",
+      "status": "mastered",
+      "expectedStatus": "mastered",
+      "diagnosis": "MASTERED",
+      "expectedDiagnosis": null,
+      "passed": true,
+      "latency": 1261,
+      "probeScores": {
+        "target_mastery": {
+          "entailment": 0.008,
+          "contradiction": 0.001,
+          "neutral": 0.991,
+          "fwd_e": 0.008,
+          "fwd_c": 0.001
+        },
+        "minimal_core": {
+          "entailment": 0.993,
+          "contradiction": 0.001,
+          "neutral": 0.006,
+          "fwd_e": 0.993,
+          "fwd_c": 0.001
+        },
+        "superficial_attribute": {
+          "entailment": 0.014,
+          "contradiction": 0.83,
+          "neutral": 0.156,
+          "fwd_e": 0.004,
+          "fwd_c": 0.009
+        },
+        "premise_echo": {
+          "entailment": 0.004,
+          "contradiction": 0.906,
+          "neutral": 0.09,
+          "fwd_e": 0.001,
+          "fwd_c": 0.995
+        },
+        "character_confusion": {
+          "entailment": 0.096,
+          "contradiction": 0.877,
+          "neutral": 0.027,
+          "fwd_e": 0.096,
+          "fwd_c": 0.877
+        },
+        "distractor_misconception": {
+          "entailment": 0.018,
+          "contradiction": 0.968,
+          "neutral": 0.015,
+          "fwd_e": 0.018,
+          "fwd_c": 0.968
+        },
+        "functional_circumlocution": {
+          "entailment": 0.163,
+          "contradiction": 0.001,
+          "neutral": 0.836,
+          "fwd_e": 0.163,
+          "fwd_c": 0.001
+        }
+      }
+    },
+    {
+      "id": "garden_formal",
+      "category": "Formal Clausal",
+      "text": "she will be a gardener and find him",
+      "status": "mastered",
+      "expectedStatus": "mastered",
+      "diagnosis": "MASTERED",
+      "expectedDiagnosis": null,
+      "passed": true,
+      "latency": 115,
+      "probeScores": {
+        "target_mastery": {
+          "entailment": 0.985,
+          "contradiction": 0.001,
+          "neutral": 0.014,
+          "fwd_e": 0.985,
+          "fwd_c": 0.001
+        },
+        "minimal_core": {
+          "entailment": 0.988,
+          "contradiction": 0.002,
+          "neutral": 0.01,
+          "fwd_e": 0.988,
+          "fwd_c": 0.002
+        },
+        "superficial_attribute": {
+          "entailment": 0.007,
+          "contradiction": 0.015,
+          "neutral": 0.977,
+          "fwd_e": 0.001,
+          "fwd_c": 0.002
+        },
+        "premise_echo": {
+          "entailment": 0.004,
+          "contradiction": 0.027,
+          "neutral": 0.969,
+          "fwd_e": 0.001,
+          "fwd_c": 0.902
+        },
+        "character_confusion": {
+          "entailment": 0.002,
+          "contradiction": 0.977,
+          "neutral": 0.02,
+          "fwd_e": 0.002,
+          "fwd_c": 0.977
+        },
+        "distractor_misconception": {
+          "entailment": 0,
+          "contradiction": 0.999,
+          "neutral": 0.001,
+          "fwd_e": 0,
+          "fwd_c": 0.999
+        },
+        "functional_circumlocution": {
+          "entailment": 0.018,
+          "contradiction": 0.044,
+          "neutral": 0.938,
+          "fwd_e": 0.002,
+          "fwd_c": 0.016
+        }
+      }
+    },
+    {
+      "id": "stay_paraphrase",
+      "category": "Paraphrase",
+      "text": "he is gonna stay right where he is with his mommy",
+      "status": "mastered",
+      "expectedStatus": "mastered",
+      "diagnosis": "MASTERED",
+      "expectedDiagnosis": null,
+      "passed": true,
+      "latency": 112,
+      "probeScores": {
+        "target_mastery": {
+          "entailment": 0.77,
+          "contradiction": 0.002,
+          "neutral": 0.228,
+          "fwd_e": 0.77,
+          "fwd_c": 0.002
+        },
+        "minimal_core": {
+          "entailment": 0.992,
+          "contradiction": 0,
+          "neutral": 0.008,
+          "fwd_e": 0.992,
+          "fwd_c": 0
+        },
+        "superficial_attribute": {
+          "entailment": 0.009,
+          "contradiction": 0.134,
+          "neutral": 0.857,
+          "fwd_e": 0.001,
+          "fwd_c": 0.512
+        },
+        "premise_echo": {
+          "entailment": 0.014,
+          "contradiction": 0.103,
+          "neutral": 0.883,
+          "fwd_e": 0.002,
+          "fwd_c": 0.01
+        },
+        "character_confusion": {
+          "entailment": 0,
+          "contradiction": 0.998,
+          "neutral": 0.002,
+          "fwd_e": 0,
+          "fwd_c": 0.998
+        },
+        "distractor_misconception": {
+          "entailment": 0,
+          "contradiction": 0.999,
+          "neutral": 0.001,
+          "fwd_e": 0,
+          "fwd_c": 0.999
+        },
+        "functional_circumlocution": {
+          "entailment": 0.008,
+          "contradiction": 0.021,
+          "neutral": 0.971,
+          "fwd_e": 0.008,
+          "fwd_c": 0.021
+        }
+      }
+    },
+    {
+      "id": "fish_minimal",
+      "category": "Minimal Core",
+      "text": "a fisherman",
+      "status": "mastered",
+      "expectedStatus": "mastered",
+      "diagnosis": "MASTERED",
+      "expectedDiagnosis": null,
+      "passed": true,
+      "latency": 138,
+      "probeScores": {
+        "target_mastery": {
+          "entailment": 0.001,
+          "contradiction": 0.964,
+          "neutral": 0.035,
+          "fwd_e": 0.001,
+          "fwd_c": 0.964
+        },
+        "minimal_core": {
+          "entailment": 0.002,
+          "contradiction": 0.018,
+          "neutral": 0.98,
+          "fwd_e": 0.002,
+          "fwd_c": 0.018
+        },
+        "superficial_attribute": {
+          "entailment": 0.027,
+          "contradiction": 0.035,
+          "neutral": 0.938,
+          "fwd_e": 0.011,
+          "fwd_c": 0.019
+        },
+        "premise_echo": {
+          "entailment": 0.009,
+          "contradiction": 0.859,
+          "neutral": 0.133,
+          "fwd_e": 0,
+          "fwd_c": 0.997
+        },
+        "character_confusion": {
+          "entailment": 0.007,
+          "contradiction": 0.774,
+          "neutral": 0.218,
+          "fwd_e": 0.007,
+          "fwd_c": 0.774
+        },
+        "distractor_misconception": {
+          "entailment": 0.005,
+          "contradiction": 0.979,
+          "neutral": 0.016,
+          "fwd_e": 0.005,
+          "fwd_c": 0.979
+        },
+        "core_entity": {
+          "entailment": 0.881,
+          "contradiction": 0.016,
+          "neutral": 0.103,
+          "fwd_e": 0.881,
+          "fwd_c": 0.016
+        },
+        "functional_circumlocution": {
+          "entailment": 0.956,
+          "contradiction": 0.001,
+          "neutral": 0.044,
+          "fwd_e": 0.357,
+          "fwd_c": 0.001
+        }
+      }
+    },
+    {
+      "id": "garden_minimal",
+      "category": "Minimal Core",
+      "text": "a gardener",
+      "status": "mastered",
+      "expectedStatus": "mastered",
+      "diagnosis": "MASTERED",
+      "expectedDiagnosis": null,
+      "passed": true,
+      "latency": 131,
+      "probeScores": {
+        "target_mastery": {
+          "entailment": 0.002,
+          "contradiction": 0.796,
+          "neutral": 0.202,
+          "fwd_e": 0.002,
+          "fwd_c": 0.796
+        },
+        "minimal_core": {
+          "entailment": 0.001,
+          "contradiction": 0.004,
+          "neutral": 0.995,
+          "fwd_e": 0.001,
+          "fwd_c": 0.004
+        },
+        "superficial_attribute": {
+          "entailment": 0.024,
+          "contradiction": 0.825,
+          "neutral": 0.151,
+          "fwd_e": 0.003,
+          "fwd_c": 0.965
+        },
+        "premise_echo": {
+          "entailment": 0.078,
+          "contradiction": 0.04,
+          "neutral": 0.881,
+          "fwd_e": 0,
+          "fwd_c": 0.998
+        },
+        "character_confusion": {
+          "entailment": 0.004,
+          "contradiction": 0.745,
+          "neutral": 0.251,
+          "fwd_e": 0.004,
+          "fwd_c": 0.745
+        },
+        "distractor_misconception": {
+          "entailment": 0,
+          "contradiction": 0.992,
+          "neutral": 0.008,
+          "fwd_e": 0,
+          "fwd_c": 0.992
+        },
+        "core_entity": {
+          "entailment": 0.845,
+          "contradiction": 0.029,
+          "neutral": 0.126,
+          "fwd_e": 0.845,
+          "fwd_c": 0.029
+        },
+        "functional_circumlocution": {
+          "entailment": 0.524,
+          "contradiction": 0.003,
+          "neutral": 0.473,
+          "fwd_e": 0.002,
+          "fwd_c": 0.039
+        }
+      }
+    },
+    {
+      "id": "stay_minimal",
+      "category": "Minimal Core",
+      "text": "stay home",
+      "status": "mastered",
+      "expectedStatus": "mastered",
+      "diagnosis": "MASTERED",
+      "expectedDiagnosis": null,
+      "passed": true,
+      "latency": 127,
+      "probeScores": {
+        "target_mastery": {
+          "entailment": 0.001,
+          "contradiction": 0.005,
+          "neutral": 0.993,
+          "fwd_e": 0.001,
+          "fwd_c": 0.005
+        },
+        "minimal_core": {
+          "entailment": 0.003,
+          "contradiction": 0.005,
+          "neutral": 0.992,
+          "fwd_e": 0.003,
+          "fwd_c": 0.005
+        },
+        "superficial_attribute": {
+          "entailment": 0.001,
+          "contradiction": 0.971,
+          "neutral": 0.028,
+          "fwd_e": 0.001,
+          "fwd_c": 0.971
+        },
+        "premise_echo": {
+          "entailment": 0.001,
+          "contradiction": 0.945,
+          "neutral": 0.054,
+          "fwd_e": 0.001,
+          "fwd_c": 0.945
+        },
+        "character_confusion": {
+          "entailment": 0,
+          "contradiction": 0.999,
+          "neutral": 0.001,
+          "fwd_e": 0,
+          "fwd_c": 0.999
+        },
+        "distractor_misconception": {
+          "entailment": 0,
+          "contradiction": 0.998,
+          "neutral": 0.002,
+          "fwd_e": 0,
+          "fwd_c": 0.998
+        },
+        "core_entity": {
+          "entailment": 0.3,
+          "contradiction": 0.01,
+          "neutral": 0.69,
+          "fwd_e": 0.3,
+          "fwd_c": 0.01
+        },
+        "functional_circumlocution": {
+          "entailment": 0.623,
+          "contradiction": 0.012,
+          "neutral": 0.365,
+          "fwd_e": 0.012,
+          "fwd_c": 0.001
+        }
+      }
+    },
+    {
+      "id": "fish_net",
+      "category": "Circumlocution",
+      "text": "the person who catches fish with a net",
+      "status": "mastered",
+      "expectedStatus": "mastered",
+      "diagnosis": "MASTERED",
+      "expectedDiagnosis": null,
+      "passed": true,
+      "latency": 111,
+      "probeScores": {
+        "target_mastery": {
+          "entailment": 0.002,
+          "contradiction": 0.908,
+          "neutral": 0.09,
+          "fwd_e": 0.002,
+          "fwd_c": 0.908
+        },
+        "minimal_core": {
+          "entailment": 0.002,
+          "contradiction": 0.01,
+          "neutral": 0.989,
+          "fwd_e": 0.002,
+          "fwd_c": 0.01
+        },
+        "superficial_attribute": {
+          "entailment": 0.011,
+          "contradiction": 0.078,
+          "neutral": 0.911,
+          "fwd_e": 0.011,
+          "fwd_c": 0.078
+        },
+        "premise_echo": {
+          "entailment": 0.005,
+          "contradiction": 0.771,
+          "neutral": 0.225,
+          "fwd_e": 0,
+          "fwd_c": 0.995
+        },
+        "character_confusion": {
+          "entailment": 0.005,
+          "contradiction": 0.881,
+          "neutral": 0.114,
+          "fwd_e": 0.005,
+          "fwd_c": 0.881
+        },
+        "distractor_misconception": {
+          "entailment": 0.003,
+          "contradiction": 0.991,
+          "neutral": 0.007,
+          "fwd_e": 0.003,
+          "fwd_c": 0.991
+        },
+        "functional_circumlocution": {
+          "entailment": 0.94,
+          "contradiction": 0.004,
+          "neutral": 0.056,
+          "fwd_e": 0.054,
+          "fwd_c": 0.002
+        }
+      }
+    },
+    {
+      "id": "fish_rod",
+      "category": "Circumlocution",
+      "text": "someone who goes in the water with a fishing rod",
+      "status": "mastered",
+      "expectedStatus": "mastered",
+      "diagnosis": "MASTERED",
+      "expectedDiagnosis": null,
+      "passed": true,
+      "latency": 143,
+      "probeScores": {
+        "target_mastery": {
+          "entailment": 0.005,
+          "contradiction": 0.618,
+          "neutral": 0.377,
+          "fwd_e": 0.005,
+          "fwd_c": 0.618
+        },
+        "minimal_core": {
+          "entailment": 0.006,
+          "contradiction": 0.013,
+          "neutral": 0.981,
+          "fwd_e": 0.006,
+          "fwd_c": 0.013
+        },
+        "superficial_attribute": {
+          "entailment": 0.036,
+          "contradiction": 0.557,
+          "neutral": 0.407,
+          "fwd_e": 0.008,
+          "fwd_c": 0.044
+        },
+        "premise_echo": {
+          "entailment": 0.003,
+          "contradiction": 0.917,
+          "neutral": 0.08,
+          "fwd_e": 0.001,
+          "fwd_c": 0.98
+        },
+        "character_confusion": {
+          "entailment": 0.028,
+          "contradiction": 0.176,
+          "neutral": 0.796,
+          "fwd_e": 0.028,
+          "fwd_c": 0.176
+        },
+        "distractor_misconception": {
+          "entailment": 0.004,
+          "contradiction": 0.986,
+          "neutral": 0.01,
+          "fwd_e": 0.004,
+          "fwd_c": 0.986
+        },
+        "functional_circumlocution": {
+          "entailment": 0.938,
+          "contradiction": 0.015,
+          "neutral": 0.048,
+          "fwd_e": 0.05,
+          "fwd_c": 0.661
+        }
+      }
+    },
+    {
+      "id": "garden_can",
+      "category": "Circumlocution",
+      "text": "the lady who waters plants with a can",
+      "status": "mastered",
+      "expectedStatus": "mastered",
+      "diagnosis": "MASTERED",
+      "expectedDiagnosis": null,
+      "passed": true,
+      "latency": 128,
+      "probeScores": {
+        "target_mastery": {
+          "entailment": 0.003,
+          "contradiction": 0.6,
+          "neutral": 0.397,
+          "fwd_e": 0.003,
+          "fwd_c": 0.6
+        },
+        "minimal_core": {
+          "entailment": 0.004,
+          "contradiction": 0.001,
+          "neutral": 0.994,
+          "fwd_e": 0.004,
+          "fwd_c": 0.001
+        },
+        "superficial_attribute": {
+          "entailment": 0.002,
+          "contradiction": 0.958,
+          "neutral": 0.039,
+          "fwd_e": 0.001,
+          "fwd_c": 0.983
+        },
+        "premise_echo": {
+          "entailment": 0,
+          "contradiction": 0.999,
+          "neutral": 0.001,
+          "fwd_e": 0,
+          "fwd_c": 0.999
+        },
+        "character_confusion": {
+          "entailment": 0.001,
+          "contradiction": 0.982,
+          "neutral": 0.017,
+          "fwd_e": 0.001,
+          "fwd_c": 0.982
+        },
+        "distractor_misconception": {
+          "entailment": 0,
+          "contradiction": 0.98,
+          "neutral": 0.019,
+          "fwd_e": 0,
+          "fwd_c": 0.98
+        },
+        "functional_circumlocution": {
+          "entailment": 0.98,
+          "contradiction": 0.002,
+          "neutral": 0.018,
+          "fwd_e": 0.98,
+          "fwd_c": 0.002
+        }
+      }
+    },
+    {
+      "id": "garden_flowers",
+      "category": "Circumlocution",
+      "text": "the lady who puts water on the flowers so they grow",
+      "status": "needs_scaffold",
+      "expectedStatus": "mastered",
+      "diagnosis": "UNGROUNDED_OFF_TRACK",
+      "expectedDiagnosis": null,
+      "passed": false,
+      "latency": 122,
+      "probeScores": {
+        "target_mastery": {
+          "entailment": 0.001,
+          "contradiction": 0.915,
+          "neutral": 0.084,
+          "fwd_e": 0.001,
+          "fwd_c": 0.915
+        },
+        "minimal_core": {
+          "entailment": 0.003,
+          "contradiction": 0.001,
+          "neutral": 0.996,
+          "fwd_e": 0.003,
+          "fwd_c": 0.001
+        },
+        "superficial_attribute": {
+          "entailment": 0.002,
+          "contradiction": 0.886,
+          "neutral": 0.112,
+          "fwd_e": 0.001,
+          "fwd_c": 0.989
+        },
+        "premise_echo": {
+          "entailment": 0.001,
+          "contradiction": 0.842,
+          "neutral": 0.157,
+          "fwd_e": 0,
+          "fwd_c": 0.998
+        },
+        "character_confusion": {
+          "entailment": 0.001,
+          "contradiction": 0.987,
+          "neutral": 0.012,
+          "fwd_e": 0.001,
+          "fwd_c": 0.987
+        },
+        "distractor_misconception": {
+          "entailment": 0.001,
+          "contradiction": 0.577,
+          "neutral": 0.422,
+          "fwd_e": 0.001,
+          "fwd_c": 0.577
+        },
+        "functional_circumlocution": {
+          "entailment": 0.025,
+          "contradiction": 0.001,
+          "neutral": 0.974,
+          "fwd_e": 0.003,
+          "fwd_c": 0.001
+        }
+      }
+    },
+    {
+      "id": "garden_dirt",
+      "category": "Circumlocution",
+      "text": "someone who takes care of plants in the dirt",
+      "status": "needs_scaffold",
+      "expectedStatus": "mastered",
+      "diagnosis": "UNGROUNDED_OFF_TRACK",
+      "expectedDiagnosis": null,
+      "passed": false,
+      "latency": 116,
+      "probeScores": {
+        "target_mastery": {
+          "entailment": 0.002,
+          "contradiction": 0.09,
+          "neutral": 0.908,
+          "fwd_e": 0.002,
+          "fwd_c": 0.09
+        },
+        "minimal_core": {
+          "entailment": 0.002,
+          "contradiction": 0.005,
+          "neutral": 0.993,
+          "fwd_e": 0.002,
+          "fwd_c": 0.005
+        },
+        "superficial_attribute": {
+          "entailment": 0.035,
+          "contradiction": 0.014,
+          "neutral": 0.951,
+          "fwd_e": 0.001,
+          "fwd_c": 0.983
+        },
+        "premise_echo": {
+          "entailment": 0.068,
+          "contradiction": 0.007,
+          "neutral": 0.925,
+          "fwd_e": 0,
+          "fwd_c": 0.994
+        },
+        "character_confusion": {
+          "entailment": 0.02,
+          "contradiction": 0.228,
+          "neutral": 0.752,
+          "fwd_e": 0.02,
+          "fwd_c": 0.228
+        },
+        "distractor_misconception": {
+          "entailment": 0.001,
+          "contradiction": 0.534,
+          "neutral": 0.465,
+          "fwd_e": 0.001,
+          "fwd_c": 0.534
+        },
+        "functional_circumlocution": {
+          "entailment": 0.238,
+          "contradiction": 0.023,
+          "neutral": 0.739,
+          "fwd_e": 0.002,
+          "fwd_c": 0.022
+        }
+      }
+    },
+    {
+      "id": "garden_distractor_collision",
+      "category": "Collision Test",
+      "text": "she will become a flower",
+      "status": "needs_scaffold",
+      "expectedStatus": "needs_scaffold",
+      "diagnosis": "PREMISE_ECHO",
+      "expectedDiagnosis": "DISTRACTOR_MISCONCEPTION",
+      "passed": false,
+      "latency": 100,
+      "probeScores": {
+        "target_mastery": {
+          "entailment": 0.004,
+          "contradiction": 0.229,
+          "neutral": 0.767,
+          "fwd_e": 0.004,
+          "fwd_c": 0.229
+        },
+        "minimal_core": {
+          "entailment": 0.034,
+          "contradiction": 0.334,
+          "neutral": 0.632,
+          "fwd_e": 0.034,
+          "fwd_c": 0.334
+        },
+        "superficial_attribute": {
+          "entailment": 0.008,
+          "contradiction": 0.71,
+          "neutral": 0.282,
+          "fwd_e": 0.001,
+          "fwd_c": 0.011
+        },
+        "premise_echo": {
+          "entailment": 0.51,
+          "contradiction": 0.015,
+          "neutral": 0.476,
+          "fwd_e": 0.001,
+          "fwd_c": 0.021
+        },
+        "character_confusion": {
+          "entailment": 0.007,
+          "contradiction": 0.949,
+          "neutral": 0.044,
+          "fwd_e": 0.007,
+          "fwd_c": 0.949
+        },
+        "distractor_misconception": {
+          "entailment": 0,
+          "contradiction": 0.998,
+          "neutral": 0.002,
+          "fwd_e": 0,
+          "fwd_c": 0.998
+        },
+        "functional_circumlocution": {
+          "entailment": 0.005,
+          "contradiction": 0.787,
+          "neutral": 0.208,
+          "fwd_e": 0.002,
+          "fwd_c": 0.827
+        }
+      }
+    },
+    {
+      "id": "fish_bird",
+      "category": "Distractor",
+      "text": "she becomes a bird",
+      "status": "needs_scaffold",
+      "expectedStatus": "needs_scaffold",
+      "diagnosis": "DISTRACTOR_MISCONCEPTION",
+      "expectedDiagnosis": "DISTRACTOR_MISCONCEPTION",
+      "passed": true,
+      "latency": 102,
+      "probeScores": {
+        "target_mastery": {
+          "entailment": 0.001,
+          "contradiction": 0.977,
+          "neutral": 0.022,
+          "fwd_e": 0.001,
+          "fwd_c": 0.977
+        },
+        "minimal_core": {
+          "entailment": 0.001,
+          "contradiction": 0.988,
+          "neutral": 0.011,
+          "fwd_e": 0.001,
+          "fwd_c": 0.988
+        },
+        "superficial_attribute": {
+          "entailment": 0.187,
+          "contradiction": 0.451,
+          "neutral": 0.362,
+          "fwd_e": 0.187,
+          "fwd_c": 0.451
+        },
+        "premise_echo": {
+          "entailment": 0.001,
+          "contradiction": 0.997,
+          "neutral": 0.003,
+          "fwd_e": 0,
+          "fwd_c": 0.999
+        },
+        "character_confusion": {
+          "entailment": 0.001,
+          "contradiction": 0.986,
+          "neutral": 0.013,
+          "fwd_e": 0.001,
+          "fwd_c": 0.986
+        },
+        "distractor_misconception": {
+          "entailment": 0.984,
+          "contradiction": 0.001,
+          "neutral": 0.015,
+          "fwd_e": 0.984,
+          "fwd_c": 0.001
+        },
+        "functional_circumlocution": {
+          "entailment": 0.016,
+          "contradiction": 0.708,
+          "neutral": 0.276,
+          "fwd_e": 0.016,
+          "fwd_c": 0.708
+        }
+      }
+    },
+    {
+      "id": "leo_store",
+      "category": "Distractor",
+      "text": "he bought it at the store",
+      "status": "needs_scaffold",
+      "expectedStatus": "needs_scaffold",
+      "diagnosis": "DISTRACTOR_MISCONCEPTION",
+      "expectedDiagnosis": "DISTRACTOR_MISCONCEPTION",
+      "passed": true,
+      "latency": 121,
+      "probeScores": {
+        "target_mastery": {
+          "entailment": 0.001,
+          "contradiction": 0.092,
+          "neutral": 0.907,
+          "fwd_e": 0.001,
+          "fwd_c": 0.092
+        },
+        "minimal_core": {
+          "entailment": 0,
+          "contradiction": 0.948,
+          "neutral": 0.052,
+          "fwd_e": 0,
+          "fwd_c": 0.948
+        },
+        "superficial_attribute": {
+          "entailment": 0.001,
+          "contradiction": 0.002,
+          "neutral": 0.997,
+          "fwd_e": 0.001,
+          "fwd_c": 0.001
+        },
+        "premise_echo": {
+          "entailment": 0,
+          "contradiction": 0.937,
+          "neutral": 0.063,
+          "fwd_e": 0,
+          "fwd_c": 0.937
+        },
+        "character_confusion": {
+          "entailment": 0.001,
+          "contradiction": 0.061,
+          "neutral": 0.938,
+          "fwd_e": 0.001,
+          "fwd_c": 0.061
+        },
+        "distractor_misconception": {
+          "entailment": 0.857,
+          "contradiction": 0.004,
+          "neutral": 0.139,
+          "fwd_e": 0.857,
+          "fwd_c": 0.004
+        },
+        "functional_circumlocution": {
+          "entailment": 0.001,
+          "contradiction": 0.618,
+          "neutral": 0.381,
+          "fwd_e": 0,
+          "fwd_c": 0.079
+        },
+        "beneficiary_consistency": {
+          "entailment": 0.003,
+          "contradiction": 0.962,
+          "neutral": 0.035,
+          "fwd_e": 0.003,
+          "fwd_c": 0.962
+        },
+        "attribute_consistency": {
+          "entailment": 0.001,
+          "contradiction": 0.001,
+          "neutral": 0.999,
+          "fwd_e": 0.001,
+          "fwd_c": 0.001
+        }
+      }
+    },
+    {
+      "id": "fish_boots",
+      "category": "Visual Detail",
+      "text": "she gets boots and catches him",
+      "status": "needs_scaffold",
+      "expectedStatus": "needs_scaffold",
+      "diagnosis": "UNGROUNDED_OFF_TRACK",
+      "expectedDiagnosis": null,
+      "passed": true,
+      "latency": 105,
+      "probeScores": {
+        "target_mastery": {
+          "entailment": 0.003,
+          "contradiction": 0.004,
+          "neutral": 0.992,
+          "fwd_e": 0.003,
+          "fwd_c": 0.004
+        },
+        "minimal_core": {
+          "entailment": 0.011,
+          "contradiction": 0.005,
+          "neutral": 0.985,
+          "fwd_e": 0.011,
+          "fwd_c": 0.005
+        },
+        "superficial_attribute": {
+          "entailment": 0.005,
+          "contradiction": 0.331,
+          "neutral": 0.664,
+          "fwd_e": 0.001,
+          "fwd_c": 0.001
+        },
+        "premise_echo": {
+          "entailment": 0.003,
+          "contradiction": 0.611,
+          "neutral": 0.386,
+          "fwd_e": 0.001,
+          "fwd_c": 0.023
+        },
+        "character_confusion": {
+          "entailment": 0.005,
+          "contradiction": 0.016,
+          "neutral": 0.98,
+          "fwd_e": 0.005,
+          "fwd_c": 0.016
+        },
+        "distractor_misconception": {
+          "entailment": 0.032,
+          "contradiction": 0.446,
+          "neutral": 0.522,
+          "fwd_e": 0.032,
+          "fwd_c": 0.446
+        },
+        "functional_circumlocution": {
+          "entailment": 0.066,
+          "contradiction": 0.024,
+          "neutral": 0.911,
+          "fwd_e": 0.066,
+          "fwd_c": 0.024
+        }
+      }
+    },
+    {
+      "id": "leo_red_hat",
+      "category": "Visual Detail",
+      "text": "his hat was red",
+      "status": "needs_scaffold",
+      "expectedStatus": "needs_scaffold",
+      "diagnosis": "SUPERFICIAL_ATTRIBUTE",
+      "expectedDiagnosis": "SUPERFICIAL_ATTRIBUTE",
+      "passed": true,
+      "latency": 114,
+      "probeScores": {
+        "target_mastery": {
+          "entailment": 0,
+          "contradiction": 0.001,
+          "neutral": 0.998,
+          "fwd_e": 0,
+          "fwd_c": 0.001
+        },
+        "minimal_core": {
+          "entailment": 0,
+          "contradiction": 0.007,
+          "neutral": 0.993,
+          "fwd_e": 0,
+          "fwd_c": 0.007
+        },
+        "superficial_attribute": {
+          "entailment": 0.958,
+          "contradiction": 0,
+          "neutral": 0.042,
+          "fwd_e": 0.004,
+          "fwd_c": 0.001
+        },
+        "premise_echo": {
+          "entailment": 0.001,
+          "contradiction": 0.523,
+          "neutral": 0.476,
+          "fwd_e": 0.001,
+          "fwd_c": 0.523
+        },
+        "character_confusion": {
+          "entailment": 0.001,
+          "contradiction": 0.009,
+          "neutral": 0.99,
+          "fwd_e": 0.001,
+          "fwd_c": 0.009
+        },
+        "distractor_misconception": {
+          "entailment": 0.009,
+          "contradiction": 0.002,
+          "neutral": 0.989,
+          "fwd_e": 0.009,
+          "fwd_c": 0.002
+        },
+        "functional_circumlocution": {
+          "entailment": 0.967,
+          "contradiction": 0.001,
+          "neutral": 0.032,
+          "fwd_e": 0.001,
+          "fwd_c": 0.001
+        },
+        "beneficiary_consistency": {
+          "entailment": 0.001,
+          "contradiction": 0.002,
+          "neutral": 0.997,
+          "fwd_e": 0.001,
+          "fwd_c": 0.002
+        },
+        "attribute_consistency": {
+          "entailment": 0.003,
+          "contradiction": 0,
+          "neutral": 0.996,
+          "fwd_e": 0.003,
+          "fwd_c": 0
+        }
+      }
+    },
+    {
+      "id": "fish_swap",
+      "category": "Agent Swap",
+      "text": "the bunny catches the mother",
+      "status": "needs_scaffold",
+      "expectedStatus": "needs_scaffold",
+      "diagnosis": "UNGROUNDED_OFF_TRACK",
+      "expectedDiagnosis": null,
+      "passed": true,
+      "latency": 93,
+      "probeScores": {
+        "target_mastery": {
+          "entailment": 0.001,
+          "contradiction": 0.976,
+          "neutral": 0.023,
+          "fwd_e": 0.001,
+          "fwd_c": 0.976
+        },
+        "minimal_core": {
+          "entailment": 0.006,
+          "contradiction": 0.114,
+          "neutral": 0.879,
+          "fwd_e": 0.006,
+          "fwd_c": 0.114
+        },
+        "superficial_attribute": {
+          "entailment": 0.491,
+          "contradiction": 0.225,
+          "neutral": 0.284,
+          "fwd_e": 0.491,
+          "fwd_c": 0.225
+        },
+        "premise_echo": {
+          "entailment": 0.002,
+          "contradiction": 0.803,
+          "neutral": 0.195,
+          "fwd_e": 0.001,
+          "fwd_c": 0.987
+        },
+        "character_confusion": {
+          "entailment": 0.033,
+          "contradiction": 0.02,
+          "neutral": 0.947,
+          "fwd_e": 0.033,
+          "fwd_c": 0.02
+        },
+        "distractor_misconception": {
+          "entailment": 0.008,
+          "contradiction": 0.82,
+          "neutral": 0.172,
+          "fwd_e": 0.008,
+          "fwd_c": 0.82
+        },
+        "functional_circumlocution": {
+          "entailment": 0.042,
+          "contradiction": 0.681,
+          "neutral": 0.276,
+          "fwd_e": 0.042,
+          "fwd_c": 0.681
+        }
+      }
+    },
+    {
+      "id": "leo_grandpa",
+      "category": "Character Confusion",
+      "text": "his grandpa made it",
+      "status": "needs_scaffold",
+      "expectedStatus": "needs_scaffold",
+      "diagnosis": "CHARACTER_CONFUSION",
+      "expectedDiagnosis": "CHARACTER_CONFUSION",
+      "passed": true,
+      "latency": 146,
+      "probeScores": {
+        "target_mastery": {
+          "entailment": 0,
+          "contradiction": 0.998,
+          "neutral": 0.002,
+          "fwd_e": 0,
+          "fwd_c": 0.998
+        },
+        "minimal_core": {
+          "entailment": 0,
+          "contradiction": 0.999,
+          "neutral": 0.001,
+          "fwd_e": 0,
+          "fwd_c": 0.999
+        },
+        "superficial_attribute": {
+          "entailment": 0,
+          "contradiction": 0.002,
+          "neutral": 0.998,
+          "fwd_e": 0,
+          "fwd_c": 0.002
+        },
+        "premise_echo": {
+          "entailment": 0.001,
+          "contradiction": 0.17,
+          "neutral": 0.829,
+          "fwd_e": 0.001,
+          "fwd_c": 0.081
+        },
+        "character_confusion": {
+          "entailment": 0.001,
+          "contradiction": 0.004,
+          "neutral": 0.995,
+          "fwd_e": 0.001,
+          "fwd_c": 0.004
+        },
+        "distractor_misconception": {
+          "entailment": 0.006,
+          "contradiction": 0.906,
+          "neutral": 0.088,
+          "fwd_e": 0.006,
+          "fwd_c": 0.906
+        },
+        "functional_circumlocution": {
+          "entailment": 0,
+          "contradiction": 0.998,
+          "neutral": 0.001,
+          "fwd_e": 0,
+          "fwd_c": 0.999
+        },
+        "beneficiary_consistency": {
+          "entailment": 0,
+          "contradiction": 0.998,
+          "neutral": 0.001,
+          "fwd_e": 0,
+          "fwd_c": 0.998
+        },
+        "attribute_consistency": {
+          "entailment": 0.001,
+          "contradiction": 0.001,
+          "neutral": 0.999,
+          "fwd_e": 0.001,
+          "fwd_c": 0.001
+        }
+      }
+    },
+    {
+      "id": "leo_conflicting_recipient",
+      "category": "Slot Conflict",
+      "text": "grandma made grampa's hat",
+      "status": "needs_scaffold",
+      "expectedStatus": "needs_scaffold",
+      "diagnosis": "CHARACTER_CONFUSION",
+      "expectedDiagnosis": "CHARACTER_CONFUSION",
+      "passed": true,
+      "latency": 141,
+      "probeScores": {
+        "target_mastery": {
+          "entailment": 0.017,
+          "contradiction": 0,
+          "neutral": 0.983,
+          "fwd_e": 0.017,
+          "fwd_c": 0
+        },
+        "minimal_core": {
+          "entailment": 0.983,
+          "contradiction": 0,
+          "neutral": 0.017,
+          "fwd_e": 0.983,
+          "fwd_c": 0
+        },
+        "superficial_attribute": {
+          "entailment": 0.002,
+          "contradiction": 0.003,
+          "neutral": 0.995,
+          "fwd_e": 0.001,
+          "fwd_c": 0.001
+        },
+        "premise_echo": {
+          "entailment": 0.003,
+          "contradiction": 0.021,
+          "neutral": 0.976,
+          "fwd_e": 0,
+          "fwd_c": 0.869
+        },
+        "character_confusion": {
+          "entailment": 0.033,
+          "contradiction": 0.618,
+          "neutral": 0.348,
+          "fwd_e": 0.033,
+          "fwd_c": 0.618
+        },
+        "distractor_misconception": {
+          "entailment": 0.01,
+          "contradiction": 0.037,
+          "neutral": 0.953,
+          "fwd_e": 0.01,
+          "fwd_c": 0.037
+        },
+        "functional_circumlocution": {
+          "entailment": 0.145,
+          "contradiction": 0.009,
+          "neutral": 0.847,
+          "fwd_e": 0.002,
+          "fwd_c": 0.001
+        },
+        "beneficiary_consistency": {
+          "entailment": 0.019,
+          "contradiction": 0.966,
+          "neutral": 0.014,
+          "fwd_e": 0.019,
+          "fwd_c": 0.966
+        },
+        "attribute_consistency": {
+          "entailment": 0.001,
+          "contradiction": 0.001,
+          "neutral": 0.999,
+          "fwd_e": 0.001,
+          "fwd_c": 0.001
+        }
+      }
+    }
+  ]
+}

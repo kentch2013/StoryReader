@@ -100,6 +100,25 @@ export function getMockBookAnalysis(files = []) {
   };
 }
 
+export function sanitizeAnalysisProbes(analysis) {
+  if (!analysis || !Array.isArray(analysis.chunks)) return analysis;
+  const META_COGNITIVE_REGEX = /^(child|student|user)\s+(understands|identifies|identified|knows|confuses|confused|repeats|repeated|focused\s+on)\s+/i;
+
+  for (const chunk of analysis.chunks) {
+    if (chunk.diagnostic_probes) {
+      for (const [key, probe] of Object.entries(chunk.diagnostic_probes)) {
+        if (probe && typeof probe.hypothesis === 'string' && META_COGNITIVE_REGEX.test(probe.hypothesis)) {
+          probe.hypothesis = probe.hypothesis.replace(META_COGNITIVE_REGEX, '').trim();
+          if (probe.hypothesis.length > 0) {
+            probe.hypothesis = probe.hypothesis.charAt(0).toUpperCase() + probe.hypothesis.slice(1);
+          }
+        }
+      }
+    }
+  }
+  return analysis;
+}
+
 export async function analyzeBookPages(files) {
   if (!files || !Array.isArray(files) || files.length === 0) {
     throw new Error('No files provided');
@@ -138,7 +157,7 @@ export async function analyzeBookPages(files) {
     })
   );
 
-  return safeJsonParse(response.text);
+  return sanitizeAnalysisProbes(safeJsonParse(response.text));
 }
 
 export function getMockAnswerClassification(data = {}) {

@@ -164,6 +164,8 @@ export async function evaluateSemanticMatch(normalizedTranscript, rubric = {}) {
 
   const coreContradictions = [];
 
+  let topContradiction = null;
+
   for (let i = 0; i < meta.length; i++) {
     const offset = i * 3;
     // Softmax: idx 0 = contradiction, idx 1 = entailment, idx 2 = neutral
@@ -181,6 +183,7 @@ export async function evaluateSemanticMatch(normalizedTranscript, rubric = {}) {
         maxEntailment = e;
         topReference = item.text;
         topNeutral = n;
+        topContradiction = c;
       }
       if (!scoreTable[item.type] || e > scoreTable[item.type]) {
         scoreTable[item.type] = Number(e.toFixed(3));
@@ -190,15 +193,18 @@ export async function evaluateSemanticMatch(normalizedTranscript, rubric = {}) {
 
   const minContradiction = coreContradictions.length > 0 ? Math.min(...coreContradictions) : 0;
   const maxContradiction = coreContradictions.length > 0 ? Math.max(...coreContradictions) : 0;
+  const effectiveContradiction = topContradiction !== null ? topContradiction : maxContradiction;
 
-  const isDistractor = distractorEntailment >= 0.60 || maxContradiction >= 0.70;
-  const isMatch = !isDistractor && maxEntailment >= 0.50 && maxContradiction < 0.35 && distractorEntailment < 0.60;
+  // Distractor triggers if explicit distractor matches, or if every positive prototype is contradicted,
+  // or if the highest-entailing prototype itself is contradicted.
+  const isDistractor = distractorEntailment >= 0.60 || minContradiction >= 0.70 || effectiveContradiction >= 0.50;
+  const isMatch = !isDistractor && maxEntailment >= 0.50 && effectiveContradiction < 0.35 && distractorEntailment < 0.60;
 
   return {
     isMatch,
     isDistractor,
     entailment: Number(maxEntailment.toFixed(3)),
-    contradiction: Number(maxContradiction.toFixed(3)),
+    contradiction: Number(effectiveContradiction.toFixed(3)),
     neutral: Number(topNeutral.toFixed(3)),
     topReference,
     matchedPrototype: topReference,
@@ -299,22 +305,35 @@ export async function evaluateDiagnosticProbes(normalizedTranscript, rubric = {}
   const primaryChar = characters[0]?.canonical_name || characters[0]?.canonical_id || '';
   const secondaryChar = characters.find((c) => c !== characters[0])?.canonical_name || characters.find((c) => c !== characters[0])?.canonical_id || '';
 
-  const actorName = rubric.story_context?.actor || primaryChar || 'the character';
-  const recipientName = rubric.story_context?.recipient || secondaryChar || '';
+  const actorName = rubric.story_context?.actor || '';
+  const recipientName = rubric.story_context?.recipient || '';
   const objectName = rubric.story_context?.object || '';
-  const itemNoun = objectName ? objectName.split(/\s+/).pop() : 'item';
+  const itemNoun = objectName ? objectName.split(/\s+/).pop() : '';
 
-  const beneficiaryHyp = (rubric.story_context?.recipient || recipientName)
-    ? `${actorName} made ${(rubric.story_context?.recipient || recipientName)}'s ${itemNoun}.`
+  const beneficiaryHyp = (actorName && recipientName && itemNoun)
+    ? `${actorName} made ${recipientName}'s ${itemNoun}.`
     : null;
 
-  const attributeHyp = (rubric.story_context?.object || objectName)
-    ? `The ${itemNoun} was a ${(rubric.story_context?.object || objectName)}.`
+  const attributeHyp = (objectName && itemNoun)
+    ? `The ${itemNoun} was a ${objectName}.`
     : null;
 
   const wordTokens = transcript.split(/\s+/).filter(Boolean);
   const wordCount = wordTokens.length;
-  const coreEntity = wordCount <= 3 ? (rubric.keyword_clusters?.[0]?.synonyms?.[0] || rubric.entity_graph?.characters?.[0]?.canonical_name) : null;
+  const minimalCoreText = rubric.canonical_prototypes?.find((p) => p && p.type === 'minimal_core')?.text || null;
+  const atomicKeyword = rubric.keyword_clusters?.[0]?.synonyms?.[0] || rubric.entity_graph?.characters?.[0]?.canonical_name || rubric.story_context?.actor || null;
+  const coreEntity = minimalCoreText || atomicKeyword || null;
+  const atomicEntity = (atomicKeyword && atomicKeyword !== coreEntity) ? atomicKeyword : null;
+
+  const circumlocutionText = Array.isArray(rubric.canonical_prototypes)
+    ? rubric.canonical_prototypes.find((p) => p && p.type === 'functional_circumlocution')?.text || null
+    : null;
+  const partialActionText = Array.isArray(rubric.canonical_prototypes)
+    ? rubric.canonical_prototypes.find((p) => p && p.type === 'partial_action')?.text || null
+    : null;
+  const commonDistractorText = Array.isArray(rubric.canonical_prototypes)
+    ? rubric.canonical_prototypes.find((p) => p && p.type === 'common_distractor')?.text || null
+    : null;
 
   const probeKeys = [
     'target_mastery',
@@ -328,6 +347,18 @@ export async function evaluateDiagnosticProbes(normalizedTranscript, rubric = {}
   if (coreEntity) {
     probeKeys.push('core_entity');
   }
+  if (atomicEntity) {
+    probeKeys.push('atomic_entity');
+  }
+  if (partialActionText) {
+    probeKeys.push('partial_action');
+  }
+  if (circumlocutionText) {
+    probeKeys.push('functional_circumlocution');
+  }
+  if (commonDistractorText) {
+    probeKeys.push('common_distractor');
+  }
   if (beneficiaryHyp) {
     probeKeys.push('beneficiary_consistency');
   }
@@ -338,6 +369,10 @@ export async function evaluateDiagnosticProbes(normalizedTranscript, rubric = {}
   const fullProbes = {
     ...probes,
     core_entity: { hypothesis: coreEntity || '' },
+    atomic_entity: { hypothesis: atomicEntity || '' },
+    partial_action: { hypothesis: partialActionText || '' },
+    functional_circumlocution: { hypothesis: circumlocutionText || '' },
+    common_distractor: { hypothesis: commonDistractorText || '' },
     beneficiary_consistency: { hypothesis: beneficiaryHyp || '' },
     attribute_consistency: { hypothesis: attributeHyp || '' },
   };
@@ -402,12 +437,12 @@ export async function evaluateDiagnosticProbes(normalizedTranscript, rubric = {}
     // Only descriptive echoes (superficial, premise_echo) may accept bidirectional correlation.
     const isForwardOnly = revKeyIndices[key] === undefined;
     const effectiveE = isForwardOnly ? e_fwd : Math.max(e_fwd, e_rev);
-    const maxC = Math.max(c_fwd, c_rev);
+    const effectiveC = isForwardOnly ? c_fwd : (effectiveE === e_rev ? c_rev : c_fwd);
     const bestN = effectiveE === e_fwd ? n_fwd : n_rev;
 
     probeScores[key] = {
       entailment: Number(effectiveE.toFixed(3)),
-      contradiction: Number(maxC.toFixed(3)),
+      contradiction: Number(effectiveC.toFixed(3)),
       neutral: Number(bestN.toFixed(3)),
       fwd_e: Number(e_fwd.toFixed(3)),
       fwd_c: Number(c_fwd.toFixed(3)),
@@ -436,54 +471,94 @@ export async function evaluateDiagnosticProbes(normalizedTranscript, rubric = {}
   let minimalE = probeScores.minimal_core?.fwd_e ?? 0;
   let minimalC = probeScores.minimal_core?.fwd_c ?? 1;
 
-  if (coreEntity && probeScores.core_entity) {
-    const ceE = probeScores.core_entity.fwd_e ?? 0;
-    const ceC = probeScores.core_entity.fwd_c ?? 1;
-    if (ceE >= 0.50 && ceC < 0.35) {
-      if (ceE > minimalE) {
-        minimalE = ceE;
-        minimalC = ceC;
+  for (const entityKey of ['core_entity', 'atomic_entity']) {
+    if (probeScores[entityKey]) {
+      const ceE = probeScores[entityKey].entailment ?? 0;
+      const ceC = probeScores[entityKey].contradiction ?? 1;
+      if (ceE >= 0.50 && ceC < 0.35) {
+        if (ceE > minimalE) {
+          minimalE = ceE;
+          minimalC = ceC;
+        }
       }
     }
   }
 
+  const circumE = probeScores.functional_circumlocution?.entailment ?? 0;
+  const circumC = probeScores.functional_circumlocution?.contradiction ?? 1;
+
+  const partialActionE = probeScores.partial_action?.entailment ?? 0;
+  const partialActionC = probeScores.partial_action?.contradiction ?? 1;
+
+  const winningE = Math.max(targetE, minimalE, circumE, partialActionE);
+  const winningC =
+    winningE === targetE
+      ? targetC
+      : winningE === minimalE
+      ? minimalC
+      : winningE === circumE
+      ? circumC
+      : partialActionC;
+  const masteryScore = winningE;
+
+  const distractorE = Math.max(
+    probeScores.distractor_misconception?.entailment ?? 0,
+    probeScores.common_distractor?.entailment ?? 0
+  );
+  const premiseEchoE = probeScores.premise_echo?.entailment ?? 0;
+  const superficialE = probeScores.superficial_attribute?.entailment ?? 0;
+  const charConfusionE = probeScores.character_confusion?.entailment ?? 0;
+
+  // Vector of competing error modes for dynamic argmax
+  const errorCandidates = [
+    {
+      type: 'DISTRACTOR_MISCONCEPTION',
+      score: distractorE,
+      contradiction: probeScores.distractor_misconception?.contradiction ?? 0,
+      neutral: probeScores.distractor_misconception?.neutral ?? 0,
+      feedback: fullProbes.distractor_misconception?.scaffold || rubric.hint_level_1 || '',
+    },
+    {
+      type: 'PREMISE_ECHO',
+      score: premiseEchoE,
+      contradiction: probeScores.premise_echo?.contradiction ?? 0,
+      neutral: probeScores.premise_echo?.neutral ?? 0,
+      feedback: fullProbes.premise_echo?.scaffold || rubric.hint_level_1 || '',
+    },
+    {
+      type: 'SUPERFICIAL_ATTRIBUTE',
+      score: superficialE,
+      contradiction: probeScores.superficial_attribute?.contradiction ?? 0,
+      neutral: probeScores.superficial_attribute?.neutral ?? 0,
+      feedback: fullProbes.superficial_attribute?.scaffold || rubric.hint_level_1 || '',
+    },
+    {
+      type: 'CHARACTER_CONFUSION',
+      score: charConfusionE,
+      contradiction: probeScores.character_confusion?.contradiction ?? 0,
+      neutral: probeScores.character_confusion?.neutral ?? 0,
+      feedback: fullProbes.character_confusion?.scaffold || rubric.hint_level_1 || '',
+    },
+  ];
+
+  errorCandidates.sort((a, b) => b.score - a.score);
+  const topError = errorCandidates[0];
+  const margin = masteryScore - topError.score;
+
   const hasVagueObject = /\b(something|anything|stuff)\b/i.test(transcript);
   const isMasteredCandidate =
     (targetE >= 0.50 && targetC < 0.35) ||
-    (minimalE >= 0.50 && minimalC < 0.35 && !hasVagueObject && (wordCount <= 6 || targetE >= 0.05));
+    (minimalE >= 0.50 && minimalC < 0.35 && !hasVagueObject && (wordCount <= 6 || targetE >= 0.05 || margin >= 0.25)) ||
+    (circumE >= 0.50 && circumC < 0.35) ||
+    (partialActionE >= 0.50 && partialActionC < 0.35 && !hasVagueObject);
 
-  // 1. Direct Specific Error Modes
-  if ((probeScores.distractor_misconception?.entailment ?? 0) >= 0.50) {
-    cognitive_diagnosis = 'DISTRACTOR_MISCONCEPTION';
-    spoken_feedback = fullProbes.distractor_misconception?.scaffold || rubric.hint_level_1 || '';
-    topEntailment = probeScores.distractor_misconception.entailment;
-    topContradiction = probeScores.distractor_misconception.contradiction;
-    topNeutral = probeScores.distractor_misconception.neutral;
-  } else if ((probeScores.premise_echo?.entailment ?? 0) >= 0.50) {
-    cognitive_diagnosis = 'PREMISE_ECHO';
-    spoken_feedback = fullProbes.premise_echo?.scaffold || rubric.hint_level_1 || '';
-    topEntailment = probeScores.premise_echo.entailment;
-    topContradiction = probeScores.premise_echo.contradiction;
-    topNeutral = probeScores.premise_echo.neutral;
-  } else if ((probeScores.superficial_attribute?.entailment ?? 0) >= 0.50) {
-    cognitive_diagnosis = 'SUPERFICIAL_ATTRIBUTE';
-    spoken_feedback = fullProbes.superficial_attribute?.scaffold || rubric.hint_level_1 || '';
-    topEntailment = probeScores.superficial_attribute.entailment;
-    topContradiction = probeScores.superficial_attribute.contradiction;
-    topNeutral = probeScores.superficial_attribute.neutral;
-  } else if (
-    (probeScores.character_confusion?.entailment ?? 0) >= 0.50 ||
-    (probeScores.target_mastery?.fwd_c ?? 0) >= 0.70 ||
-    (probeScores.minimal_core?.fwd_c ?? 0) >= 0.70
-  ) {
-    cognitive_diagnosis = 'CHARACTER_CONFUSION';
-    spoken_feedback = fullProbes.character_confusion?.scaffold || rubric.hint_level_1 || '';
-    topEntailment = probeScores.character_confusion?.entailment ?? 0;
-    topContradiction = Math.max(
-      probeScores.character_confusion?.contradiction ?? 0,
-      probeScores.target_mastery?.fwd_c ?? 0
-    );
-    topNeutral = probeScores.character_confusion?.neutral ?? 0;
+  // 1. Dynamic Argmax: highest-confidence explicit error probe wins
+  if (topError.score >= 0.50 && topError.score >= masteryScore) {
+    cognitive_diagnosis = topError.type;
+    spoken_feedback = topError.feedback;
+    topEntailment = topError.score;
+    topContradiction = topError.contradiction;
+    topNeutral = topError.neutral;
   } else if (beneficiaryHyp && (probeScores.beneficiary_consistency?.contradiction ?? 0) >= 0.70) {
     cognitive_diagnosis = 'CHARACTER_CONFUSION';
     spoken_feedback =
@@ -498,16 +573,35 @@ export async function evaluateDiagnosticProbes(normalizedTranscript, rubric = {}
       (objectName ? `Look closely at the details in the story!` : rubric.hint_level_1 || rubric.scaffold_hint || '');
     topContradiction = probeScores.attribute_consistency.contradiction;
     topEntailment = 0;
-  } else if (isMasteredCandidate) {
+  } else if (
+    !isMasteredCandidate &&
+    (((probeScores.target_mastery?.fwd_c ?? 0) >= 0.70 && (probeScores.minimal_core?.fwd_c ?? 0) >= 0.70) ||
+      (probeScores.character_confusion?.fwd_e ?? 0) >= 0.40)
+  ) {
+    cognitive_diagnosis = 'CHARACTER_CONFUSION';
+    spoken_feedback = fullProbes.character_confusion?.scaffold || rubric.hint_level_1 || '';
+    topEntailment = probeScores.character_confusion?.entailment ?? 0;
+    topContradiction = Math.max(
+      probeScores.character_confusion?.contradiction ?? 0,
+      probeScores.target_mastery?.fwd_c ?? 0
+    );
+    topNeutral = probeScores.character_confusion?.neutral ?? 0;
+  } else if (isMasteredCandidate || (winningE >= 0.45 && margin >= 0.20 && winningC < 0.35)) {
     isMatch = true;
     cognitive_diagnosis = 'MASTERED';
     spoken_feedback =
       fullProbes.target_mastery?.feedback ||
       fullProbes.minimal_core?.feedback ||
       'Spot on! That is exactly right!';
-    topEntailment = Math.max(targetE, minimalE);
-    topContradiction = targetE >= minimalE ? targetC : minimalC;
+    topEntailment = masteryScore;
+    topContradiction = winningC;
     topNeutral = targetE >= minimalE ? probeScores.target_mastery?.neutral : probeScores.minimal_core?.neutral;
+  } else if (topError.score >= 0.40) {
+    cognitive_diagnosis = topError.type;
+    spoken_feedback = topError.feedback;
+    topEntailment = topError.score;
+    topContradiction = topError.contradiction;
+    topNeutral = topError.neutral;
   } else {
     cognitive_diagnosis = 'UNGROUNDED_OFF_TRACK';
     spoken_feedback = rubric.hint_level_1 || rubric.scaffold_hint || '';

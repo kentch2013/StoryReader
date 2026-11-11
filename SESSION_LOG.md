@@ -1,60 +1,62 @@
 # StoryScout Session Handoff Log
 
-**Session Date:** 2026-11-10 (Wrapup & Mobile Testing Environment)  
+**Session Date:** 2026-11-10 (Wrapup: Circumlocution Probing, Dynamic Argmax Arbitration & Zero-Lag Latency Blueprint)  
 **Repository:** `kentch2013/StoryReader`  
 **Current Branch:** `main` (Synchronized, clean)  
-**Milestone:** Complete Module 3 Coarse-to-Fine Semantic Slot Diagnostic Funnel, Hardening, and Mobile Zero-Typing Testing Infrastructure (60/60 Tests Passing, 100% Contract Immutability)
+**Milestone:** Complete Module 3 Socratic Answer Evaluation Engine with Circumlocution Support & Dynamic Argmax Arbitration (60/60 Tests Passing, 19/19 Decision Model Benchmark Passing, 100% Contract Immutability). Defined Pre-Module 4 Objective: 4-Layer System 1 Latency Optimization Stack.
 
 ---
 
 ## 1. Crucial Components for a Seamless Agent Handoff
 
 To eliminate context loss between sessions, every handoff must maintain:
-1. **Target Architecture & Hardware Reality:** Client device (iPhone 14 Plus Safari), host OS (Windows 11), model endpoint targets (Gemini 3.1 Flash Lite for ingestion, local quantized `nli-deberta-v3-xsmall` ONNX for real-time sub-30ms evaluation), and network transport (Cloudflare HTTPS tunnel).
-2. **Current State & Progress Gate:** Modules 1, 2, and 3 are 100% complete, hardened, and verified across 60 automated tests (12 suites) with 0 failures and 100% contract immutability. Mobile device testing infrastructure is active. Module 4 (Camera Tray & Canvas Downsampler) is next.
+1. **Target Architecture & Hardware Reality:** Client device (iPhone 14 Plus Safari), host OS (Windows 11), model endpoint targets (Gemini 3.1 Flash Lite for multimodal chunking, local quantized `nli-deberta-v3-xsmall` ONNX for real-time evaluation), and network transport (Cloudflare HTTPS tunnel).
+2. **Current State & Progress Gate:** Modules 1, 2, and 3 are 100% complete, hardened, and verified across 60 automated tests (12 suites) with 0 failures and 100% contract immutability. The 19-case decision model benchmark (`scripts/benchmark_decision_models.js`) passes 19/19 (100%).
 3. **Known Gotchas & Solutions:**
-   - *Reverse Entailment Trap:* Checking whether the model answer entails the child transcript causes word repetitions and echoes to pass. Mastery strictly requires forward causality ($Child \implies Target$).
-   - *Dangling Pronoun Leak:* Minimal core hypotheses (`"Grandma made it"`) without entity anchors can match wrong recipients (*"grampa's hat"*) or wrong attributes (*"blue hat"*). Solved via Layer 2 Parallel Ground-Truth Slot Consistency Probes.
-   - *Kinship Subtoken Bleed:* Multi-generational terms (`"mother's nana"`) share substrings with `"grandma"`. Solved via compound generational kinship normalization to `great-relative`.
-   - *Question Inquiries & Stutter:* Child questions (*"who made the hat"*) and token repetition (*"the hat the hat"*) are caught by Layer 1 Intelligibility Screener.
-   - *Grade 2 Vocabulary Stripping Protection:* Speech filler normalization strictly protects "like" as a verb (*"I like the hat"*) and "well" as a noun (*"The well was deep"*).
-   - *Pronoun Scope Isolation:* Ambiguity resolution strictly bounds replacement to the target gender, preventing cross-gender bleed (*"she made it for him"*).
-   - *Adversarial Prompt Injection Gate:* System 1 pre-screener intercepts injection directives before reaching semantic evaluation.
-   - *Rate Limiter Hard Cap:* Daily limit strictly enforces the 500 RPD cap and deduplicates retry counts.
-   - *Bearer Token Transport Protection:* All API endpoints (except `/api/health`) require `Authorization: Bearer <AUTH_SECRET>` when set.
-   - *Mobile HTTPS Requirement:* Mobile Safari (iOS) strictly disables camera (`getUserMedia`) and microphone speech recognition on non-HTTPS origins. Solved via automated Cloudflare quick tunnel.
-   - *Mobile Tunnel Zero-Typing Workflow:* Random Cloudflare URLs (`https://*-*-*.trycloudflare.com`) are auto-copied to the Windows clipboard and rendered as a scannable QR code on the desktop monitor ([public/connect.html](public/connect.html)) to eliminate typing on mobile phones.
-4. **Environment & Secrets Placement:** Local `.env` holding `GEMINI_API_KEY`. When offline, `MOCK_AI=true` or Tier 1/2 local ONNX handles evaluation with 0 cloud dependencies.
-5. **Exact Next Command / Red State Action:** Implement Module 4: Mobile Camera Tray & Canvas Compression Engine (`public/js/camera_tray.js`). Run automated contract audit: `npm run verify`.
+   - *Meta-Cognitive Hypotheses Trap:* Prompting LLMs to produce hypotheses like `"Child understands X"` destroys cross-encoder NLI entailment ($E = 0.023$). Hypotheses must be direct factual propositions (*"X happened"* $\rightarrow E = 0.887$). Solved via prompt banning and `sanitizeAnalysisProbes()`.
+   - *Multi-Word Circumlocutions:* When children describe concepts (*"the lady who puts water on the flowers so they grow"*), gating minimal core probes at $\le 3$ words causes false negative rejections ($E = 0.001$). Solved by dual-probing against atomic entity nouns (`"gardener"`) and minimal core prototypes (`"A gardener."`) regardless of transcript word count ($E = 0.605, C = 0.002$).
+   - *Static Cascade Misdiagnosis:* Hardcoded `if/else` cascades misdiagnose error collisions (e.g., classifying a distractor as premise echo because echo was evaluated first). Solved via dynamic vector Argmax arbitration.
+   - *Directional Scoping:* Mastery and error modes strictly require forward causality ($Child \implies Hypothesis$). Bidirectional correlation ($\max(E_{fwd}, E_{rev})$) is strictly bounded to descriptive scaffolds (`superficial_attribute`, `premise_echo`), preventing visual descriptions (*"his hat was red"*) from false-positive mastery.
+   - *WASM Padding Bloat:* `MAX_LENGTH_PROBE: 64` forces `@xenova/transformers` to pad all 14 batch rows to 64 tokens, spending 177ms in matrix multiplication. Clamping to `max_length: 36` cuts latency to 96ms with zero truncation.
+4. **Environment & Secrets Placement:** Local `.env` holding `GEMINI_API_KEY`. Offline fallback via local quantized ONNX and mock fixtures.
+5. **Exact Next Command / Red State Action:** Implement **Module 3.5: 4-Layered System 1 Latency Optimization Pipeline** before starting Module 4:
+   - Layer 1: Token sequence length clamping (`max_length: 36`).
+   - Layer 2: Two-stage speculative cascaded probing (5-pair mastery sweep $\le 35\text{ms}$; 9-pair error fallback $\le 90\text{ms}$).
+   - Layer 3: Native C++ SIMD (`onnxruntime-node`).
+   - Layer 4: Synchronous Tier 1 gate ($<1\text{ms}$).
+   - Run verification: `npm test` (60 tests) and `node scripts/benchmark_decision_models.js`.
 
 ---
 
 ## 2. Session Summary & Decisions Made
 
-### A. Foundational Architecture & Hardening (Modules 1 & 2)
-* Completed Express server foundation, Multer batch memory storage (up to 20 images), and rate-limited Gemini Vision client with automatic sliding window throttling ($\le 14$ RPM).
-* Adversarial hardening: Trapped 413 oversized uploads, 400 file overflows, 400 non-image MIME types, and stripped model markdown fences via `safeJsonParse`.
+### A. Live Book Extraction (*The Runaway Bunny*)
+* Loaded all 10 physical page scans (`bunny1.png`–`bunny10.png`) from `test/fixtures/book_pages/`.
+* Executed live Gemini 3.5 Flash extraction and generated structured chunk output in `test_output/bunny_10_pages_analysis.json`.
+* Identified that Gemini stochastic hypothesis generation was contaminating probes with meta-cognitive framing (`"Child understands that..."`). Added deterministic regex sanitizer `sanitizeAnalysisProbes` in `services/gemini_service.js` to strip prefixes at ingestion.
+* Added `functional_circumlocution` archetype to canonical prototypes in `prompts/book_analysis.js` and extraction schema.
 
-### B. Module 3 Evolution: The Coarse-to-Fine Semantic Slot Funnel
-* Transformed the evaluation pipeline into a 3-layer zero-lag cognitive diagnostic funnel:
-  1. **Layer 1: Grounding & Intelligibility Gate:**
-     - Filters question inquiries (`"who made the hat"`, `"why did he cry"`) into `QUESTION_ECHO` scaffolds.
-     - Filters repetitive word stutter (`"the hat the hat"`) into `SUPERFICIAL_ATTRIBUTE` scaffolds.
-     - Fast shrug screener handles non-answers (`"i don't know"`, `""`) in 0ms.
-  2. **Layer 2: Semantic Slot & Component Decomposition (Single ONNX Batch, ~25ms):**
-     - Runs 8 parallel probe hypotheses simultaneously in RAM via `Xenova/nli-deberta-v3-xsmall`:
-       - `target_mastery`: Forward entailment against target concept.
-       - `minimal_core`: Forward entailment against core action.
-       - `superficial_attribute`: Catches color/warmth/appearance fixation.
-       - `premise_echo`: Catches echoing of question setup.
-       - `character_confusion`: Catches wrong actors (grandpa, friend, cat).
-       - `distractor_misconception`: Catches book distractors (bought at store).
-       - `beneficiary_consistency`: Rejects conflicting recipients (`"grampa's hat"` vs `"Leo's hat"`, $C \ge 0.70$).
-       - `attribute_consistency`: Rejects contradictory attributes (`"blue hat"` vs `"red hat"`, $C \ge 0.70$).
-  3. **Layer 3: Cognitive Resolution & Socratic Scaffolding Gate:**
-     - Deterministically maps diagnosed error mode to targeted Socratic audio feedback.
-     - Enforces unidirectional causality ($E_{fwd} \ge 0.50, C_{fwd} < 0.35$).
-     - Hard Attempt 2 auto-reveal bounds Socratic dialogue to 2 attempts max.
+### B. Decision Model Benchmark: Empirical Before vs. After
+Created reproducible 19-test benchmark suite (`scripts/benchmark_decision_models.js`) evaluating direct keywords, formal clauses, paraphrases, minimal core, circumlocutions, collision tests, distractors, visual details, agent swaps, and slot conflicts.
+
+| Metric | Before Optimization | After Optimization |
+| :--- | :---: | :---: |
+| **Benchmark Pass Rate** | 16 / 19 (84.2%) | **19 / 19 (100%)** |
+| *Circumlocution 1 ("the lady who puts water on the flowers so they grow")* | FAIL (`UNGROUNDED_OFF_TRACK`) | **PASS (`MASTERED`, $E = 0.605$)** |
+| *Circumlocution 2 ("someone who takes care of plants in the dirt")* | FAIL (`UNGROUNDED_OFF_TRACK`) | **PASS (`MASTERED`, $E = 0.734$)** |
+| *Collision Test ("she will become a flower")* | FAIL (`PREMISE_ECHO` misdiagnosis) | **PASS (`DISTRACTOR_MISCONCEPTION`)** |
+| **Full Regression Suite** | 56 / 60 | **60 / 60 Passing (100%)** |
+| **Contract Immutability** | 100% Immutable | **100% Immutable** |
+
+### C. Empirical Latency Breakdown & Findings
+Detailed benchmarking into why System 1 DeBERTa NLI exhibited ~165ms warm latency:
+1. **Cold-Start Spike (1,216ms):** One-time cost of loading 184MB ONNX weights from disk and compiling WASM execution graph. Pre-warmed at server boot via `getExtractor()`.
+2. **Batch Size vs Sequence Length Scaling:**
+   - 1 pair (32 tokens): **12 ms**.
+   - 5 pairs (36 tokens, mastery sweep): **31 ms**.
+   - 14 pairs (36 tokens, clamped): **89 ms**.
+   - 14 pairs (64 tokens, unclamped baseline): **177 ms**.
+3. **Architecture Decision:** Architected the 4-layer latency optimization pipeline to achieve sub-35ms mastery and sub-90ms full error diagnosis before beginning Module 4.
 
 ---
 
@@ -77,81 +79,25 @@ To eliminate context loss between sessions, every handoff must maintain:
   - [x] **Zero-Lag Tier 2: System 1 Local ONNX Semantic Evaluator** (Completed & Verified)
   - [x] **Coarse-to-Fine Semantic Slot Diagnostic Funnel** (Completed & Verified)
   - [x] **Relational & Discourse Resolution Engine** (Completed & Verified)
-- [ ] **Module 4: Mobile Camera Tray & Canvas Compression Engine** (NEXT)
+  - [x] **Circumlocution Probing & Dynamic Argmax Arbitration** (Completed & Verified)
+- [ ] **Module 3.5: 4-Layered System 1 Latency Optimization Pipeline** (NEXT IMMEDIATE OBJECTIVE)
+  - [ ] Layer 1: Token Sequence Length Clamping (`max_length: 36`)
+  - [ ] Layer 2: Two-Stage Speculative Cascaded Probing (Mastery $\le 35\text{ms}$, Error $\le 90\text{ms}$)
+  - [ ] Layer 3: Native C++ SIMD Runtime (`onnxruntime-node`)
+  - [ ] Layer 4: Synchronous Tier 1 0ms Gate
+- [ ] **Module 4: Mobile Camera Tray & Canvas Compression Engine**
 - [ ] **Module 5: Safari Audio Coordinator (TTS & STT)**
 - [ ] **Module 6: Full SPA Orchestration & End-to-End Reading Flow**
 
 ---
 
-## 5. Module 3 Gate & Regression Audit
+## 5. Verification Commands for Resuming Agent
 
-* **Gate 1 (Pipeline):** All domain modules implemented with local ONNX model support, mounted on `POST /api/evaluate-answer`, and pre-warmed on server boot.
-* **Gate 2 (Code Tests):**
-  - [test/health.test.js](test/health.test.js) (3 tests)
-  - [test/analyze_book.test.js](test/analyze_book.test.js) (3 tests)
-  - [test/hardening_m1_m2.test.js](test/hardening_m1_m2.test.js) (5 tests)
-  - [test/evaluate_answer.test.js](test/evaluate_answer.test.js) (5 tests)
-  - [test/zero_lag_deterministic_fastpath.test.js](test/zero_lag_deterministic_fastpath.test.js) (5 tests)
-  - [test/zero_lag_tier1.test.js](test/zero_lag_tier1.test.js) (5 tests)
-  - [test/zero_lag_tier2.test.js](test/zero_lag_tier2.test.js) (8 tests)
-  - [test/parallel_diagnostic_probing.test.js](test/parallel_diagnostic_probing.test.js) (5 tests)
-  - [test/coarse_to_fine_diagnostic_funnel.test.js](test/coarse_to_fine_diagnostic_funnel.test.js) (6 tests)
-  - [test/relational_discourse_resolution.test.js](test/relational_discourse_resolution.test.js) (5 tests)
-  - [test/system1_input_optimization.test.js](test/system1_input_optimization.test.js) (5 tests)
-  - [test/hardening_and_security.test.js](test/hardening_and_security.test.js) (5 tests)
-  - **Full Regression Status:** **60/60 passing**, 0 failures (~18.2s). Contract audit: `✅ 100% immutable`.
-* **Gate 3 (Digital Samples Benchmark):** [scripts/test_evaluate_sample.js](scripts/test_evaluate_sample.js) (10/10 passing) & [scripts/test_50_eval_cases.js](scripts/test_50_eval_cases.js) (**50/50 PASS (100%)** across all 6 cognitive error tiers).
-* **Gate 4 (Human Interactive REPL):** [scripts/interactive_eval_test.js](scripts/interactive_eval_test.js) streamlined with high-level cognitive diagnosis telemetry and `verbose` toggle.
-* **Gate 5 (Mobile Hardware & Tunnel Verification):** Verified server accessibility over live Cloudflare HTTPS tunnel from iPhone 14 Plus Safari via zero-typing QR code scanner ([launch_mobile_test.bat](launch_mobile_test.bat)).
-
----
-
-## 6. Rigorous Human Testing Protocol (Pre-Module 4 Gate)
-
-Before advancing to Module 4, run human evaluation using the interactive REPL:
+To verify baseline health immediately upon resume:
 ```powershell
-node scripts/interactive_eval_test.js
+# 1. Run full project regression suite (must pass 60/60 tests):
+npm test
+
+# 2. Run 19-case decision model benchmark (must pass 19/19 cases):
+node scripts/benchmark_decision_models.js test_output/benchmark_after.json
 ```
-*(Or launch `launch_test_environment.bat` and select Option 4).*
-
-### Human Test Verification Matrix
-1. **Core Concept Mastery:**
-   - `"grandma made it"` $\rightarrow$ `MASTERED` (Feedback: *"Spot on! His grandma knitted that warm red hat just for him!"*)
-   - `"his nana knitted it"` $\rightarrow$ `MASTERED`
-   - `"it was special because his granny made it"` $\rightarrow$ `MASTERED`
-2. **Actor / Character Confusion:**
-   - `"his grandpa made it"` $\rightarrow$ `CHARACTER_CONFUSION` (Feedback: *"Check the picture! Did his grandpa make it, or was it someone else?"*)
-   - `"the cat made it"` $\rightarrow$ `CHARACTER_CONFUSION`
-   - `"his mother's nana made the hat"` $\rightarrow$ `CHARACTER_CONFUSION`
-3. **Recipient Confusion:**
-   - `"grandma made grampa's hat"` $\rightarrow$ `CHARACTER_CONFUSION` (Feedback: *"That hat was for Leo, not someone else! Think about who made it for Leo."*)
-4. **Attribute / Distractor Confusion:**
-   - `"his nana made the blue hat"` $\rightarrow$ `DISTRACTOR_MISCONCEPTION` (Feedback: *"Look at the picture! Was the hat blue, or was it a warm red hat?"*)
-   - `"he bought it at the store"` $\rightarrow$ `DISTRACTOR_MISCONCEPTION` (Feedback: *"He didn't buy it at a store! Look at who knitted it for him!"*)
-5. **Superficial Attributes & Premise Echoes:**
-   - `"his hat was red"` $\rightarrow$ `SUPERFICIAL_ATTRIBUTE` (Feedback: *"Yes, it was a warm red hat! But think about who made that hat for Leo."*)
-   - `"the hat the hat"` $\rightarrow$ `SUPERFICIAL_ATTRIBUTE`
-   - `"the hat blew away"` $\rightarrow$ `PREMISE_ECHO` (Feedback: *"Yes, his hat blew away! But why was that hat so special to Leo?"*)
-   - `"who made the hat"` $\rightarrow$ `QUESTION_ECHO`
-6. **Shrugs & 2-Attempt Bounding:**
-   - `"i don't know"` (Attempt 1) $\rightarrow$ `NEEDS_SCAFFOLD` (Hint 1)
-   - `2: idk` (Attempt 2) $\rightarrow$ `OFF_TRACK` with cheerful auto-reveal and `resolved: true`.
-
----
-
-## 7. Mobile Device Testing Infrastructure
-
-To test on real mobile hardware (iPhone 14 Plus Safari):
-```cmd
-launch_mobile_test.bat
-```
-This utility:
-- Clears port 3000 via [scripts/prelaunch.js](scripts/prelaunch.js).
-- Boots the Express server in a dedicated window.
-- Resolves local network addresses via [scripts/detect_lan.js](scripts/detect_lan.js).
-- Spawns the Cloudflare HTTPS tunnel via [scripts/mobile_tunnel.js](scripts/mobile_tunnel.js).
-- Copies the HTTPS tunnel URL to the Windows Clipboard automatically (`Set-Clipboard`).
-- Opens a desktop browser tab with a large QR code ([public/connect.html](public/connect.html)) so the iPhone camera can open Safari with 0 typing.
-
-
-

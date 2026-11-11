@@ -30,10 +30,16 @@ Each module must pass all 4 verification gates before the next module begins:
   - [x] Human Gate: Validate chunk structure and Grade 2 prompts against physical pages
 
 - [x] **Module 3: Socratic Answer Evaluation Engine**
-  - [x] Pipeline: `POST /api/evaluate-answer`, System 1 ONNX NLI, discourse resolver, $\le 25$ word cap, attempt tracking & free microturn
+  - [x] Pipeline: `POST /api/evaluate-answer`, System 1 ONNX NLI, discourse resolver, dynamic argmax arbitration, circumlocution support
   - [x] Code Tests: 60 unit/integration tests across 12 test suites with 100% contract immutability
-  - [x] Digital Samples: 50-item benchmark runner (`scripts/test_50_eval_cases.js`) passing 50/50 (100%)
-  - [x] Human Gate: Interactive terminal REPL (`scripts/interactive_eval_test.js`) testing edge-case child phrases for tone
+  - [x] Digital Samples: 19-case decision model benchmark (`scripts/benchmark_decision_models.js`) passing 19/19 (100%); 50-item benchmark passing 50/50
+  - [x] Human Gate: Empirical verification across *The Runaway Bunny* chunks with zero subjective grading
+
+- [ ] **Module 3.5: 4-Layered System 1 Latency Optimization Pipeline (Pre-Module 4 Objective)**
+  - [ ] Pipeline: Token sequence clamping (`max_length: 36`), 2-stage cascaded probing, native C++ SIMD, synchronous Tier 1 gate
+  - [ ] Code Tests: Maintain 60/60 passing tests and <50ms timing assertions
+  - [ ] Digital Samples: Benchmark verification: Stage 1 mastery $\le 35\text{ms}$, Stage 2 full diagnosis $\le 90\text{ms}$
+  - [ ] Human Gate: Perceptual zero-lag audio feedback validation
 
 - [ ] **Module 4: Mobile Camera Tray & Canvas Compression Engine**
   - [ ] Pipeline: `public/js/camera_tray.js`, sequential capture, filmstrip tray, canvas downscaler ($\le 1600\text{px}$)

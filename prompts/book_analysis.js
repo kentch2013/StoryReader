@@ -21,7 +21,7 @@ Strict Generation Rules:
    - The necessary and sufficient factual kernel for full credit. Under 14 words.
 4. "keyword_clusters":
    - Exactly 2 concept clusters required for mastery.
-   - Each cluster has a "concept_name" and 2-4 acceptable synonyms/inflections a 7-year-old might naturally speak.
+   - Each cluster has a "concept_name" and 2-4 acceptable synonyms, common inflections, or functional action phrases a 7-year-old might naturally speak (e.g. for gardener: "gardener", "garden worker", "watering plants", "plant keeper").
 5. "acceptable_phrasings":
    - Exactly 2 natural spoken examples of how a real Grade 2 child would answer.
 6. "hint_level_1" (Spatial Anchor):
@@ -31,22 +31,24 @@ Strict Generation Rules:
 8. "scaffold_hint":
    - Concise primary hint (matches hint_level_1). Under 15 words.
 9. "canonical_prototypes":
-   - Exactly 5 standardized response archetypes for deterministic speech matching:
+   - Exactly 6 standardized response archetypes for deterministic speech matching:
      1. "formal_full": Complete, well-structured answer.
      2. "colloquial": Natural informal child phrasing.
      3. "minimal_core": Shortest 2-4 word factual kernel.
-     4. "partial_action": Key verb/action without full context.
-     5. "common_distractor": A plausible misunderstanding to catch and scaffold.
+     4. "functional_circumlocution": Describing what the character does, uses, or looks like without naming the key noun (e.g. "someone who catches fish with a net or pole", "the lady who waters plants", "the air that blows").
+     5. "partial_action": Key verb/action without full context.
+     6. "common_distractor": A plausible misunderstanding to catch and scaffold.
 10. "question_type":
    - One of 'cause_and_effect', 'character_motivation', 'literal_fact', 'sequential_action'.
 11. "diagnostic_probes":
-   - Parallel probing hypotheses and scaffolds/feedback for 6 diagnostic conditions:
-     - target_mastery: Full concept hypothesis & praise feedback.
-     - minimal_core: Minimal key detail hypothesis & praise feedback.
-     - superficial_attribute: Irrelevant visual/perceptual attribute hypothesis & scaffold.
-     - premise_echo: Echoing the question premise & scaffold.
-     - character_confusion: Conflating characters or wrong agent & scaffold.
-     - distractor_misconception: Plausible misconception & scaffold.
+   - Parallel probing hypotheses and scaffolds/feedback for 6 diagnostic conditions.
+   - CRITICAL REQUIREMENT FOR HYPOTHESES: Every hypothesis MUST be stated as a direct factual story proposition or concrete event/action description (e.g. "The mother will catch fish with a net or pole", "The mother is a gardener who waters plants"). NEVER use meta-commentary about the child (e.g. NEVER write "Child understands...", "Child identified the word...", or "Child confused...").
+     - target_mastery: Full concept statement & praise feedback.
+     - minimal_core: Minimal key detail/action statement & praise feedback.
+     - superficial_attribute: Description of an irrelevant visual/perceptual attribute & scaffold.
+     - premise_echo: Exact repetition of the question premise & scaffold.
+     - character_confusion: Statement where wrong character/agent performs the action & scaffold.
+     - distractor_misconception: Plausible incorrect story event/misconception & scaffold.
 12. "entity_graph":
    - Character and relational entity network for discourse and kinship resolution:
      - "characters": Array of character entities with canonical_id, canonical_name, gender, aliases, and kinship_compositions.
@@ -119,7 +121,7 @@ export const BOOK_ANALYSIS_SCHEMA = {
               properties: {
                 type: {
                   type: Type.STRING,
-                  enum: ['formal_full', 'colloquial', 'minimal_core', 'partial_action', 'common_distractor'],
+                  enum: ['formal_full', 'colloquial', 'minimal_core', 'functional_circumlocution', 'partial_action', 'common_distractor'],
                 },
                 text: { type: Type.STRING },
               },

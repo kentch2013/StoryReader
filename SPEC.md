@@ -55,6 +55,7 @@ StoryScout is a local, lightweight web application designed for a parent and chi
         { "type": "formal_full", "text": "She will run after him because he is her little bunny." },
         { "type": "colloquial", "text": "She chases him cause she loves her baby." },
         { "type": "minimal_core", "text": "Run after him." },
+        { "type": "functional_circumlocution", "text": "The mother chases her child so he does not get lost." },
         { "type": "partial_action", "text": "She will use her feet to run." },
         { "type": "common_distractor", "text": "She will stay at home." }
       ],
@@ -116,11 +117,12 @@ StoryScout is a local, lightweight web application designed for a parent and chi
   "microturn_used": false
 }
 ```
-- **Execution Architecture (Coarse-to-Fine Semantic Slot Funnel):**
+- **Execution Architecture (Coarse-to-Fine Semantic Slot Funnel & 4-Layer Latency Stack):**
   1. *Layer 1: Discourse & Relational Resolution & Intelligibility Gate (0ms):* Grounding through chunk `entity_graph` (kinship composition, cross-generational mismatch detection, social relations, pronoun anaphora). Executes 3-tier Hierarchical Ambiguity Cascade (Question Salience $\rightarrow$ Predicate Exclusivity $\rightarrow$ Free Clarification Micro-Turn with `is_microturn: true` without consuming attempt). Screens inquiry questions (`"who made the hat"`), word stutters, and catches shrugs (`"i don't know"`, `""`).
-  2. *Layer 2: Parallel Slot Consistency Decomp. (ONNX Batch, ~25ms):* In a single forward pass via `Xenova/nli-deberta-v3-xsmall` (with `max_length: 64`), evaluates parallel hypotheses covering actor, action, beneficiary attribution consistency (`${actor} made ${recipient}'s hat`), and attribute consistency (`"The hat was red"`).
-  3. *Layer 3: Cognitive Resolution & Socratic Gate:* Enforces forward-only causality for mastery ($E_{fwd} \ge 0.50, C_{fwd} < 0.35$) and forward-only causality for error modes (`CHARACTER_CONFUSION`, `DISTRACTOR_MISCONCEPTION`). Applies vague object guard and minimal core length bounds. Maps diagnosed errors (`CHARACTER_CONFUSION`, `DISTRACTOR_MISCONCEPTION`, `SUPERFICIAL_ATTRIBUTE`, `PREMISE_ECHO`, `AMBIGUOUS_REFERENT`) to targeted scaffolds.
+  2. *Layer 2: Parallel Slot Consistency Decomp. (ONNX Batch, ~25ms):* In a single forward pass via `Xenova/nli-deberta-v3-xsmall`, evaluates parallel hypotheses covering actor, action, beneficiary attribution consistency (`${actor} made ${recipient}'s hat`), and attribute consistency (`"The hat was red"`).
+  3. *Layer 3: Dynamic Argmax & Circumlocution Resolution:* Enforces forward-only causality for mastery ($E_{fwd} \ge 0.50, C_{fwd} < 0.35$), minimal core, partial actions, and functional circumlocutions (e.g. *"the lady who puts water on the flowers so they grow"*). Vector argmax arbitrates competing error modes (`DISTRACTOR_MISCONCEPTION`, `CHARACTER_CONFUSION`, `SUPERFICIAL_ATTRIBUTE`, `PREMISE_ECHO`, `AMBIGUOUS_REFERENT`).
   4. *Attempt 2 Auto-Reveal (0ms):* On Attempt 2 failure, cheerful reveal is emitted and `resolved: true` is returned to prevent infinite Socratic loops.
+  5. *Pre-Module 4 Latency Optimization Objective:* The pipeline implements a 4-layer latency stack (dynamic token clamping to `max_length: 36`, 2-stage cascaded early-exit probing, native C++ SIMD, and synchronous Tier 1 0ms gate) targeting $\le 35\text{ms}$ mastery and $\le 90\text{ms}$ full error diagnosis.
 - **Output JSON Schema:**
 ```json
 {
