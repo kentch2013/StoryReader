@@ -67,7 +67,22 @@ Copy `.env.example` to `.env` and set your key:
 cp .env.example .env
 ```
 
-### 3. Start Local Host & Cloudflare Tunnel
+### 3. Start Local Host & Mobile Tunnel
+
+#### Option A: One-Click Mobile Testing (Zero-Typing QR Code)
+Double-click `launch_mobile_test.bat` or run:
+```cmd
+launch_mobile_test.bat
+```
+This boots the server, creates an HTTPS tunnel, copies the URL to your clipboard, and displays a scannable QR code on your monitor. Point your iPhone camera at the screen to launch Safari instantly.
+
+#### Option B: Master Test Environment & REPL
+```cmd
+launch_test_environment.bat
+```
+Launches the Express server, opens the interactive Socratic REPL (`scripts/interactive_eval_test.js`), checks health in browser, and presents the benchmark menu.
+
+#### Option C: Manual CLI Launch
 ```bash
 # Terminal 1: Node.js server
 npm install
