@@ -45,12 +45,16 @@ Strict Generation Rules:
 12. "diagnostic_probes":
    - Parallel probing hypotheses and scaffolds/feedback for 6 diagnostic conditions.
    - CRITICAL REQUIREMENT FOR HYPOTHESES: Every hypothesis MUST be stated as a direct factual story proposition or concrete event/action description (e.g. "The mother will catch fish with a net or pole", "The mother is a gardener who waters plants"). NEVER use meta-commentary about the child (e.g. NEVER write "Child understands...", "Child identified the word...", or "Child confused...").
+   - CRITICAL REQUIREMENT FOR ATTEMPT 1 SCAFFOLDS (ZERO ANSWER SPOILERS):
+     - Scaffolds for error probes (superficial_attribute, premise_echo, character_confusion, distractor_misconception, scaffold_hint, hint_level_1) MUST NEVER reveal the target answer, key noun, or final solution.
+     - Scaffolds must be purely Socratic redirects or picture-clue anchors (e.g. "Look at the top of the barn in the picture—where did she sleep?", NEVER "She slept in the haymow!").
+     - For distractor_misconception: Redirect the child back to the story clue without giving away the answer (e.g. "She didn't live in the city! Take another look at the picture—where did she make her home?").
      - target_mastery: Full concept statement & praise feedback.
      - minimal_core: Minimal key detail/action statement & praise feedback.
-     - superficial_attribute: Description of an irrelevant visual/perceptual attribute & scaffold.
-     - premise_echo: Exact repetition of the question premise & scaffold.
-     - character_confusion: Statement where wrong character/agent performs the action & scaffold.
-     - distractor_misconception: Plausible incorrect story event/misconception & scaffold.
+     - superficial_attribute: Description of an irrelevant visual/perceptual attribute & Socratic redirect scaffold.
+     - premise_echo: Exact repetition of the question premise & Socratic redirect scaffold.
+     - character_confusion: Statement where wrong character/agent performs the action & Socratic who-redirect scaffold.
+     - distractor_misconception: Plausible incorrect story event/misconception & Socratic redirect scaffold without revealing the answer.
 13. "entity_graph":
    - Character and relational entity network for discourse and kinship resolution:
      - "characters": Array of character entities with canonical_id, canonical_name, gender, aliases, and kinship_compositions.

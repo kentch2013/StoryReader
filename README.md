@@ -9,6 +9,7 @@
 * **[Project Specification (`SPEC.md`)](SPEC.md):** Core requirements, Gemini prompts, and user flows.
 * **[Architecture Blueprint (`architecture.md`)](architecture.md):** Deep pre-mortem risk register, Safari hardware workarounds, data contracts, and audio lifecycle state machine.
 * **[Roadmap to Completion (`roadmap.md`)](roadmap.md):** Granular module-by-module implementation plan and verification protocol.
+* **[Rattles Testing Benchmark (`docs/rattles_testing_benchmark.md`)](docs/rattles_testing_benchmark.md):** 8 Grade 2 comprehension questions with 80 evaluated test cases for System 1 ONNX NLI, Near-Miss Slot Repair, and no-spoiler Socratic scaffolding.
 
 ---
 

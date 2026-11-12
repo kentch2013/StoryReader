@@ -10,6 +10,7 @@ import { evaluateSemanticMatch, evaluateDiagnosticProbes } from './semantic_eval
 import { getPrebakedFeedback } from './feedback_synthesizer.js';
 import { classifyAnswerSemantic } from './gemini_service.js';
 import { resolveDiscourse } from './discourse_resolver.js';
+import { evaluateSlotDelta } from './slot_delta_engine.js';
 
 const ADVERSARIAL_INJECTION_REGEX = /\b(ignore\s+previous|system\s+prompt|jailbreak|disregard|you\s+are\s+now|developer\s+mode)\b/i;
 
@@ -101,8 +102,29 @@ export async function evaluateChildAnswer(data = {}) {
     });
   }
 
-  // If Cross-Generational Mismatch (Character Confusion) was detected
+  // If Cross-Generational Mismatch or Conflicting Beneficiary was detected
   if (discourseResult.character_confusion) {
+    // If explicit semantic slots are provided and child matched other core slots, evaluate for Near-Miss Slot Repair
+    if (data.semantic_slots) {
+      const slotDelta = evaluateSlotDelta(grounded, data);
+      if (slotDelta.is_near_miss && slotDelta.repair_prompt) {
+        diagnostics.cognitive_diagnosis = 'NEAR_MISS_REPAIR';
+        diagnostics.slot_delta = slotDelta;
+        diagnostics.tier_resolved = 'SLOT_DELTA_NEAR_MISS_REPAIR';
+
+        return makeEvalResult({
+          status: 'needs_scaffold',
+          spoken_feedback: slotDelta.repair_prompt,
+          follow_up_prompt: slotDelta.repair_prompt,
+          attempt_count: attempt,
+          resolved: false,
+          is_microturn: true,
+          microturn_used: true,
+          diagnostics,
+        });
+      }
+    }
+
     const confusionFeedback =
       data.diagnostic_probes?.character_confusion?.scaffold ||
       discourseResult.spoken_prompt ||
@@ -154,6 +176,27 @@ export async function evaluateChildAnswer(data = {}) {
     });
   }
 
+  // Universal Slot Delta Gate: Check for explicit slot conflicts before or alongside semantic evaluation
+  if (data.semantic_slots) {
+    const slotDelta = evaluateSlotDelta(grounded, data);
+    if (slotDelta.is_near_miss && slotDelta.repair_prompt) {
+      diagnostics.cognitive_diagnosis = 'NEAR_MISS_REPAIR';
+      diagnostics.slot_delta = slotDelta;
+      diagnostics.tier_resolved = 'SLOT_DELTA_NEAR_MISS_REPAIR';
+
+      return makeEvalResult({
+        status: 'needs_scaffold',
+        spoken_feedback: slotDelta.repair_prompt,
+        follow_up_prompt: slotDelta.repair_prompt,
+        attempt_count: attempt,
+        resolved: false,
+        is_microturn: true,
+        microturn_used: true,
+        diagnostics,
+      });
+    }
+  }
+
   // Parallel Diagnostic Probing Architecture (System 1 Single-Pass Diagnostic Evaluator)
   if (data.diagnostic_probes) {
     let result = null;
@@ -187,6 +230,27 @@ export async function evaluateChildAnswer(data = {}) {
           microturn_used: data.microturn_used === true,
           diagnostics,
         });
+      }
+
+      // Check Slot Delta for Near-Miss single-slot isolation repair
+      if (data.semantic_slots) {
+        const slotDelta = evaluateSlotDelta(grounded, data);
+        if (slotDelta.is_near_miss && slotDelta.repair_prompt) {
+          diagnostics.cognitive_diagnosis = 'NEAR_MISS_REPAIR';
+          diagnostics.slot_delta = slotDelta;
+          diagnostics.tier_resolved = 'SLOT_DELTA_NEAR_MISS_REPAIR';
+
+          return makeEvalResult({
+            status: 'needs_scaffold',
+            spoken_feedback: slotDelta.repair_prompt,
+            follow_up_prompt: slotDelta.repair_prompt,
+            attempt_count: attempt,
+            resolved: false,
+            is_microturn: true,
+            microturn_used: true,
+            diagnostics,
+          });
+        }
       }
 
       if (attempt >= 2) {

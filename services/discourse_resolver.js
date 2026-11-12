@@ -74,9 +74,11 @@ export function resolveDiscourse(normalizedTranscript = '', rubric = {}, options
   // Conflicting recipient detection against story_context.recipient
   const storyRecipient = (rubric.story_context?.recipient || rubric.entity_graph?.discourse_referents?.him || '').toLowerCase().trim();
   if (storyRecipient) {
-    const beneficiaryMatch = transcript.match(/\b(?:for)\s+(?:a\s+|the\s+|his\s+|her\s+|my\s+)?(dog|cat|pet|grampa|grandpa|friend|someone\s+else|sister|brother|dad|father)\b/i);
+    const beneficiaryMatch = transcript.match(
+      /\b(?:for\s+(?:a\s+|the\s+|his\s+|her\s+|my\s+)?(dog|cat|pet|grampa|grandpa|friend|someone\s+else|sister|brother|dad|father)|(?:a\s+|the\s+|his\s+|her\s+|my\s+)?(dog|cat|pet|grampa|grandpa|friend|someone\s+else|sister|brother|dad|father)'s\s+(?:hat|item|thing|stuff|one))\b/i
+    );
     if (beneficiaryMatch) {
-      const statedBeneficiary = beneficiaryMatch[1].toLowerCase();
+      const statedBeneficiary = (beneficiaryMatch[1] || beneficiaryMatch[2]).toLowerCase();
       result.character_confusion = true;
       result.cognitive_diagnosis = 'CHARACTER_CONFUSION';
       const recipientLabel = rubric.story_context?.recipient || storyRecipient || 'them';

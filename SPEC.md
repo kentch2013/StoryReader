@@ -120,9 +120,10 @@ StoryScout is a local, lightweight web application designed for a parent and chi
 ```
 - **Execution Architecture (Coarse-to-Fine Semantic Slot Funnel & 4-Layer Latency Stack):**
   0. *Grounding Fidelity Gate (Server-Side, Pre-Delivery):* When pages are analyzed via `POST /api/analyze-book`, each chunk's `verbatim_page_text` is verified against `target_answer_concept` and `checkin_question` via lexical entity overlap and ONNX DeBERTa NLI ($E \ge 0.50, C < 0.25$). Context bounding limits chunks to $\le 3$ pages. Ungrounded entities or factual contradictions trigger automatic review flags.
-  1. *Layer 1: Discourse & Relational Resolution & Intelligibility Gate (0ms):* Grounding through chunk `entity_graph` (kinship composition, cross-generational mismatch detection, social relations, pronoun anaphora). Executes 3-tier Hierarchical Ambiguity Cascade (Question Salience $\rightarrow$ Predicate Exclusivity $\rightarrow$ Free Clarification Micro-Turn with `is_microturn: true` without consuming attempt). Screens inquiry questions (`"who made the hat"`), word stutters, and catches shrugs (`"i don't know"`, `""`).
-  2. *Layer 2: Parallel Slot Consistency Decomp. (ONNX Batch, ~25ms):* In a single forward pass via `Xenova/nli-deberta-v3-xsmall`, evaluates parallel hypotheses covering actor, action, beneficiary attribution consistency (`${actor} made ${recipient}'s hat`), and attribute consistency (`"The hat was red"`).
-  3. *Layer 3: Dynamic Argmax & Circumlocution Resolution:* Enforces forward-only causality for mastery ($E_{fwd} \ge 0.50, C_{fwd} < 0.35$), minimal core, partial actions, and functional circumlocutions (e.g. *"the lady who puts water on the flowers so they grow"*). Vector argmax arbitrates competing error modes (`DISTRACTOR_MISCONCEPTION`, `CHARACTER_CONFUSION`, `SUPERFICIAL_ATTRIBUTE`, `PREMISE_ECHO`, `AMBIGUOUS_REFERENT`).
+  1. *Layer 1: Discourse & Relational Resolution & Intelligibility Gate (0ms):* Grounding through chunk `entity_graph` (kinship composition, cross-generational mismatch detection, possessive modifier isolation e.g. `[Character]'s brother`, social relations, pronoun anaphora). Executes 3-tier Hierarchical Ambiguity Cascade (Question Salience $\rightarrow$ Predicate Exclusivity $\rightarrow$ Free Clarification Micro-Turn with `is_microturn: true` without consuming attempt). Screens inquiry questions (`"who made the hat"`), word stutters, and catches shrugs (`"i don't know"`, `""`).
+  1.5. *Universal Slot Delta Gate (Near-Miss Repair, <5ms):* If `semantic_slots` are defined, calculates frame-semantic slot overlap. If exactly one slot is conflicted and at least one core slot is matched (`accuracy_degree >= 0.50`), intercepts with generic Socratic Wh-prompts without bespoke book hardcoding (e.g., location: *"Where did that happen?"*, agent: *"Who was the one doing that?"*, action: *"What was the action?"*).
+  2. *Layer 2: Parallel Diagnostic Probing & Canonical Prototype Expansion (ONNX Batch, ~25ms):* In a single forward pass via `Xenova/nli-deberta-v3-xsmall`, evaluates parallel hypotheses covering `target_mastery`, `minimal_core`, positive prototypes (`formal_full`, `colloquial`), actor, beneficiary consistency, and attribute consistency. Wh-question grounding strictly forbids non-agent questions from awarding minimal core mastery on character names alone.
+  3. *Layer 3: Dynamic Argmax & Strict Contradiction Guard:* Enforces target mastery contradiction guard ($C_{target} < 0.35$). Evaluates dynamic argmax across competing error modes (`DISTRACTOR_MISCONCEPTION`, `CHARACTER_CONFUSION`, `SUPERFICIAL_ATTRIBUTE`, `PREMISE_ECHO`, `PARTIAL_ACTION`, `AMBIGUOUS_REFERENT`). Attempts 1 scaffolds strictly follow the **No-Spoiler Pedagogical Rule** (guiding inquiries without leaking the answer noun or action).
   4. *Attempt 2 Auto-Reveal (0ms):* On Attempt 2 failure, cheerful reveal is emitted and `resolved: true` is returned to prevent infinite Socratic loops.
   5. *Pre-Module 4 Latency Optimization Objective:* The pipeline implements a 4-layer latency stack (dynamic token clamping to `max_length: 36`, 2-stage cascaded early-exit probing, native C++ SIMD, and synchronous Tier 1 0ms gate) targeting $\le 35\text{ms}$ mastery and $\le 90\text{ms}$ full error diagnosis.
 - **Output JSON Schema:**
@@ -136,9 +137,10 @@ StoryScout is a local, lightweight web application designed for a parent and chi
   "is_microturn": false,
   "microturn_used": false,
   "diagnostics": {
-    "tier_resolved": "PARALLEL_DIAGNOSTIC_PROBING",
-    "cognitive_diagnosis": "MASTERED" | "CHARACTER_CONFUSION" | "DISTRACTOR_MISCONCEPTION" | "SUPERFICIAL_ATTRIBUTE" | "PREMISE_ECHO" | "QUESTION_ECHO" | "AMBIGUOUS_REFERENT" | "UNGROUNDED_OFF_TRACK",
-    "probe_scores": {}
+    "tier_resolved": "PARALLEL_DIAGNOSTIC_PROBING" | "SLOT_DELTA_NEAR_MISS_REPAIR",
+    "cognitive_diagnosis": "MASTERED" | "NEAR_MISS_REPAIR" | "CHARACTER_CONFUSION" | "DISTRACTOR_MISCONCEPTION" | "SUPERFICIAL_ATTRIBUTE" | "PREMISE_ECHO" | "QUESTION_ECHO" | "PARTIAL_ACTION" | "AMBIGUOUS_REFERENT" | "UNGROUNDED_OFF_TRACK",
+    "probe_scores": {},
+    "slot_delta": {}
   }
 }
 ```

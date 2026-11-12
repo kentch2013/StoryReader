@@ -335,7 +335,8 @@ export async function evaluateDiagnosticProbes(normalizedTranscript, rubric = {}
   const wordTokens = transcript.split(/\s+/).filter(Boolean);
   const wordCount = wordTokens.length;
   const minimalCoreText = rubric.canonical_prototypes?.find((p) => p && p.type === 'minimal_core')?.text || null;
-  const atomicKeyword = rubric.keyword_clusters?.[0]?.synonyms?.[0] || rubric.entity_graph?.characters?.[0]?.canonical_name || rubric.story_context?.actor || null;
+  const isAgentQuestion = rubric.question_type === 'agent_identification' || /^(who|whose)\b/i.test(rubric.checkin_question || '');
+  const atomicKeyword = (rubric.keyword_clusters?.[0]?.synonyms?.[0] || (isAgentQuestion ? (rubric.entity_graph?.characters?.[0]?.canonical_name || rubric.story_context?.actor) : null)) || null;
   const coreEntity = minimalCoreText || atomicKeyword || null;
   const atomicEntity = (atomicKeyword && atomicKeyword !== coreEntity) ? atomicKeyword : null;
 
@@ -365,10 +366,27 @@ export async function evaluateDiagnosticProbes(normalizedTranscript, rubric = {}
     ? rubric.canonical_prototypes.find((p) => p && p.type === 'common_distractor')?.text || null
     : null;
 
+  const positiveProtos = [];
+  if (Array.isArray(rubric.canonical_prototypes)) {
+    for (let i = 0; i < rubric.canonical_prototypes.length; i++) {
+      const p = rubric.canonical_prototypes[i];
+      if (p && p.text && p.type !== 'common_distractor' && p.type !== 'partial_action') {
+        const key = `proto_${p.type || i}`;
+        positiveProtos.push({ key, text: p.text.trim() });
+      }
+    }
+  }
+
   const stage1Keys = [
     'target_mastery',
     'minimal_core',
+    'character_confusion',
+    'distractor_misconception',
+    'superficial_attribute',
   ];
+  for (const pr of positiveProtos) {
+    stage1Keys.push(pr.key);
+  }
   if (coreEntity) {
     stage1Keys.push('core_entity');
   }
@@ -412,6 +430,9 @@ export async function evaluateDiagnosticProbes(normalizedTranscript, rubric = {}
     beneficiary_consistency: { hypothesis: beneficiaryHyp || '' },
     attribute_consistency: { hypothesis: attributeHyp || '' },
   };
+  for (const pr of positiveProtos) {
+    fullProbes[pr.key] = { hypothesis: pr.text };
+  }
 
   // -------------------------------------------------------------------------
   // STAGE 1: Positive Mastery Sweep & Negative Anchors (Batch-Adaptive SIMD)
@@ -485,25 +506,46 @@ export async function evaluateDiagnosticProbes(normalizedTranscript, rubric = {}
   const circumE = probeScores.functional_circumlocution?.entailment ?? 0;
   const circumC = probeScores.functional_circumlocution?.contradiction ?? 1;
 
-  const winningE = Math.max(targetE, minimalE, circumE);
+  let protoMaxE = 0;
+  let protoMaxC = 1;
+  for (const pr of positiveProtos) {
+    const pE = probeScores[pr.key]?.entailment ?? 0;
+    const pC = probeScores[pr.key]?.contradiction ?? 1;
+    if (pE > protoMaxE) {
+      protoMaxE = pE;
+      protoMaxC = pC;
+    }
+  }
+
+  const winningE = Math.max(targetE, minimalE, circumE, protoMaxE);
   const winningC =
     winningE === targetE
       ? targetC
       : winningE === minimalE
       ? minimalC
+      : winningE === protoMaxE
+      ? protoMaxC
       : circumC;
   const masteryScore = winningE;
 
-  const hasVagueObject = /\b(something|anything|stuff)\b/i.test(transcript);
+  const hasVagueObject = /\b(something|anything|stuff|a\s+place|someplace|somewhere)\b/i.test(transcript) || /\b(something|anything|stuff|a\s+place|someplace|somewhere)\b/i.test(normalizedTranscript);
+  const hasMannerCueOnly =
+    /\b(yarn|color|red\s+yarn|blue\s+yarn|wool|needles?)\b/i.test(transcript) &&
+    !/\b(love|loved|special|sad|cried|upset|favorite)\b/i.test(transcript) &&
+    targetE < 0.10;
+
   const isMasteredCandidate =
-    (targetE >= 0.50 && targetC < 0.35) ||
-    (minimalE >= 0.50 && minimalC < 0.35 && !hasVagueObject && (wordCount <= 6 || targetE >= 0.05)) ||
-    (circumE >= 0.50 && circumC < 0.35);
+    targetC < 0.35 &&
+    ((targetE >= 0.50) ||
+      (protoMaxE >= 0.50 && protoMaxC < 0.35) ||
+      (minimalE >= 0.50 && minimalC < 0.35 && !hasVagueObject && !hasMannerCueOnly && (wordCount <= 6 || targetE >= 0.05)) ||
+      (circumE >= 0.50 && circumC < 0.35));
 
   const benC = probeScores.beneficiary_consistency?.contradiction ?? 0;
   const attrC = probeScores.attribute_consistency?.contradiction ?? 0;
   const stage1CharConfusionE = probeScores.character_confusion?.entailment ?? 0;
   const stage1DistractorE = probeScores.distractor_misconception?.entailment ?? 0;
+  const stage1SuperficialE = probeScores.superficial_attribute?.entailment ?? 0;
 
   // Speculative Early-Exit Gate:
   // Awards mastery immediately if high-confidence entailment, low contradiction (<0.20),
@@ -514,10 +556,12 @@ export async function evaluateDiagnosticProbes(normalizedTranscript, rubric = {}
     winningC < 0.20 &&
     targetC < 0.35 &&
     !hasVagueObject &&
+    !hasMannerCueOnly &&
     benC < 0.50 &&
     attrC < 0.50 &&
     stage1CharConfusionE < 0.40 &&
-    stage1DistractorE < 0.40;
+    stage1DistractorE < 0.40 &&
+    stage1SuperficialE < 0.40;
 
   if (canEarlyExit) {
     return {
@@ -587,7 +631,7 @@ export async function evaluateDiagnosticProbes(normalizedTranscript, rubric = {}
       ]);
     }
 
-    const isForwardOnly = stage2RevKeyIndices[key] === undefined;
+    const isForwardOnly = stage2RevKeyIndices[key] === undefined || hasVagueObject;
     const effectiveE = isForwardOnly ? e_fwd : Math.max(e_fwd, e_rev);
     const effectiveC = isForwardOnly ? c_fwd : (effectiveE === e_rev ? c_rev : c_fwd);
     const bestN = effectiveE === e_fwd ? n_fwd : n_rev;
@@ -655,20 +699,25 @@ export async function evaluateDiagnosticProbes(normalizedTranscript, rubric = {}
       neutral: probeScores.character_confusion?.neutral ?? 0,
       feedback: fullProbes.character_confusion?.scaffold || rubric.hint_level_1 || '',
     },
+    {
+      type: 'PARTIAL_ACTION',
+      score: probeScores.partial_action?.entailment ?? 0,
+      contradiction: probeScores.partial_action?.contradiction ?? 0,
+      neutral: probeScores.partial_action?.neutral ?? 0,
+      feedback: rubric.scaffold_hint || rubric.hint_level_1 || 'You got part of it! What else happened in the story?',
+    },
   ];
 
   errorCandidates.sort((a, b) => b.score - a.score);
   const topError = errorCandidates[0];
   const margin = masteryScore - topError.score;
 
-  const partialActionE = probeScores.partial_action?.entailment ?? 0;
-  const partialActionC = probeScores.partial_action?.contradiction ?? 1;
-
   const isMasteredCandidatePostStage2 =
-    (targetE >= 0.50 && targetC < 0.35) ||
-    (minimalE >= 0.50 && minimalC < 0.35 && !hasVagueObject && (wordCount <= 6 || targetE >= 0.05 || margin >= 0.25)) ||
-    (circumE >= 0.50 && circumC < 0.35) ||
-    (partialActionE >= 0.50 && partialActionC < 0.35 && !hasVagueObject);
+    targetC < 0.35 &&
+    ((targetE >= 0.50) ||
+      (protoMaxE >= 0.50 && protoMaxC < 0.35) ||
+      (minimalE >= 0.50 && minimalC < 0.35 && !hasVagueObject && !hasMannerCueOnly && (wordCount <= 6 || targetE >= 0.05 || margin >= 0.25)) ||
+      (circumE >= 0.50 && circumC < 0.35));
 
   // 1. Dynamic Argmax: highest-confidence explicit error probe wins
   if (topError.score >= 0.50 && topError.score >= masteryScore) {
@@ -693,8 +742,9 @@ export async function evaluateDiagnosticProbes(normalizedTranscript, rubric = {}
     topEntailment = 0;
   } else if (
     !isMasteredCandidatePostStage2 &&
-    (((probeScores.target_mastery?.fwd_c ?? 0) >= 0.70 && (probeScores.minimal_core?.fwd_c ?? 0) >= 0.70) ||
-      (probeScores.character_confusion?.fwd_e ?? 0) >= 0.40)
+    ((probeScores.character_confusion?.fwd_e ?? 0) >= 0.40 ||
+      (charConfusionE >= 0.15 && (probeScores.target_mastery?.fwd_c ?? 0) >= 0.70 && (probeScores.minimal_core?.fwd_c ?? 0) >= 0.70) ||
+      (/\b(grandpa|grandfather|grandma|grandmother|mom|mother|dad|father|brother|sister|someone|somebody|friend)\b/i.test(transcript) && (probeScores.target_mastery?.fwd_c ?? 0) >= 0.70 && (probeScores.minimal_core?.fwd_c ?? 0) >= 0.70))
   ) {
     cognitive_diagnosis = 'CHARACTER_CONFUSION';
     spoken_feedback = fullProbes.character_confusion?.scaffold || rubric.hint_level_1 || '';
@@ -704,7 +754,16 @@ export async function evaluateDiagnosticProbes(normalizedTranscript, rubric = {}
       probeScores.target_mastery?.fwd_c ?? 0
     );
     topNeutral = probeScores.character_confusion?.neutral ?? 0;
-  } else if (isMasteredCandidatePostStage2 || (winningE >= 0.45 && margin >= 0.20 && winningC < 0.35)) {
+  } else if (
+    !isMasteredCandidatePostStage2 &&
+    (probeScores.target_mastery?.fwd_c ?? 0) >= 0.70
+  ) {
+    cognitive_diagnosis = 'DISTRACTOR_MISCONCEPTION';
+    spoken_feedback = fullProbes.distractor_misconception?.scaffold || rubric.hint_level_1 || '';
+    topEntailment = 0;
+    topContradiction = probeScores.target_mastery.fwd_c;
+    topNeutral = 0;
+  } else if (!hasVagueObject && !hasMannerCueOnly && targetC < 0.35 && (isMasteredCandidatePostStage2 || (winningE >= 0.45 && margin >= 0.20 && winningC < 0.35))) {
     isMatch = true;
     cognitive_diagnosis = 'MASTERED';
     spoken_feedback =
@@ -714,7 +773,7 @@ export async function evaluateDiagnosticProbes(normalizedTranscript, rubric = {}
     topEntailment = masteryScore;
     topContradiction = winningC;
     topNeutral = targetE >= minimalE ? probeScores.target_mastery?.neutral : probeScores.minimal_core?.neutral;
-  } else if (topError.score >= 0.40) {
+  } else if (!hasVagueObject && topError.score >= 0.40) {
     cognitive_diagnosis = topError.type;
     spoken_feedback = topError.feedback;
     topEntailment = topError.score;
