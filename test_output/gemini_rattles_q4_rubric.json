@@ -1,0 +1,181 @@
+{
+  "is_legible": true,
+  "book_type": "fiction",
+  "summary": "A friendly cat named Rattles loves being around people on the farm. When Linda and Michelle visit Grandma, they learn all about Rattles and her kitten litter.",
+  "chunks": [
+    {
+      "chunk_id": 1,
+      "page_range": "1-2",
+      "chunk_type": "scene",
+      "verbatim_page_text": "Rattles loved humans. When Uncle Duane milked the cows, Rattles would jump onto his lap. When Grandma fed the calves, Rattles would follow her. And when Grandma went for a walk, Rattles would jump on her shoulder, ride along, and purr a purr so big she sounded like a rattle. Rattles was different. One day two children arrived on the farm. Their names were Linda and Michelle, and they had come to visit Grandma. “Kitties!” shouted Linda as she crawled out of the van. “Grandma, do you have any new baby kittens?” “I sure do,” smiled Grandma. “There’s a litter of four kittens in the haymow. They’re all wild though – all of them except one that is.” That one was Rattles, of course. Rattles was different.",
+      "lookout_prompt": "Before you read, watch for how Rattles sounds when she purrs.",
+      "checkin_question": "Why was the kitten named Rattles?",
+      "question_type": "cause_and_effect",
+      "target_answer_concept": "She purred so big she sounded like a rattle.",
+      "keyword_clusters": [
+        {
+          "concept_name": "purred loudly",
+          "synonyms": [
+            "purred",
+            "purring",
+            "purr so big",
+            "made a big purr",
+            "rumbled",
+            "making a purr"
+          ]
+        },
+        {
+          "concept_name": "sounded like a rattle",
+          "synonyms": [
+            "sounded like a rattle",
+            "like a rattle",
+            "made a rattling sound",
+            "sounded rattling",
+            "sounded just like a rattle"
+          ]
+        }
+      ],
+      "acceptable_phrasings": [
+        "Because her purr was so big she sounded like a rattle.",
+        "She purred really loud and sounded just like a rattle."
+      ],
+      "canonical_prototypes": [
+        {
+          "type": "formal_full",
+          "text": "She was named Rattles because she purred a purr so big she sounded like a rattle."
+        },
+        {
+          "type": "colloquial",
+          "text": "Cause her purr sounded just like a rattle."
+        },
+        {
+          "type": "minimal_core",
+          "text": "Purred like a rattle."
+        },
+        {
+          "type": "functional_circumlocution",
+          "text": "Because the vibrating sound in her throat sounded like something you shake."
+        },
+        {
+          "type": "partial_action",
+          "text": "She purred really big on Grandma's shoulder."
+        },
+        {
+          "type": "common_distractor",
+          "text": "Because she liked playing with a baby rattle toy."
+        }
+      ],
+      "diagnostic_probes": {
+        "target_mastery": {
+          "hypothesis": "The kitten was named Rattles because her purr was so big she sounded like a rattle.",
+          "feedback": "That's right! Her big purr sounded just like a rattle, so she got the name Rattles!"
+        },
+        "minimal_core": {
+          "hypothesis": "The kitten purred like a rattle.",
+          "feedback": "Spot on! Her loud purring sounded like a rattle!"
+        },
+        "superficial_attribute": {
+          "hypothesis": "The kitten sits on Grandma's shoulder and rides along.",
+          "scaffold": "Look at the text under the picture of Grandma. How does the story describe her purr?"
+        },
+        "premise_echo": {
+          "hypothesis": "The kitten was named Rattles.",
+          "scaffold": "What noise did the kitten make that gave her that special name?"
+        },
+        "character_confusion": {
+          "hypothesis": "Grandma or Uncle Duane made a rattle sound while working on the farm.",
+          "scaffold": "Take another look at page 1. Which animal makes a loud sound on Grandma's shoulder?"
+        },
+        "distractor_misconception": {
+          "hypothesis": "The kitten was named Rattles because she played with a baby rattle toy.",
+          "scaffold": "She didn't play with a toy! Take another look at what happens when she rides on Grandma's shoulder."
+        }
+      },
+      "hint_level_1": "Look at the text under the picture of Grandma with the cat.",
+      "hint_level_2": "What did her loud purr sound like when riding on Grandma's shoulder?",
+      "scaffold_hint": "Look at the text under the picture of Grandma with the cat.",
+      "entity_graph": {
+        "characters": [
+          {
+            "canonical_id": "rattles",
+            "canonical_name": "Rattles",
+            "aliases": [
+              "the cat",
+              "the kitten",
+              "Rattles"
+            ],
+            "gender": "female",
+            "kinship_compositions": []
+          },
+          {
+            "canonical_id": "grandma",
+            "canonical_name": "Grandma",
+            "aliases": [
+              "Grandma"
+            ],
+            "gender": "female",
+            "kinship_compositions": [
+              "grandmother of Linda",
+              "grandmother of Michelle"
+            ]
+          },
+          {
+            "canonical_id": "uncle_duane",
+            "canonical_name": "Uncle Duane",
+            "aliases": [
+              "Uncle Duane",
+              "Duane"
+            ],
+            "gender": "male",
+            "kinship_compositions": [
+              "uncle"
+            ]
+          },
+          {
+            "canonical_id": "linda",
+            "canonical_name": "Linda",
+            "aliases": [
+              "Linda"
+            ],
+            "gender": "female",
+            "kinship_compositions": [
+              "granddaughter of Grandma",
+              "sister of Michelle"
+            ]
+          },
+          {
+            "canonical_id": "michelle",
+            "canonical_name": "Michelle",
+            "aliases": [
+              "Michelle"
+            ],
+            "gender": "female",
+            "kinship_compositions": [
+              "granddaughter of Grandma",
+              "sister of Linda"
+            ]
+          }
+        ],
+        "social_relations": [
+          {
+            "subject_id": "linda",
+            "relation": "grandchild_of",
+            "target_id": "grandma",
+            "aliases": [
+              "Grandma's granddaughter"
+            ]
+          },
+          {
+            "subject_id": "michelle",
+            "relation": "grandchild_of",
+            "target_id": "grandma",
+            "aliases": [
+              "Grandma's granddaughter"
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "error_message": null
+}

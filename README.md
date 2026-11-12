@@ -44,9 +44,15 @@ Each module must pass all 4 verification gates before the next module begins:
 
 - [x] **Module 3.6: Grounding Fidelity Gate & Transcription Verification**
   - [x] Pipeline: `services/grounding_verifier.js`, verbatim page text extraction (`verbatim_page_text`), context bounding ceiling ($\le 3$ pages), lexical entity-overlap filter, local ONNX DeBERTa-v3 premise-entailment verification pass
-  - [x] Code Tests: 64/64 unit/integration tests across 13 test suites with 100% contract immutability
+  - [x] Code Tests: 68/68 unit/integration tests across 14 test suites with 100% contract immutability
   - [x] Digital Samples: Factual entailment vs contradiction/ungrounded entity verification (`test/grounding_verifier.test.js`)
   - [x] Human Gate: Verified automated rejection of hallucinated entities and contradictory concepts with zero manual grading
+
+- [x] **Rattles Benchmark Live Pipeline Validation (Q3 & Q4 Trials)**
+  - [x] Pipeline: Live Gemini API (`gemini-3.5-flash`) Stage 1 book analysis + System 1 ONNX DeBERTa Stage 2 Socratic speech evaluation
+  - [x] Code Tests: Name-homonym discourse injection guard, minimal core terse gating, verb stem expansion (`VERB_STEM_MAP`), frame semantic fast-path (`SLOT_FRAME_ALL_MATCH`)
+  - [x] Digital Samples: Q3 Trial (`scripts/trial_rattles_q3.js`) 10/10 passing (100%), Q4 Trial (`scripts/trial_rattles_q4.js`) 10/10 passing (100%)
+  - [x] Human Gate: Near-miss slot repairs caught in <16ms with Wh-nudges; correct answers resolved in <32ms; 0 false positives on direct contradictions
 
 - [ ] **Module 4: Mobile Camera Tray & Canvas Compression Engine (NEXT IMMEDIATE OBJECTIVE)**
   - [ ] Pipeline: `public/js/camera_tray.js`, sequential capture, filmstrip tray, canvas downscaler ($\le 1600\text{px}$)

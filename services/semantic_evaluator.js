@@ -324,11 +324,11 @@ export async function evaluateDiagnosticProbes(normalizedTranscript, rubric = {}
   const objectName = rubric.story_context?.object || '';
   const itemNoun = objectName ? objectName.split(/\s+/).pop() : '';
 
-  const beneficiaryHyp = (actorName && recipientName && itemNoun)
+  const beneficiaryHyp = (actorName && recipientName && itemNoun && actorName.toLowerCase() !== recipientName.toLowerCase())
     ? `${actorName} made ${recipientName}'s ${itemNoun}.`
     : null;
 
-  const attributeHyp = (objectName && itemNoun)
+  const attributeHyp = (objectName && itemNoun && objectName.toLowerCase() !== itemNoun.toLowerCase())
     ? `The ${itemNoun} was a ${objectName}.`
     : null;
 
@@ -371,8 +371,21 @@ export async function evaluateDiagnosticProbes(normalizedTranscript, rubric = {}
     for (let i = 0; i < rubric.canonical_prototypes.length; i++) {
       const p = rubric.canonical_prototypes[i];
       if (p && p.text && p.type !== 'common_distractor' && p.type !== 'partial_action') {
+        // minimal_core is evaluated under core_entity / minimal_core with strict terse gating (wordCount <= 6).
+        // Exclude it from positiveProtos to prevent long distractor sentences from matching terse fragment prototypes.
+        if (p.type === 'minimal_core') continue;
         const key = `proto_${p.type || i}`;
         positiveProtos.push({ key, text: p.text.trim() });
+      }
+    }
+  }
+
+  if (Array.isArray(rubric.acceptable_phrasings)) {
+    for (let i = 0; i < rubric.acceptable_phrasings.length; i++) {
+      const phrase = rubric.acceptable_phrasings[i];
+      if (phrase && typeof phrase === 'string' && phrase.trim()) {
+        const key = `phrase_${i}`;
+        positiveProtos.push({ key, text: phrase.trim() });
       }
     }
   }
@@ -486,7 +499,8 @@ export async function evaluateDiagnosticProbes(normalizedTranscript, rubric = {}
     if (probeScores[entityKey]) {
       const ceE = probeScores[entityKey].entailment ?? 0;
       const ceC = probeScores[entityKey].contradiction ?? 1;
-      if (ceE >= 0.50 && ceC < 0.35) {
+      const isTerseEntity = entityKey === 'core_entity' ? (wordCount <= 6) : (wordCount <= 3);
+      if (isTerseEntity && ceE >= 0.50 && ceC < 0.35) {
         if (ceE > minimalE) {
           minimalE = ceE;
           minimalC = ceC;
@@ -497,7 +511,10 @@ export async function evaluateDiagnosticProbes(normalizedTranscript, rubric = {}
 
   const clusterMatchE = probeScores.matched_cluster_synonym?.entailment ?? 0;
   const clusterMatchC = probeScores.matched_cluster_synonym?.contradiction ?? 1;
-  const isClusterCandidate = clusterMatchE >= 0.60 && clusterMatchC < 0.20 && wordCount <= 3;
+  const isClusterCandidate =
+    clusterMatchE >= 0.60 &&
+    clusterMatchC < 0.20 &&
+    (wordCount <= 3 || (probeScores.beneficiary_consistency?.entailment ?? 0) >= 0.50 || (wordCount <= 8 && targetC < 0.50));
   if (isClusterCandidate && clusterMatchE > minimalE) {
     minimalE = clusterMatchE;
     minimalC = clusterMatchC;
@@ -535,11 +552,10 @@ export async function evaluateDiagnosticProbes(normalizedTranscript, rubric = {}
     targetE < 0.10;
 
   const isMasteredCandidate =
-    targetC < 0.35 &&
-    ((targetE >= 0.50) ||
-      (protoMaxE >= 0.50 && protoMaxC < 0.35) ||
-      (minimalE >= 0.50 && minimalC < 0.35 && !hasVagueObject && !hasMannerCueOnly && (wordCount <= 6 || targetE >= 0.05)) ||
-      (circumE >= 0.50 && circumC < 0.35));
+    (targetE >= 0.50 && targetC < 0.35) ||
+    (protoMaxE >= 0.50 && protoMaxC < 0.35) ||
+    (minimalE >= 0.50 && minimalC < 0.35 && !hasVagueObject && !hasMannerCueOnly && (wordCount <= 6 || targetE >= 0.05)) ||
+    (circumE >= 0.50 && circumC < 0.35);
 
   const benC = probeScores.beneficiary_consistency?.contradiction ?? 0;
   const attrC = probeScores.attribute_consistency?.contradiction ?? 0;
@@ -549,7 +565,7 @@ export async function evaluateDiagnosticProbes(normalizedTranscript, rubric = {}
 
   // Speculative Early-Exit Gate:
   // Awards mastery immediately if high-confidence entailment, low contradiction (<0.20),
-  // target mastery is not contradicted (<0.35), no vague objects, and error probes are low (<0.40)
+  // winning candidate is not contradicted (<0.20), no vague objects, and error probes are low (<0.40)
   const canEarlyExit =
     isMasteredCandidate &&
     winningE >= 0.50 &&
@@ -756,7 +772,8 @@ export async function evaluateDiagnosticProbes(normalizedTranscript, rubric = {}
     topNeutral = probeScores.character_confusion?.neutral ?? 0;
   } else if (
     !isMasteredCandidatePostStage2 &&
-    (probeScores.target_mastery?.fwd_c ?? 0) >= 0.70
+    (probeScores.target_mastery?.fwd_c ?? 0) >= 0.70 &&
+    (distractorE >= 0.30 || (probeScores.common_distractor?.entailment ?? 0) >= 0.30)
   ) {
     cognitive_diagnosis = 'DISTRACTOR_MISCONCEPTION';
     spoken_feedback = fullProbes.distractor_misconception?.scaffold || rubric.hint_level_1 || '';

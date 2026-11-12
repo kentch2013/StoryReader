@@ -256,3 +256,26 @@ Use this suite to evaluate:
 8. `[Evasive 6 - Question Echo]`: `"Why was he so surprised?"` $\rightarrow$ `needs_scaffold` (`QUESTION_ECHO`)
 9. `[Evasive 7 - Vague Fragment]`: `"Because something weird happened."` $\rightarrow$ `needs_scaffold` (`UNGROUNDED_OFF_TRACK`)
 10. `[Evasive 8 - Direct Contradiction]`: `"He expected every barn cat to love cuddles."` $\rightarrow$ `needs_scaffold` (`DISTRACTOR_MISCONCEPTION`)
+
+---
+
+## Empirical Live Pipeline Verification (Q3 & Q4 Trials)
+
+* **Execution Date:** 2026-11-11
+* **Rubric Generation:** Live Gemini API (`gemini-3.5-flash`) on physical book page fixtures (`rattles3.png`, `rattles4.png`, `rattles5.png`)
+* **Speech Evaluation:** System 1 Transformers ONNX (`Xenova/nli-deberta-v3-xsmall`) + Slot Delta Frame Semantics Engine
+* **Runtime Constraint:** Zero cloud LLM calls during speech evaluation; all answers resolved locally in <155ms.
+
+### Question 3 Results (`scripts/trial_rattles_q3.js`)
+* **Target Concept:** `"Rattles jumped onto Uncle Duane's lap."`
+* **Score:** **10 / 10 Passing (100%)**
+* **Near-Miss Latency:** 12.8ms–15.3ms
+* **Mastery Latency:** 4.9ms–31.5ms via `SLOT_FRAME_ALL_MATCH`
+
+### Question 4 Results (`scripts/trial_rattles_q4.js`)
+* **Target Concept:** `"She purred so big she sounded like a rattle."`
+* **Score:** **10 / 10 Passing (100%)**
+* **Near-Miss Latency:** 13.0ms (Conflicted sound action `"bark"`)
+* **Mastery Latency:** 4.3ms–29.4ms via `SLOT_FRAME_ALL_MATCH`
+* **Direct Contradiction Rejection:** `"Her purr was very soft and quiet"` correctly rejected with zero false positives.
+

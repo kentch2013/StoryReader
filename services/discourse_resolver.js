@@ -16,6 +16,43 @@ function escapeRegex(str = '') {
 }
 
 /**
+ * When a character's name collides with a naming-origin question or non-agent sound/object concept
+ * (e.g., character named "Rattles" when the question asks why she was named Rattles or the sound is a rattle),
+ * pronoun replacement must use a descriptive alias (e.g., "the kitten", "the cat") rather than the proper name
+ * to prevent injecting the target answer root into child speech.
+ */
+function getSafeReferentReplacement(referentName = '', rubric = {}) {
+  if (!referentName || typeof referentName !== 'string') return referentName;
+  const checkinQ = (rubric.checkin_question || '').toLowerCase();
+  const isNamingQuestion = /why\s+(?:was|is)\s+.*\bnamed\b/i.test(checkinQ);
+
+  const cleanName = referentName.toLowerCase().trim();
+  const stemName = cleanName.replace(/s$/, '');
+
+  const objectName = (rubric.story_context?.object || rubric.semantic_slots?.object?.canonical || '').toLowerCase();
+  const soundName = (rubric.story_context?.sound || rubric.semantic_slots?.sound?.canonical || '').toLowerCase();
+  const isSoundOrObjectCollision =
+    (stemName.length >= 4 && (objectName.includes(stemName) || soundName.includes(stemName)));
+
+  const hasConceptCollision = isNamingQuestion || isSoundOrObjectCollision;
+
+  if (hasConceptCollision && rubric.entity_graph && Array.isArray(rubric.entity_graph.characters)) {
+    const char = rubric.entity_graph.characters.find(
+      (c) => (c.canonical_name || c.canonical_id || '').toLowerCase() === cleanName
+    );
+    if (char && Array.isArray(char.aliases)) {
+      const descAlias = char.aliases.find(
+        (a) => a.toLowerCase().startsWith('the ') || a.toLowerCase() !== cleanName
+      );
+      if (descAlias) {
+        return descAlias;
+      }
+    }
+  }
+  return referentName;
+}
+
+/**
  * Resolves relational discourse, kinship compositions, social relations,
  * anaphora / pronouns, and hierarchical ambiguity cascade with micro-turns.
  *
@@ -96,10 +133,19 @@ export function resolveDiscourse(normalizedTranscript = '', rubric = {}, options
         for (const comp of char.kinship_compositions) {
           const normComp = comp.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
           if (!normComp) continue;
+          const canonicalName = (char.canonical_name || char.canonical_id || '').toLowerCase();
+
+          // Guard against stutter if normComp is already a prefix of canonicalName (e.g. "uncle" in "uncle duane")
+          if (canonicalName && canonicalName !== normComp && canonicalName.startsWith(normComp + ' ')) {
+            const suffix = canonicalName.slice(normComp.length).trim();
+            const guardedRegex = new RegExp(`\\b${escapeRegex(normComp)}\\b(?!\\s+${escapeRegex(suffix)})`, 'gi');
+            transcript = transcript.replace(guardedRegex, canonicalName);
+            continue;
+          }
+
           const regex = new RegExp(`\\b${escapeRegex(normComp)}\\b`, 'gi');
           if (regex.test(transcript)) {
-            const canonicalName = char.canonical_name || char.canonical_id;
-            transcript = transcript.replace(regex, canonicalName.toLowerCase());
+            transcript = transcript.replace(regex, canonicalName);
           }
         }
       }
@@ -183,7 +229,8 @@ export function resolveDiscourse(normalizedTranscript = '', rubric = {}, options
   if (containsFemalePronoun && !discourseReferents?.she && discourseReferents?.she !== null) {
     const femaleChars = entityGraph?.characters?.filter((c) => c.gender === 'female') || [];
     if (femaleChars.length === 1) {
-      const name = femaleChars[0].canonical_name || femaleChars[0].canonical_id;
+      const rawName = femaleChars[0].canonical_name || femaleChars[0].canonical_id;
+      const name = getSafeReferentReplacement(rawName, rubric);
       femalePronouns.forEach((p) => {
         transcript = transcript.replace(new RegExp(`\\b${p}\\b`, 'gi'), name);
       });
@@ -193,7 +240,8 @@ export function resolveDiscourse(normalizedTranscript = '', rubric = {}, options
   if (containsMalePronoun && !discourseReferents?.he && discourseReferents?.he !== null) {
     const maleChars = entityGraph?.characters?.filter((c) => c.gender === 'male') || [];
     if (maleChars.length === 1) {
-      const name = maleChars[0].canonical_name || maleChars[0].canonical_id;
+      const rawName = maleChars[0].canonical_name || maleChars[0].canonical_id;
+      const name = getSafeReferentReplacement(rawName, rubric);
       malePronouns.forEach((p) => {
         transcript = transcript.replace(new RegExp(`\\b${p}\\b`, 'gi'), name);
       });
@@ -208,9 +256,9 @@ export function resolveDiscourse(normalizedTranscript = '', rubric = {}, options
     );
 
     if (mentionedCandidates.length === 1) {
-      const resolvedName = mentionedCandidates[0];
+      const resolvedName = getSafeReferentReplacement(mentionedCandidates[0], rubric);
       const char = entityGraph.characters?.find(
-        (c) => (c.canonical_name || c.canonical_id).toLowerCase() === resolvedName.toLowerCase()
+        (c) => (c.canonical_name || c.canonical_id).toLowerCase() === mentionedCandidates[0].toLowerCase()
       );
       if (char?.gender === 'female' || activeGender === 'female') {
         femalePronouns.forEach((p) => {
@@ -243,16 +291,17 @@ export function resolveDiscourse(normalizedTranscript = '', rubric = {}, options
       }
 
       if (uniqueActionCandidate) {
+        const resolvedActionCandidate = getSafeReferentReplacement(uniqueActionCandidate, rubric);
         const char = entityGraph.characters?.find(
           (c) => (c.canonical_name || c.canonical_id).toLowerCase() === uniqueActionCandidate.toLowerCase()
         );
         if (char?.gender === 'female' || activeGender === 'female') {
           femalePronouns.forEach((p) => {
-            transcript = transcript.replace(new RegExp(`\\b${p}\\b`, 'gi'), uniqueActionCandidate);
+            transcript = transcript.replace(new RegExp(`\\b${p}\\b`, 'gi'), resolvedActionCandidate);
           });
         } else if (char?.gender === 'male' || activeGender === 'male') {
           malePronouns.forEach((p) => {
-            transcript = transcript.replace(new RegExp(`\\b${p}\\b`, 'gi'), uniqueActionCandidate);
+            transcript = transcript.replace(new RegExp(`\\b${p}\\b`, 'gi'), resolvedActionCandidate);
           });
         }
       } else {
@@ -283,8 +332,9 @@ export function resolveDiscourse(normalizedTranscript = '', rubric = {}, options
   if (discourseReferents) {
     for (const [pronoun, referent] of Object.entries(discourseReferents)) {
       if (typeof referent === 'string' && referent.trim()) {
+        const safeReferent = getSafeReferentReplacement(referent, rubric);
         const regex = new RegExp(`\\b${escapeRegex(pronoun)}\\b`, 'gi');
-        transcript = transcript.replace(regex, referent);
+        transcript = transcript.replace(regex, safeReferent);
       }
     }
   }

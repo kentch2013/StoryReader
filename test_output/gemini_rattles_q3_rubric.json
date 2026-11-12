@@ -1,0 +1,142 @@
+{
+  "is_legible": true,
+  "book_type": "fiction",
+  "summary": "Grandma and Uncle Duane live on a farm where most cats avoid people. However, Rattles loves humans and enjoys jumping on Uncle Duane's lap and Grandma's shoulder.",
+  "chunks": [
+    {
+      "chunk_id": 1,
+      "page_range": "1-2",
+      "chunk_type": "scene",
+      "verbatim_page_text": "There weren't many people that lived on the farm – only Grandma and Uncle Duane. Grandma and Uncle Duane did not play with the cats, so the cats were afraid of humans. All of them except Rattles, that is. Rattles was different. Rattles loved humans. When Uncle Duane milked the cows, Rattles would jump onto his lap. When Grandma fed the calves, Rattles would follow her. And when Grandma went for a walk, Rattles would jump on her shoulder, ride along, and purr a purr so big she sounded like a rattle. Rattles was different.",
+      "lookout_prompt": "Before you read, watch for what Rattles does near Uncle Duane.",
+      "checkin_question": "What did Rattles do when Uncle Duane was milking the cows?",
+      "question_type": "literal_fact",
+      "target_answer_concept": "Rattles jumped onto Uncle Duane's lap.",
+      "keyword_clusters": [
+        {
+          "concept_name": "jumped",
+          "synonyms": [
+            "jumped",
+            "leaped",
+            "climbed",
+            "hopped"
+          ]
+        },
+        {
+          "concept_name": "lap",
+          "synonyms": [
+            "lap",
+            "his lap",
+            "legs",
+            "knees"
+          ]
+        }
+      ],
+      "acceptable_phrasings": [
+        "She jumped onto his lap.",
+        "Rattles jumped right up on Uncle Duane's lap."
+      ],
+      "canonical_prototypes": [
+        {
+          "type": "formal_full",
+          "text": "When Uncle Duane milked the cows, Rattles jumped onto his lap."
+        },
+        {
+          "type": "colloquial",
+          "text": "She jumped up on his lap."
+        },
+        {
+          "type": "minimal_core",
+          "text": "Jumped on his lap."
+        },
+        {
+          "type": "functional_circumlocution",
+          "text": "The cat climbed right onto where he was sitting."
+        },
+        {
+          "type": "partial_action",
+          "text": "She jumped up."
+        },
+        {
+          "type": "common_distractor",
+          "text": "She jumped on Grandma's shoulder."
+        }
+      ],
+      "diagnostic_probes": {
+        "target_mastery": {
+          "hypothesis": "Rattles jumped onto Uncle Duane's lap.",
+          "feedback": "Great reading! Rattles jumped right onto Uncle Duane's lap."
+        },
+        "minimal_core": {
+          "hypothesis": "Rattles jumped on his lap.",
+          "feedback": "Spot on! Rattles leaped right onto his lap."
+        },
+        "superficial_attribute": {
+          "hypothesis": "Uncle Duane wore a blue shirt while sitting.",
+          "scaffold": "Check the words near the picture of Uncle Duane—where did Rattles jump?"
+        },
+        "premise_echo": {
+          "hypothesis": "Uncle Duane was milking the cows on the farm.",
+          "scaffold": "Uncle Duane milked cows! Look at that sentence to see what Rattles did."
+        },
+        "character_confusion": {
+          "hypothesis": "Grandma jumped onto Uncle Duane's lap.",
+          "scaffold": "Take another look at the page—which friendly pet jumped on Uncle Duane?"
+        },
+        "distractor_misconception": {
+          "hypothesis": "Rattles jumped onto Grandma's shoulder.",
+          "scaffold": "Rattles rode on Grandma's shoulder during walks! Where did Rattles go with Uncle Duane?"
+        }
+      },
+      "hint_level_1": "Look at the middle of the second page near Uncle Duane.",
+      "hint_level_2": "Where did Rattles jump while Uncle Duane was sitting down?",
+      "scaffold_hint": "Look at the picture of Uncle Duane near the cow.",
+      "entity_graph": {
+        "characters": [
+          {
+            "canonical_id": "rattles",
+            "canonical_name": "Rattles",
+            "aliases": [
+              "the cat",
+              "Rattles the cat"
+            ],
+            "gender": "female",
+            "kinship_compositions": []
+          },
+          {
+            "canonical_id": "uncle_duane",
+            "canonical_name": "Uncle Duane",
+            "aliases": [
+              "Duane"
+            ],
+            "gender": "male",
+            "kinship_compositions": [
+              "uncle"
+            ]
+          },
+          {
+            "canonical_id": "grandma",
+            "canonical_name": "Grandma",
+            "aliases": [],
+            "gender": "female",
+            "kinship_compositions": [
+              "grandmother",
+              "grandma"
+            ]
+          }
+        ],
+        "social_relations": [
+          {
+            "subject_id": "uncle_duane",
+            "relation": "relative_of",
+            "target_id": "grandma",
+            "aliases": [
+              "family"
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "error_message": null
+}

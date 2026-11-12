@@ -24,8 +24,10 @@ Strict Generation Rules:
 5. "keyword_clusters":
    - Exactly 2 concept clusters required for mastery.
    - Each cluster has a "concept_name" and 2-4 acceptable synonyms, common inflections, or functional action phrases a 7-year-old might naturally speak (e.g. for gardener: "gardener", "garden worker", "watering plants", "plant keeper").
+   - For physical actions, include both dynamic actions and resulting states or stative equivalents (e.g. for "jumped onto", include "sat on", "was on", "hopped up"; for "purred", include "rumbled", "sounded like a rattle").
+   - For metaphors, similes, or sound descriptions (e.g. "purred like a rattle"), synonyms must describe the sound/action, NEVER literal physical objects (NEVER include toys, objects, or animals like "baby rattle toy" or "rattlesnake" as synonyms; those are common distractors).
 6. "acceptable_phrasings":
-   - Exactly 2 natural spoken examples of how a real Grade 2 child would answer.
+   - Exactly 2 natural spoken examples of how a real Grade 2 child would answer, including common colloquial or stative variants.
 7. "hint_level_1" (Spatial Anchor):
    - Directs the child's eyes to the exact location on the page. Under 15 words.
 8. "hint_level_2" (Socratic Leading Question):

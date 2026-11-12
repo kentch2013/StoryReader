@@ -9,6 +9,26 @@
  * - Synthesizes tailored "affirm + isolate + contrast" repair prompts
  */
 
+const VERB_STEM_MAP = {
+  sit: ['sat', 'sitting', 'sits', 'sit'],
+  sat: ['sit', 'sitting', 'sits', 'sat'],
+  sitting: ['sit', 'sat', 'sits', 'sitting'],
+  jump: ['jumped', 'jumping', 'jumps', 'jump'],
+  jumped: ['jump', 'jumping', 'jumps', 'jumped'],
+  jumping: ['jump', 'jumped', 'jumps', 'jumping'],
+  hop: ['hopped', 'hopping', 'hops', 'hop'],
+  hopped: ['hop', 'hopping', 'hops', 'hopped'],
+  climb: ['climbed', 'climbing', 'climbs', 'climb'],
+  climbed: ['climb', 'climbing', 'climbs', 'climbed'],
+  purr: ['purred', 'purring', 'purrs', 'purr'],
+  purred: ['purr', 'purring', 'purrs', 'purred'],
+  purring: ['purr', 'purred', 'purrs', 'purring'],
+  sound: ['sounded', 'sounding', 'sounds', 'sound'],
+  sounded: ['sound', 'sounding', 'sounds', 'sounded'],
+  shake: ['shook', 'shaking', 'shakes', 'shake'],
+  shook: ['shake', 'shaking', 'shakes', 'shook'],
+};
+
 function escapeRegex(str = '') {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -18,7 +38,8 @@ function escapeRegex(str = '') {
  */
 function containsToken(text = '', token = '') {
   if (!text || !token) return false;
-  const re = new RegExp(`\\b${escapeRegex(token.toLowerCase().trim())}\\b`, 'i');
+  const cleanToken = token.toLowerCase().trim();
+  const re = new RegExp(`\\b${escapeRegex(cleanToken)}('?s)?\\b`, 'i');
   return re.test(text);
 }
 
@@ -37,9 +58,9 @@ export function evaluateSlotDelta(transcript = '', rubric = {}) {
   const slots = {
     agent: rawSlots.agent || (rubric.story_context?.actor ? { canonical: rubric.story_context.actor } : null),
     action: rawSlots.action || null,
-    theme: rawSlots.theme || (rubric.story_context?.object ? { canonical: rubric.story_context.object } : null),
+    theme: rawSlots.theme || rawSlots.sound || rawSlots.cause || (rubric.story_context?.object ? { canonical: rubric.story_context.object } : null),
     location: rawSlots.location || (rubric.story_context?.location ? { canonical: rubric.story_context.location } : null),
-    recipient: rawSlots.recipient || (rubric.story_context?.recipient ? { canonical: rubric.story_context.recipient } : null),
+    recipient: rawSlots.recipient || rawSlots.target_person || (rubric.story_context?.recipient ? { canonical: rubric.story_context.recipient } : null),
     attribute: rawSlots.attribute || rawSlots.trait || null,
   };
 
@@ -129,17 +150,31 @@ export function evaluateSlotDelta(transcript = '', rubric = {}) {
     if (containsToken(text, canonical) || synonyms.some((s) => containsToken(text, s))) {
       matches.recipient = canonical;
     } else {
-      // Check for conflicting beneficiary phrases ("for [X]", "[X]'s hat")
-      const beneficiaryConflict = text.match(
-        /\b(?:for\s+(?:a\s+|the\s+|his\s+|her\s+|my\s+)?(dog|cat|pet|grampa|grandpa|friend|someone\s+else|sister|brother|dad|father)|(?:a\s+|the\s+|his\s+|her\s+|my\s+)?(dog|cat|pet|grampa|grandpa|friend|someone\s+else|sister|brother|dad|father)'s)\b/i
-      );
-      if (beneficiaryConflict) {
-        const stated = (beneficiaryConflict[1] || beneficiaryConflict[2]).toLowerCase().trim();
-        if (stated !== canonical) {
-          conflicts.recipient = { stated, canonical };
-        }
+      // Check distractors and other known characters
+      const explicitDistractors = (slots.recipient.distractors || []).map((d) => d.toLowerCase().trim());
+      const otherChars = (rubric.entity_graph?.characters || [])
+        .map((c) => (c.canonical_name || c.canonical_id).toLowerCase().trim())
+        .filter((c) => c !== canonical && c !== (slots.agent?.canonical || '').toLowerCase().trim());
+      const allDistractors = [...new Set([...explicitDistractors, ...otherChars])];
+      const matchedDistractor = allDistractors.find((d) => d && containsToken(text, d));
+
+      if (matchedDistractor) {
+        conflicts.recipient = { stated: matchedDistractor, canonical };
       } else {
-        missing.push('recipient');
+        // Check for conflicting beneficiary phrases ("for [X]", "[X]'s hat/lap")
+        const beneficiaryConflict = text.match(
+          /\b(?:for\s+(?:a\s+|the\s+|his\s+|her\s+|my\s+)?([a-z]+)|(?:a\s+|the\s+|his\s+|her\s+|my\s+)?([a-z]+)'s)\b/i
+        );
+        if (beneficiaryConflict) {
+          const stated = (beneficiaryConflict[1] || beneficiaryConflict[2]).toLowerCase().trim();
+          if (stated !== canonical && !synonyms.includes(stated)) {
+            conflicts.recipient = { stated, canonical };
+          } else {
+            missing.push('recipient');
+          }
+        } else {
+          missing.push('recipient');
+        }
       }
     }
   }
@@ -148,11 +183,33 @@ export function evaluateSlotDelta(transcript = '', rubric = {}) {
   if (slots.action) {
     const canonical = (slots.action.canonical || '').toLowerCase().trim();
     const synonyms = (slots.action.synonyms || []).map((s) => s.toLowerCase().trim());
+    const distractors = (
+      slots.action.distractors && slots.action.distractors.length > 0
+        ? slots.action.distractors
+        : ['bark', 'barks', 'barked', 'barking', 'meow', 'meows', 'meowed', 'hiss', 'hisses', 'hissed', 'growl', 'growled', 'yell', 'yelled', 'screamed', 'cried', 'bit', 'biting', 'ran', 'running', 'slept', 'sleeping']
+    ).map((d) => d.toLowerCase().trim());
 
-    if (containsToken(text, canonical) || synonyms.some((s) => containsToken(text, s))) {
+    // Expand canonical and synonyms with morphological/stem variants
+    const baseActionWords = [canonical, ...synonyms];
+    const expandedActionWords = new Set(baseActionWords);
+    for (const w of baseActionWords) {
+      if (VERB_STEM_MAP[w]) {
+        for (const variant of VERB_STEM_MAP[w]) {
+          expandedActionWords.add(variant);
+        }
+      }
+    }
+    const allActions = Array.from(expandedActionWords);
+
+    if (allActions.some((s) => containsToken(text, s))) {
       matches.action = canonical;
     } else {
-      missing.push('action');
+      const matchedDistractor = distractors.find((d) => d !== canonical && containsToken(text, d));
+      if (matchedDistractor) {
+        conflicts.action = { stated: matchedDistractor, canonical };
+      } else {
+        missing.push('action');
+      }
     }
   }
 
@@ -162,7 +219,11 @@ export function evaluateSlotDelta(transcript = '', rubric = {}) {
   if (themeSlot) {
     const canonical = (themeSlot.canonical || '').toLowerCase().trim();
     const synonyms = (themeSlot.synonyms || ['it']).map((s) => s.toLowerCase().trim());
-    const distractors = (themeSlot.distractors || []).map((d) => d.toLowerCase().trim());
+    const distractors = (
+      themeSlot.distractors && themeSlot.distractors.length > 0
+        ? themeSlot.distractors
+        : ['shoulder', 'head', 'back', 'arm', 'kitchen', 'house', 'city', 'pet shop']
+    ).map((d) => d.toLowerCase().trim());
 
     if (containsToken(text, canonical) || synonyms.some((s) => containsToken(text, s)) || (containsToken(text, 'it') && !distractors.some((d) => containsToken(text, d)))) {
       matches[slotKey] = canonical;

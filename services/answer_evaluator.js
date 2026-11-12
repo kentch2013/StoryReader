@@ -195,6 +195,32 @@ export async function evaluateChildAnswer(data = {}) {
         diagnostics,
       });
     }
+
+    // Fast-path: When all semantic slots match with zero conflicts or missing slots
+    const activeSlotCount = Object.keys(slotDelta.matched_slots).length;
+    if (
+      activeSlotCount >= 3 &&
+      slotDelta.accuracy_degree === 1 &&
+      slotDelta.missing_slots.length === 0 &&
+      Object.keys(slotDelta.conflicted_slots).length === 0
+    ) {
+      diagnostics.cognitive_diagnosis = 'MASTERED';
+      diagnostics.slot_delta = slotDelta;
+      diagnostics.tier_resolved = 'SLOT_FRAME_ALL_MATCH';
+      return makeEvalResult({
+        status: 'mastered',
+        spoken_feedback:
+          data.diagnostic_probes?.target_mastery?.feedback ||
+          data.diagnostic_probes?.minimal_core?.feedback ||
+          feedback.praise,
+        follow_up_prompt: null,
+        attempt_count: attempt,
+        resolved: true,
+        is_microturn: false,
+        microturn_used: data.microturn_used === true,
+        diagnostics,
+      });
+    }
   }
 
   // Parallel Diagnostic Probing Architecture (System 1 Single-Pass Diagnostic Evaluator)
