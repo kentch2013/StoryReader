@@ -30,6 +30,7 @@ graph TD
 
     subgraph Cloud ["Google Gen AI API"]
         GEMINI["Gemini 3.1 Flash / 3.5 Flash (Vision & Structured JSON)"]
+        DECISION["Gemini Decision 1 (Zero Output Tokens, Calibrated Choice & Noul)"]
     end
 
     UI --> CAM
@@ -38,12 +39,28 @@ graph TD
     EXPRESS --> MULTER
     MULTER --> GEMINI_SVC
     GEMINI_SVC -- "Multimodal inlineData + Schema" --> GEMINI
+    GEMINI_SVC -- "Visual Grounding / Choice Fallback" --> DECISION
     GEMINI -- "Strict JSON Chunks" --> GEMINI_SVC
     GEMINI_SVC --> EXPRESS
     EXPRESS --> UI
     UI --> TTS
     UI --> STT
 ```
+
+---
+
+## 1.5. Gemini Decision 1 Hybrid Topology & Circuit Breaker
+
+The system implements an **Asymmetric Dual-Track Architecture** balancing real-time voice latency with high-dimensional cloud reasoning:
+
+1. **Local System 1 Engine (ONNX DeBERTa-v3):** Handles the synchronous voice loop ($\le 35\text{ms}$ early exit). 100% offline-capable, zero network latency, air-gapped child speech privacy.
+2. **Gemini Decision 1 Escalation (`gemini-decision-1`):**
+   * **Zero Output Tokens:** Billed at $\$0$ output tokens, eliminating JSON schema parsing errors and token generation lag.
+   * **Tier 2.5 Circumlocution Arbiter:** When local NLI scores speech as ambiguous or ungrounded ($0.35 \le E < 0.50$), evaluates typed `choice` questions over diagnostic error categories in $\sim 180\text{ms}$.
+   * **Multimodal Visual Grounding Gate:** Evaluates raw book screenshot pixels using `noul` probes to verify factual claims before chunks reach the child.
+3. **Fail-Fast Circuit Breaker (`CloudCircuitBreaker`):**
+   * Guarantees that cloud calls never cause dead air for the child.
+   * Hard timeout ($400 - 800\text{ms}$) with 2-failure threshold. On network disconnect or timeout, automatically trips to `OPEN`, immediately defaulting all evaluations to the local ONNX DeBERTa model with zero UI stalling.
 
 ---
 

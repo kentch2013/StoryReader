@@ -62,6 +62,9 @@ export async function evaluateChildAnswer(data = {}) {
   });
 
   const grounded = discourseResult.grounded_transcript || normalized;
+  const wordTokens = grounded.split(' ').filter(Boolean);
+  const cloudAllowed = (data.enable_cloud_fallback === true || process.env.ENABLE_CLOUD_FALLBACK === 'true') &&
+    process.env.OFFLINE_MODE !== 'true';
 
   const diagnostics = {
     normalized_transcript: normalized,
@@ -279,6 +282,31 @@ export async function evaluateChildAnswer(data = {}) {
         }
       }
 
+      // Check Decision Model for Functional Circumlocutions when diagnosis is UNGROUNDED_OFF_TRACK
+      if (result.cognitive_diagnosis === 'UNGROUNDED_OFF_TRACK' && cloudAllowed && wordTokens.length >= 3) {
+        const classification = await classifyAnswerSemantic({
+          checkin_question: data.checkin_question,
+          target_answer_concept: data.target_answer_concept,
+          child_transcript: data.child_transcript,
+          story_context: data.story_context,
+        });
+
+        if (classification && classification.understands_concept) {
+          diagnostics.tier_resolved = 'TIER_2_5_DECISION_CIRCUMLOCUTION_MASTERED';
+          diagnostics.cognitive_diagnosis = 'MASTERED';
+          return makeEvalResult({
+            status: 'mastered',
+            spoken_feedback: feedback.praise,
+            follow_up_prompt: null,
+            attempt_count: attempt,
+            resolved: true,
+            is_microturn: false,
+            microturn_used: data.microturn_used === true,
+            diagnostics,
+          });
+        }
+      }
+
       if (attempt >= 2) {
         return makeEvalResult({
           status: 'off_track',
@@ -344,6 +372,7 @@ export async function evaluateChildAnswer(data = {}) {
     if (protoResult.isDistractor) {
       diagnostics.tier_resolved = 'TIER_1_DISTRACTOR_TOKEN_MATCH';
       diagnostics.cognitive_diagnosis = 'DISTRACTOR_MISCONCEPTION';
+
       if (attempt >= 2) {
         return makeEvalResult({
           status: 'off_track',
@@ -468,27 +497,66 @@ export async function evaluateChildAnswer(data = {}) {
 
   diagnostics.tier_resolved = 'TIER_2_NLI_BELOW_THRESHOLD';
 
-  // Tier 3: Emergency Fallback for highly ambiguous, complex long speech (>= 6 words)
-  const wordTokens = grounded.split(' ').filter(Boolean);
-  if (wordTokens.length >= 6 && process.env.ENABLE_CLOUD_FALLBACK === 'true') {
+  // Tier 2.5 / Tier 3: Zero-token Decision Arbiter & Cloud Fallback
+  // Invoked for unmapped or ambiguous speech >= 3 words when cloud decision/fallback is explicitly requested
+  if (wordTokens.length >= 3 && cloudAllowed) {
     diagnostics.tier3_gemini.invoked = true;
-    diagnostics.tier3_gemini.reason = 'Invoked for complex unmapped speech >= 6 words';
+    diagnostics.tier3_gemini.reason = 'Invoked for unmapped or ambiguous speech >= 3 words';
 
     const classification = await classifyAnswerSemantic({
       checkin_question: data.checkin_question,
       target_answer_concept: data.target_answer_concept,
       child_transcript: data.child_transcript,
+      story_context: data.story_context,
     });
     diagnostics.tier3_gemini.result = classification;
 
     if (classification && classification.understands_concept) {
-      diagnostics.tier_resolved = 'TIER_3_GEMINI_MASTERED';
+      diagnostics.tier_resolved = classification.model_used === 'gemini-decision-1'
+        ? 'TIER_2_5_DECISION_MASTERED'
+        : 'TIER_3_GEMINI_MASTERED';
+      diagnostics.cognitive_diagnosis = 'MASTERED';
       return makeEvalResult({
         status: 'mastered',
         spoken_feedback: feedback.praise,
         follow_up_prompt: null,
         attempt_count: attempt,
         resolved: true,
+        is_microturn: false,
+        microturn_used: data.microturn_used === true,
+        diagnostics,
+      });
+    }
+
+    if (classification?.cognitive_diagnosis && classification.cognitive_diagnosis !== 'OFF_TRACK') {
+      diagnostics.cognitive_diagnosis = classification.cognitive_diagnosis;
+      diagnostics.tier_resolved = classification.model_used === 'gemini-decision-1'
+        ? `TIER_2_5_DECISION_${classification.cognitive_diagnosis}`
+        : `TIER_3_GEMINI_${classification.cognitive_diagnosis}`;
+
+      const diagKey = classification.cognitive_diagnosis.toLowerCase();
+      const customScaffold = data.diagnostic_probes?.[diagKey]?.scaffold;
+      const scaffoldPrompt = customScaffold || feedback.hint_attempt_1;
+
+      if (attempt >= 2) {
+        return makeEvalResult({
+          status: 'off_track',
+          spoken_feedback: feedback.reveal_attempt_2,
+          follow_up_prompt: null,
+          attempt_count: attempt,
+          resolved: true,
+          is_microturn: false,
+          microturn_used: data.microturn_used === true,
+          diagnostics,
+        });
+      }
+
+      return makeEvalResult({
+        status: 'needs_scaffold',
+        spoken_feedback: scaffoldPrompt,
+        follow_up_prompt: scaffoldPrompt,
+        attempt_count: attempt,
+        resolved: false,
         is_microturn: false,
         microturn_used: data.microturn_used === true,
         diagnostics,

@@ -3,6 +3,8 @@ import { BOOK_ANALYSIS_SYSTEM_PROMPT, BOOK_ANALYSIS_SCHEMA } from '../prompts/bo
 import { ANSWER_EVALUATION_SYSTEM_PROMPT, ANSWER_EVALUATION_SCHEMA } from '../prompts/answer_evaluation.js';
 import { rateLimiter } from './rate_limiter.js';
 import { verifyGroundingFidelity } from './grounding_verifier.js';
+import { classifyWithDecisionModel } from './gemini_decision_service.js';
+import defaultDecisionBreaker from './connectivity_circuit_breaker.js';
 
 export function safeJsonParse(text) {
   if (!text || typeof text !== 'string') {
@@ -206,6 +208,41 @@ export async function classifyAnswerSemantic(data = {}) {
     return getMockAnswerClassification(data);
   }
 
+  // 1. Fast Zero-Output-Token Evaluation via Gemini Decision 1 (Protected by Circuit Breaker)
+  if (process.env.DISABLE_DECISION_MODEL !== 'true') {
+    try {
+      const decision = await defaultDecisionBreaker.execute(
+        async (signal) => {
+          return await classifyWithDecisionModel({
+            checkin_question: data.checkin_question,
+            target_answer_concept: data.target_answer_concept,
+            child_transcript: data.child_transcript,
+            story_context: data.story_context,
+            signal,
+          });
+        },
+        (fallbackReason) => {
+          console.warn(`⚡ [DECISION FALLBACK] Circuit skipped (${fallbackReason}).`);
+          return null;
+        }
+      );
+
+      if (decision && decision.category) {
+        return {
+          understands_concept: decision.category === 'MASTERED',
+          confidence: decision.confidence >= 0.70 ? 'high' : 'medium',
+          cognitive_diagnosis: decision.category,
+          probabilities: decision.probabilities,
+          model_used: 'gemini-decision-1',
+          output_tokens: 0,
+        };
+      }
+    } catch (err) {
+      console.warn(`⚠️ [DECISION ERROR] ${err.message}. Falling back to generative classifier.`);
+    }
+  }
+
+  // 2. Generative Flash Fallback
   const apiKey = process.env.GEMINI_API_KEY;
   const ai = new GoogleGenAI({ apiKey });
   const model = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite';

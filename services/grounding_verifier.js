@@ -1,4 +1,6 @@
 import { getNLIModel } from './semantic_evaluator.js';
+import { verifyVisualGroundingWithDecision } from './gemini_decision_service.js';
+import defaultDecisionBreaker from './connectivity_circuit_breaker.js';
 
 const STOPWORDS = new Set([
   'a', 'an', 'the', 'this', 'that', 'these', 'those',
@@ -177,6 +179,37 @@ export async function verifyGroundingFidelity(chunk = {}) {
   }
 
   if (entailment >= 0.50 && contradiction < 0.25) {
+    // 4. Optional Multimodal Visual Grounding Pass via Gemini Decision 1
+    if ((chunk.image_buffer || chunk.image_base64) && process.env.OFFLINE_MODE !== 'true') {
+      try {
+        const visualDecision = await defaultDecisionBreaker.execute(
+          async (signal) => {
+            return await verifyVisualGroundingWithDecision({
+              imageBuffer: chunk.image_buffer || chunk.image_base64,
+              mimeType: chunk.image_mime_type || 'image/png',
+              target_answer_concept: hypothesis,
+              checkin_question: chunk.checkin_question || '',
+              signal,
+            });
+          },
+          () => null
+        );
+
+        if (visualDecision && !visualDecision.grounded && visualDecision.groundedConfidence >= 0.70) {
+          return {
+            is_grounded: false,
+            lexical_pass: true,
+            nli_score: { entailment, contradiction, neutral },
+            visual_decision: visualDecision,
+            failure_reason: 'VISUAL_HALLUCINATION_DETECTED',
+            flagged_for_review: true,
+          };
+        }
+      } catch (err) {
+        console.warn('⚠️ Visual grounding check error, preserving text NLI verdict:', err?.message);
+      }
+    }
+
     return {
       is_grounded: true,
       lexical_pass: true,

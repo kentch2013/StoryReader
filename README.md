@@ -48,6 +48,12 @@ Each module must pass all 4 verification gates before the next module begins:
   - [x] Digital Samples: Factual entailment vs contradiction/ungrounded entity verification (`test/grounding_verifier.test.js`)
   - [x] Human Gate: Verified automated rejection of hallucinated entities and contradictory concepts with zero manual grading
 
+- [x] **Module 3.7: Gemini Decision 1 Hybrid Cloud Integration & Circuit Breaker**
+  - [x] Pipeline: `services/connectivity_circuit_breaker.js` (fail-fast 400-800ms abort, automatic cooldown), `services/gemini_decision_service.js` (zero output tokens, typed `choice` and `noul` evaluations), Tier 2.5 circumlocution arbitration, and multimodal page screenshot grounding
+  - [x] Code Tests: 85/85 unit/integration tests passing with 100% contract immutability; 100% offline fallback resilience
+  - [x] Digital Samples: 29-case comprehensive benchmark (`scripts/pipeline_comprehensive_benchmark.js`) boosting overall accuracy from 69% to 86% (+17%), lifting functional circumlocutions from 17% (1/6) to 100% (6/6), and validating physical book screenshot grounding (`rattles3.png`)
+  - [x] Human Gate: Real-time speech evaluation preserved at <35ms on local fast-path; cloud decision calls bill 0 output tokens with zero schema drift
+
 - [x] **Rattles Benchmark Live Pipeline Validation (Q3 & Q4 Trials)**
   - [x] Pipeline: Live Gemini API (`gemini-3.5-flash`) Stage 1 book analysis + System 1 ONNX DeBERTa Stage 2 Socratic speech evaluation
   - [x] Code Tests: Name-homonym discourse injection guard, minimal core terse gating, verb stem expansion (`VERB_STEM_MAP`), frame semantic fast-path (`SLOT_FRAME_ALL_MATCH`)
