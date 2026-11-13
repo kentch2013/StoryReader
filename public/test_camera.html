@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>StoryReader - Continuous Live Camera Scanner</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header with Gemini 3.1 Flash Lite Model Badge -->
+    <header class="app-header">
+      <div class="header-badge-row">
+        <span class="badge model-badge">⚡ Gemini 3.1 Flash Lite</span>
+      </div>
+      <h1 class="app-title">📸 StoryReader Live Scanner</h1>
+      <p class="app-subtitle">Continuous Page Capture & Instant Compression</p>
+    </header>
+
+    <!-- Hidden file/camera inputs for mobile file upload fallback -->
+    <input type="file" id="camera-input" accept="image/*" capture="environment" class="visually-hidden" aria-label="Take photo with camera">
+    <input type="file" id="file-input" accept="image/*" multiple class="visually-hidden" aria-label="Upload photos from library">
+
+    <!-- Front-and-Center Hero: Live Camera Viewfinder -->
+    <main class="viewfinder-section" aria-label="Camera Viewfinder Section">
+      <div id="camera-viewfinder" class="camera-viewfinder">
+        <video id="camera-feed" autoplay playsinline muted></video>
+
+        <!-- Shutter flash animation layer -->
+        <div class="shutter-flash" aria-hidden="true"></div>
+
+        <!-- Document Framing Guide Overlay with Corner Marks -->
+        <div class="framing-guide-overlay" aria-hidden="true">
+          <div class="corner corner-tl"></div>
+          <div class="corner corner-tr"></div>
+          <div class="corner corner-bl"></div>
+          <div class="corner corner-br"></div>
+          <div class="framing-guide-box">
+            <span class="framing-hint">Align Book Page Inside Frame</span>
+          </div>
+        </div>
+
+        <!-- Elegant floating overlay inside/above the viewfinder for next-step prompt -->
+        <div id="next-step-prompt" class="next-step-prompt floating-prompt" role="status" aria-live="polite">
+          Align Page 1 inside viewfinder & tap Snap 📷
+        </div>
+
+        <!-- Viewfinder top auxiliary controls -->
+        <div class="viewfinder-top-bar">
+          <button type="button" id="btn-toggle-fallback" class="touch-btn btn-viewfinder-aux" aria-label="Upload from Library or Fallback" title="Upload from Library">
+            📁
+          </button>
+        </div>
+      </div>
+
+      <!-- Backward-compatible hidden aliases for existing tests -->
+      <button type="button" id="btn-fallback-library" class="visually-hidden" aria-label="Upload from Library / Fallback">📁 Upload from Library / Fallback</button>
+      <button type="button" id="btn-snap" class="visually-hidden" aria-label="Snap Page">📷 Snap Page</button>
+      <button type="button" id="btn-choose" class="visually-hidden" aria-label="Choose Photo">📁 Library</button>
+    </main>
+
+    <!-- Compact Floating Bottom Control Bar -->
+    <nav class="floating-bottom-bar" aria-label="Camera Controls">
+      <!-- Left: Thumbnail pill of the latest captured page with page count badge (tapping opens review drawer) -->
+      <button type="button" id="pill-latest-preview" class="touch-btn thumbnail-pill" aria-label="Review book pages (0 captured)" title="Open Review Drawer">
+        <div class="pill-thumb-wrap">
+          <span class="pill-placeholder">📖</span>
+        </div>
+        <span id="pill-count-badge" class="badge pill-badge">0</span>
+      </button>
+
+      <!-- Center: Circular shutter button with quick rotate (🔄) and retake (↩️) buttons -->
+      <div class="shutter-cluster">
+        <button type="button" id="btn-rotate-viewfinder" class="touch-btn btn-viewfinder-aux" aria-label="Rotate last page 90 degrees" title="Rotate last page" disabled>
+          🔄
+        </button>
+        <button type="button" id="btn-shutter" class="shutter-btn" aria-label="Snap photo of book page">
+          <span class="shutter-btn-inner"></span>
+        </button>
+        <button type="button" id="btn-retake-viewfinder" class="touch-btn btn-viewfinder-aux" aria-label="Retake last page" title="Retake last page" disabled>
+          ↩️
+        </button>
+      </div>
+
+      <!-- Right: "📖 Review Book (N)" button (tapping opens the review drawer) -->
+      <button type="button" id="btn-open-review" class="touch-btn btn-open-review" aria-label="Review book pages (0 captured)">
+        📖 Review Book (0)
+      </button>
+    </nav>
+
+    <!-- Collapsible Bottom Sheet Review Drawer & Backdrop Overlay -->
+    <div id="drawer-backdrop" class="drawer-backdrop" aria-hidden="true"></div>
+
+    <aside id="review-drawer" class="review-drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-heading" aria-hidden="true">
+      <!-- Drawer grab handle affordance -->
+      <div class="drawer-handle-bar" aria-hidden="true">
+        <div class="drawer-handle"></div>
+      </div>
+
+      <!-- Drawer header: "📖 Review Book (N Pages)" with prominent "📷 Back to Camera" button -->
+      <div class="drawer-header">
+        <div class="drawer-title-wrap">
+          <h2 id="drawer-heading" class="drawer-title">
+            📖 Review Book (<span id="drawer-count-badge">0 Pages</span>)
+          </h2>
+        </div>
+        <button type="button" id="btn-close-drawer" class="touch-btn btn-close-drawer" aria-label="Close review drawer and return to camera">
+          📷 Back to Camera
+        </button>
+      </div>
+
+      <!-- Inside Drawer: Carousel, Filmstrip, Large Analyze, Metrics, Status, Results -->
+      <div class="drawer-body">
+        <!-- Backward-compatible Latest Page Card -->
+        <div id="latest-page-card" class="latest-page-card" aria-label="Most recently captured page preview"></div>
+
+        <!-- Sequence Switcher (for multi-sequence auto-rollover > 20 pages) -->
+        <div id="sequence-switcher-container" class="sequence-switcher-container" aria-label="Sequence Switcher"></div>
+
+        <!-- Consolidated Unified Active Captured Sequence Section -->
+        <section class="carousel-section unified-sequence-section" aria-labelledby="sequence-heading">
+          <div class="carousel-section-header">
+            <div class="sequence-heading-wrap">
+              <h3 id="sequence-heading" class="carousel-title">📚 Active Captured Sequence</h3>
+              <span id="active-sequence-badge" class="badge sequence-badge" style="display: none;">Sequence 1</span>
+            </div>
+            <div class="sequence-badge-cluster">
+              <span id="page-count-badge" class="badge page-badge">0 / 20 Pages</span>
+              <span id="carousel-count-badge" class="badge page-badge">0 Pages</span>
+            </div>
+          </div>
+          <div id="book-carousel" class="book-carousel unified-carousel" role="region" aria-label="Active captured sequence viewer"></div>
+          <div id="book-carousel-dots" class="carousel-dots" role="tablist" aria-label="Page navigation dots"></div>
+          <!-- Backward-compatible mapped filmstrip container -->
+          <div id="filmstrip-tray" class="filmstrip-container visually-hidden" role="region" aria-label="Captured book pages sequence"></div>
+        </section>
+
+        <!-- Large Analyze button and Clear button -->
+        <div class="bottom-action-grid">
+          <button type="button" id="btn-analyze" class="touch-btn btn-primary btn-analyze-prominent" disabled aria-label="Upload and analyze captured book pages with Gemini">
+            🚀 Analyze Pages (0)
+          </button>
+          <button type="button" id="btn-clear" class="touch-btn btn-danger btn-clear-compact" aria-label="Clear all pages from camera tray" title="Clear all pages">
+            🗑️
+          </button>
+        </div>
+
+        <!-- Live Performance & Compression Metrics -->
+        <div id="metrics-container" class="metrics-container" aria-live="polite"></div>
+
+        <!-- Status panel -->
+        <div id="status-panel" class="status-panel" role="status" aria-live="polite"></div>
+
+        <!-- On-Demand Book Analysis Results Viewer (collapsed by default behind toggle button) -->
+        <div class="results-container">
+          <button type="button" id="btn-toggle-results" class="touch-btn btn-toggle-results" style="display: none;" aria-expanded="false" aria-controls="results-display">
+            📊 View Analysis Results
+          </button>
+          <div id="results-display" class="results-box collapsed" style="display: none;">
+            <div class="results-box-header">
+              <h3>API Analysis Response</h3>
+              <button type="button" id="btn-close-results" class="btn-text-close" aria-label="Hide Results">✕ Hide</button>
+            </div>
+            <pre id="results-json"></pre>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <script type="module">
+    import { CameraTrayUI, CameraTrayState } from './js/camera_tray.js';
+
+    const shutterBtn = document.getElementById('btn-shutter');
+    const toggleFallbackBtn = document.getElementById('btn-toggle-fallback');
+    const fallbackLibraryBtn = document.getElementById('btn-fallback-library');
+    const retakeViewfinderBtn = document.getElementById('btn-retake-viewfinder');
+    const rotateViewfinderBtn = document.getElementById('btn-rotate-viewfinder');
+    const snapBtn = document.getElementById('btn-snap');
+    const chooseBtn = document.getElementById('btn-choose');
+    const cameraInput = document.getElementById('camera-input');
+    const fileInput = document.getElementById('file-input');
+    const pageCountBadge = document.getElementById('page-count-badge');
+    const carouselCountBadge = document.getElementById('carousel-count-badge');
+    const drawerCountBadge = document.getElementById('drawer-count-badge');
+    const resultsDisplay = document.getElementById('results-display');
+    const resultsJson = document.getElementById('results-json');
+    const toggleResultsBtn = document.getElementById('btn-toggle-results');
+    const closeResultsBtn = document.getElementById('btn-close-results');
+
+    // Button triggers
+    fallbackLibraryBtn?.addEventListener('click', () => fileInput.click());
+    toggleFallbackBtn?.addEventListener('click', () => fileInput.click());
+    snapBtn?.addEventListener('click', () => shutterBtn.click());
+    chooseBtn?.addEventListener('click', () => fileInput.click());
+
+    closeResultsBtn?.addEventListener('click', () => {
+      if (resultsDisplay) resultsDisplay.style.display = 'none';
+      if (toggleResultsBtn) {
+        toggleResultsBtn.textContent = '📊 View Analysis Results';
+        toggleResultsBtn.setAttribute('aria-expanded', 'false');
+      }
+    });
+
+    const trayUI = new CameraTrayUI({
+      videoElement: '#camera-feed',
+      viewfinderElement: '#camera-viewfinder',
+      shutterButton: '#btn-shutter',
+      retakeButton: '#btn-retake-viewfinder',
+      rotateViewfinderButton: '#btn-rotate-viewfinder',
+      toggleFallbackButton: '#btn-toggle-fallback',
+      drawerElement: '#review-drawer',
+      backdropElement: '#drawer-backdrop',
+      closeDrawerButton: '#btn-close-drawer',
+      openReviewButton: '#btn-open-review',
+      latestPreviewPill: '#pill-latest-preview',
+      drawerCountBadge: '#drawer-count-badge',
+      nextStepPromptElement: '#next-step-prompt',
+      latestCardElement: '#latest-page-card',
+      sequenceSwitcherElement: '#sequence-switcher-container',
+      activeSequenceBadge: '#active-sequence-badge',
+      toggleResultsButton: '#btn-toggle-results',
+      resultsDisplay: '#results-display',
+      trayElement: '#filmstrip-tray',
+      carouselElement: '#book-carousel',
+      carouselDotsElement: '#book-carousel-dots',
+      metricsElement: '#metrics-container',
+      statusElement: '#status-panel',
+      analyzeButton: '#btn-analyze',
+      clearButton: '#btn-clear',
+      cameraInput,
+      fileInput,
+      apiEndpoint: '/api/analyze-book',
+      onPagesChanged: (pages) => {
+        const totalInActive = pages.length;
+        const totalAll = trayUI.state.getTotalPageCount();
+        const seqCount = trayUI.state.getSequenceCount();
+
+        if (pageCountBadge) {
+          pageCountBadge.textContent = seqCount > 1
+            ? `Seq ${trayUI.state.currentSequenceIndex + 1}: ${totalInActive}/${trayUI.state.maxPages} (${totalAll} total)`
+            : `${totalInActive} / ${trayUI.state.maxPages} Pages`;
+        }
+        if (carouselCountBadge) {
+          carouselCountBadge.textContent = `${totalInActive} Page${totalInActive === 1 ? '' : 's'}`;
+        }
+        if (drawerCountBadge) {
+          drawerCountBadge.textContent = seqCount > 1
+            ? `${totalAll} Pages (${seqCount} Sequences)`
+            : `${totalAll} Page${totalAll === 1 ? '' : 's'}`;
+        }
+        if (retakeViewfinderBtn) {
+          retakeViewfinderBtn.disabled = totalInActive === 0;
+        }
+        if (rotateViewfinderBtn) {
+          rotateViewfinderBtn.disabled = totalInActive === 0;
+        }
+      },
+      onAnalyzeSuccess: (data) => {
+        if (resultsJson) resultsJson.textContent = JSON.stringify(data, null, 2);
+        if (toggleResultsBtn) {
+          toggleResultsBtn.style.display = 'inline-flex';
+          toggleResultsBtn.textContent = '📊 View Analysis Results';
+          toggleResultsBtn.setAttribute('aria-expanded', 'false');
+        }
+        if (resultsDisplay) resultsDisplay.style.display = 'none';
+      },
+      onAnalyzeError: (err) => {
+        if (resultsJson) resultsJson.textContent = JSON.stringify(err, null, 2);
+        if (toggleResultsBtn) {
+          toggleResultsBtn.style.display = 'inline-flex';
+          toggleResultsBtn.textContent = '📊 View Analysis Results';
+          toggleResultsBtn.setAttribute('aria-expanded', 'false');
+        }
+        if (resultsDisplay) resultsDisplay.style.display = 'none';
+      }
+    });
+
+    // Expose instance for automated testing
+    window.__cameraTrayUI = trayUI;
+  </script>
+</body>
+</html>

@@ -18,8 +18,8 @@
 | **M3.5** | Latency Optimization & Cross-Story Eval (Completed) | Dynamic batch padding, 2-stage cascaded probing, bidirectional character confusion, story-agnostic sanitization | Sub-35ms mastery benchmark, sub-70ms full diagnosis, 19/19 decision benchmark, 18/18 cross-story benchmark | Terminal REPL testing latency & multi-story chunks with zero subjective grading |
 | **M3.6** | Grounding Fidelity Gate (Completed) | `services/grounding_verifier.js`, `verbatim_page_text` transcription, context bounding ($\le 3$ pages), lexical entity overlap, ONNX NLI premise-entailment pass | 68/68 tests passing, 4/4 grounding contract tests, automated rejection of ungrounded entities & contradictions | Scripted verification of factual entailment vs hallucinations |
 | **Bench** | Rattles Real Pipeline Validation (Completed) | `prompts/book_analysis.js`, `services/discourse_resolver.js`, `services/semantic_evaluator.js`, `services/slot_delta_engine.js` | Q3 Trial: 10/10 passing (100%), Q4 Trial: 10/10 passing (100%), 68/68 regression tests | Live Gemini API + local ONNX evaluation with zero runtime LLM calls during speech |
-| **M4** | Camera & Canvas Tray (NEXT ACTIVE GATE) | `public/js/camera_tray.js`, thumbnail tray, canvas downscaler | Resolution capping ($\le 1600\text{px}$), payload compression ($\le 300\text{KB}$/page) | iPhone 14 Plus camera capture: snap 3 pages, verify tray order and sharpness |
-| **M5** | Safari Audio Coordinator | `public/js/audio_manager.js`, gesture unlock, TTS synthesizer, STT Push-to-Talk | Audio state lockouts, collision safety (`speechSynthesis.cancel()` before mic) | iPhone 14 Plus Safari: speak sentence, check for no silence cutoff and clean audio output |
+| **M4** | Camera & Canvas Tray (Completed & Verified) | `public/js/camera_tray.js`, continuous in-browser scanner, canvas downscaler, stationary rotation, multi-sequence | 85/85 tests passing, 17/17 camera tests, resolution capping ($\le 1600\text{px}$), payload compression ($\le 300\text{KB}$/page) | iPhone 14 Plus Safari: continuous rapid snap, stationary 90° rotate, multi-sequence pagination |
+| **M5** | Safari Audio Coordinator (NEXT ACTIVE GATE) | `public/js/audio_manager.js`, gesture unlock, TTS synthesizer, STT Push-to-Talk | Audio state lockouts, collision safety (`speechSynthesis.cancel()` before mic) | iPhone 14 Plus Safari: speak sentence, check for no silence cutoff and clean audio output |
 | **M6** | Full SPA Orchestration | `public/index.html`, `public/style.css`, `public/js/app.js`, Cloudflare Tunnel runbook | FSM state transitions, attempt limit counter ($\le 2$), chunk progression | Full parent-child reading test with physical book over HTTPS tunnel |
 
 ---
@@ -127,24 +127,32 @@
 
 ---
 
-### Module 4: Mobile Camera Tray & Canvas Compression Engine (NEXT IMMEDIATE OBJECTIVE)
+### Module 4: Mobile Camera Tray & Canvas Compression Engine (Completed & Verified)
 * **1. Pipeline Extension:**
   - Implement `public/js/camera_tray.js`:
-    - Handles `<input type="file" accept="image/*">` single-shot capture.
-    - Renders an interactive page tray filmstrip with thumbnails, page tags (`Page 1`, `Page 2`), re-order handles, and delete buttons.
-    - In-browser HTML5 `<canvas>` downsampling algorithm: constrains max dimension to $1600\text{px}$, exports `image/jpeg` at 0.8 quality.
-    - Generates multi-part `FormData` payload for backend submission.
+    - Continuous in-browser camera scanner (`navigator.mediaDevices.getUserMedia`) with document framing guide overlay.
+    - Instant snapshot shutter button (<15ms) directly from `<video>` to `<canvas>` with flash feedback and haptic vibration (`navigator.vibrate([40])`).
+    - In-browser HTML5 `<canvas>` downsampling algorithm: constrains max dimension to $\le 1600\text{px}$, exports `image/jpeg` at 0.8 quality ($\le 300\text{KB}$/page).
+    - Stationary 90° canvas rotation (`rotateImageBlob`, `rotatePage`): fixed 280px photo frame prevents buttons from jumping on rotate.
+    - Multi-sequence auto-rollover for $>20$ pages with sequence switcher tabs.
+    - Collapsible bottom-sheet review drawer with unified active sequence viewer.
+    - On-demand analysis results viewer.
+    - Generates multi-part `FormData` payload for backend submission (`POST /api/analyze-book`).
 * **2. Code Verification:**
-  - Browser/DOM harness test verifying canvas compression:
+  - Browser/DOM/Node test suite (`test/camera_tray.test.js`) passing 17/17 tests:
     - Asserts $4032 \times 3024$ (12MP) test canvas is downscaled to $\le 1600 \times 1200$.
     - Asserts output blob size $\le 300\text{KB}$.
-    - Verifies tray array state mutations (add, remove, reorder).
+    - Verifies tray array state mutations (add, remove, reorder, clear, retake).
+    - Verifies video element source downscaling.
+    - Verifies 90° canvas rotation and dimension swapping.
+    - Verifies multi-sequence pagination and auto-rollover.
 * **3. Digital Samples:**
-  - Standalone harness page `public/test_camera.html` allowing upload of high-res test images and measuring compression ratio and duration.
+  - Standalone camera harness page `public/test_camera.html` with camera-first layout, floating bottom bar, collapsible review drawer, and $\ge 56\text{px}$ touch targets.
+  - Desktop QR portal `public/connect.html` for zero-typing iPhone 14 Plus Safari launch.
 * **4. Human Verification:**
-  - Open harness on iPhone 14 Plus. Take 3 real photos of book pages.
-  - Verify camera returns immediately after each shot without crashing Safari.
-  - Verify thumbnail tray accurately shows all 3 pages with delete/retake controls.
+  - Open harness on iPhone 14 Plus in Safari over Cloudflare HTTPS tunnel.
+  - Test continuous rapid snapping across sequential physical pages with zero modal interruptions.
+  - Test stationary 90° rotation and review drawer sequence navigation.
 
 ---
 

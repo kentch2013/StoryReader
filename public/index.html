@@ -2,17 +2,24 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
   <title>StoryScout - Grade 2 Reading Companion</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div id="app">
+  <div class="app-container">
     <header class="app-header">
-      <h1>📖 StoryScout</h1>
+      <h1 class="app-title">📖 StoryScout</h1>
+      <p class="app-subtitle">Grade 2 Reading Companion & Camera Reader</p>
     </header>
+
     <main id="main-content">
-      <p class="status-msg">Server running and ready.</p>
+      <div class="controls-card">
+        <a href="test_camera.html" class="touch-btn btn-primary" style="text-decoration: none;">
+          📸 Open Camera Tray Harness
+        </a>
+      </div>
     </main>
   </div>
 </body>

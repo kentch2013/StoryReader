@@ -25,18 +25,31 @@ function handleOutput(data) {
     if (match) {
       urlFound = true;
       const tunnelUrl = match[0];
+      const cameraUrl = `${tunnelUrl}/test_camera.html`;
+      const healthUrl = `${tunnelUrl}/api/health`;
       const connectUrl = `http://localhost:${port}/connect.html?url=${encodeURIComponent(tunnelUrl)}`;
 
-      console.log('\n================================================================');
-      console.log('🎉 MOBILE HTTPS TUNNEL READY!');
-      console.log(`🔗 Public URL: ${tunnelUrl}`);
-      console.log('📋 Automatically copied to Windows Clipboard!');
-      console.log('📱 Opening QR Code on your monitor — point your iPhone camera to connect.');
-      console.log('================================================================\n');
+      console.log('\n===============================================================================');
+      console.log('  🎉 CLOUDFLARE HTTPS TUNNEL ACTIVE & READY FOR MOBILE TESTING!');
+      console.log('===============================================================================');
+      console.log(`  🔗 Root Webapp URL:        ${tunnelUrl}`);
+      console.log(`  📸 Module 4 Camera Tray:   ${cameraUrl}`);
+      console.log(`  🩺 API Health Check:       ${healthUrl}`);
+      console.log('-------------------------------------------------------------------------------');
+      console.log('  📋 Tunnel URL automatically copied to Windows Clipboard!');
+      console.log(`  🖥️ Scannable QR Portal:    ${connectUrl}`);
+      console.log('-------------------------------------------------------------------------------');
+      console.log('  📱 ZERO-TYPING IPHONE 14 PLUS INSTRUCTIONS:');
+      console.log('     1. Look at the browser tab that just opened on your monitor.');
+      console.log('     2. Aim your iPhone Camera at the high-res QR code.');
+      console.log('     3. Tap the yellow "trycloudflare.com" banner to open Safari.');
+      console.log('     4. Allow Camera permissions and snap 3 book pages.');
+      console.log('     5. Confirm filmstrip ordering and canvas compression (<= 300KB/page).');
+      console.log('===============================================================================\n');
 
       if (isWindows) {
         try {
-          execSync(`powershell -NoProfile -Command "Set-Clipboard -Value '${tunnelUrl}'"`, {
+          execSync(`powershell -NoProfile -Command "Set-Clipboard -Value '${cameraUrl}'"`, {
             stdio: 'ignore',
           });
         } catch {

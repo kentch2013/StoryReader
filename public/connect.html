@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>StoryScout Mobile Connect</title>
+  <title>StoryScout Mobile Connect & QR Code Portal</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -14,56 +14,93 @@
       align-items: center;
       justify-content: center;
       min-height: 100vh;
-      padding: 20px;
+      padding: 24px;
     }
     .card {
       background: #1e293b;
-      max-width: 480px;
+      max-width: 580px;
       width: 100%;
       padding: 32px;
-      border-radius: 20px;
+      border-radius: 24px;
       border: 1px solid #334155;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.6);
       text-align: center;
     }
-    .badge {
-      display: inline-block;
+    .header-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
       background: #0284c7;
       color: #fff;
       font-size: 12px;
       font-weight: 700;
       letter-spacing: 0.5px;
       text-transform: uppercase;
-      padding: 4px 12px;
+      padding: 5px 14px;
       border-radius: 999px;
-      margin-bottom: 16px;
+      margin-bottom: 14px;
+    }
+    .status-pulse {
+      width: 8px;
+      height: 8px;
+      background: #4ade80;
+      border-radius: 50%;
+      box-shadow: 0 0 8px #4ade80;
     }
     h1 {
-      font-size: 22px;
-      font-weight: 700;
-      margin-bottom: 8px;
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 6px;
     }
-    p {
+    .subtitle {
       color: #94a3b8;
       font-size: 14px;
       line-height: 1.5;
-      margin-bottom: 24px;
+      margin-bottom: 20px;
+    }
+    .target-tabs {
+      display: flex;
+      gap: 8px;
+      background: #0f172a;
+      padding: 6px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      border: 1px solid #334155;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 10px 8px;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      background: transparent;
+      color: #94a3b8;
+      transition: all 0.2s ease;
+    }
+    .tab-btn.active {
+      background: #38bdf8;
+      color: #0f172a;
+      box-shadow: 0 2px 8px rgba(56, 189, 248, 0.3);
     }
     .qr-container {
       background: #ffffff;
       padding: 16px;
-      border-radius: 16px;
+      border-radius: 20px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      margin-bottom: 24px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      margin-bottom: 20px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+      position: relative;
     }
     .qr-container img {
       display: block;
-      width: 250px;
-      height: 250px;
-      border-radius: 8px;
+      width: 260px;
+      height: 260px;
+      border-radius: 10px;
     }
     .url-display {
       word-break: break-all;
@@ -71,25 +108,39 @@
       font-size: 13px;
       background: #0b1120;
       border: 1px solid #334155;
-      padding: 12px;
-      border-radius: 10px;
+      padding: 12px 16px;
+      border-radius: 12px;
       color: #38bdf8;
-      margin-bottom: 20px;
+      margin-bottom: 16px;
+      text-align: left;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .url-text {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .actions {
       display: flex;
-      gap: 12px;
+      gap: 10px;
       justify-content: center;
+      margin-bottom: 24px;
     }
-    button, a.btn {
+    button.btn, a.btn {
       font-size: 14px;
       font-weight: 600;
-      padding: 10px 20px;
+      padding: 10px 18px;
       border-radius: 10px;
       border: none;
       cursor: pointer;
       text-decoration: none;
       transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
     }
     .btn-primary {
       background: #38bdf8;
@@ -105,45 +156,170 @@
     .btn-secondary:hover {
       background: #475569;
     }
+    .instructions-card {
+      background: #0b1120;
+      border: 1px solid #1e293b;
+      border-radius: 14px;
+      padding: 16px 20px;
+      text-align: left;
+    }
+    .instructions-card h3 {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #94a3b8;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .instructions-card ol {
+      padding-left: 20px;
+      font-size: 13px;
+      color: #cbd5e1;
+      line-height: 1.6;
+    }
+    .instructions-card ol li {
+      margin-bottom: 6px;
+    }
+    .instructions-card ol li:last-child {
+      margin-bottom: 0;
+    }
     .copied-msg {
-      margin-top: 12px;
       font-size: 13px;
       color: #4ade80;
+      font-weight: 600;
+      margin-top: 8px;
       display: none;
     }
   </style>
 </head>
 <body>
   <div class="card">
-    <span class="badge">Zero Typing Mobile Setup</span>
-    <h1>📷 Point iPhone Camera Here</h1>
-    <p>Open your iPhone Camera app, aim it at this QR code, and tap the yellow banner to open Safari immediately.</p>
+    <div class="header-badge">
+      <span class="status-pulse"></span>
+      <span>HTTPS Mobile Tunnel Active</span>
+    </div>
+    <h1>📱 Scan with iPhone Camera</h1>
+    <p class="subtitle">Open your iPhone Camera, point it at this QR code, and tap the yellow link banner to open in Safari instantly.</p>
+
+    <!-- Target Switcher Tabs -->
+    <div class="target-tabs">
+      <button class="tab-btn active" id="tab-camera" onclick="selectTab('camera')">
+        📸 Camera Tray (M4)
+      </button>
+      <button class="tab-btn" id="tab-app" onclick="selectTab('app')">
+        📖 StoryScout App
+      </button>
+      <button class="tab-btn" id="tab-health" onclick="selectTab('health')">
+        🩺 API Health
+      </button>
+    </div>
+
+    <!-- Scannable High-Res QR Code -->
     <div class="qr-container">
       <img id="qr-img" src="" alt="Scan QR Code with iPhone Camera">
     </div>
-    <div class="url-display" id="target-url">Resolving tunnel URL...</div>
+
+    <!-- Active Link URL Display -->
+    <div class="url-display">
+      <span class="url-text" id="target-url">Resolving tunnel URL...</span>
+    </div>
+
+    <!-- Quick Action Buttons -->
     <div class="actions">
-      <button class="btn-primary" onclick="copyUrl()">Copy URL</button>
-      <a id="open-link" href="#" target="_blank" class="btn-secondary">Open in Browser</a>
+      <button class="btn btn-primary" onclick="copyUrl()">📋 Copy URL</button>
+      <a id="open-link" href="#" target="_blank" class="btn btn-secondary">🌐 Open in Browser</a>
     </div>
     <div class="copied-msg" id="copied-toast">✓ Copied to clipboard!</div>
+
+    <!-- Step-by-Step Instructions for iPhone 14 Plus -->
+    <div class="instructions-card">
+      <h3 id="instructions-heading">📱 iPhone 14 Plus Verification Protocol</h3>
+      <ol id="instructions-list">
+        <li><strong>Aim Camera:</strong> Point your iPhone Camera app directly at the QR code above.</li>
+        <li><strong>Open Safari:</strong> Tap the yellow <em>trycloudflare.com</em> notification banner.</li>
+        <li><strong>Allow Access:</strong> Tap <em>Allow</em> when Safari asks for camera permission to launch the live viewfinder.</li>
+        <li><strong>Continuous Scanning:</strong> Aim at Page 1 and tap the circular shutter button. The page is captured instantly with zero "Use Photo" prompts!</li>
+        <li><strong>Collapsible Review Drawer:</strong> Tap the thumbnail pill or <em>📖 Review Book</em> to slide up the review drawer. Swipe horizontally across the linked book carousel to review all pages, rotate 90°, or retake.</li>
+      </ol>
+    </div>
   </div>
 
   <script>
     const params = new URLSearchParams(window.location.search);
-    const targetUrl = params.get('url') || window.location.origin;
-    document.getElementById('target-url').innerText = targetUrl;
-    document.getElementById('open-link').href = targetUrl;
-    const qrSrc = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=0&data=' + encodeURIComponent(targetUrl);
-    document.getElementById('qr-img').src = qrSrc;
+    const baseUrl = (params.get('url') || window.location.origin).replace(/\/$/, '');
+
+    const targets = {
+      camera: {
+        path: '/test_camera.html',
+        heading: '📸 Module 4: Continuous Live Camera Scanner Protocol',
+        instructions: [
+          '<strong>Scan QR & Launch:</strong> Aim your iPhone Camera at the QR code and tap the yellow banner to open in Safari.',
+          '<strong>Allow Camera Access:</strong> Tap <em>Allow</em> when Safari prompts for camera permission. The live in-browser viewfinder will start immediately with the ⚡ Gemini 3.1 Flash Lite badge.',
+          '<strong>Continuous Rapid Scanning:</strong> Align Page 1 inside the framing guides and tap the big circular <em>Shutter button</em>. The camera stays live the whole time for rapid sequential snapping with zero modal interruptions!',
+          '<strong>Thumbnail Pill & Review Drawer:</strong> Each snap updates the live thumbnail pill and review count. Tap either to open the collapsible bottom-sheet review drawer.',
+          '<strong>Swipeable Carousel & Re-orientation:</strong> Swipe through pages in the drawer. Tap <em>🔄 Rotate</em> on any sideways page to reorient it 90° right-side up, or <em>↩️ Retake</em>.',
+          '<strong>Analyze Book:</strong> Tap <em>🚀 Analyze Pages (N)</em> to send compressed pages to Gemini 3.1 Flash Lite.'
+        ]
+      },
+      app: {
+        path: '/',
+        heading: '📖 StoryScout Reader Protocol',
+        instructions: [
+          '<strong>Aim Camera:</strong> Point your iPhone Camera at the QR code above.',
+          '<strong>Open Safari:</strong> Tap the yellow banner to launch StoryScout.',
+          '<strong>Navigation:</strong> Access the reading companion and test harnesses directly from the home screen.'
+        ]
+      },
+      health: {
+        path: '/api/health',
+        heading: '🩺 Server Health Gateway Protocol',
+        instructions: [
+          '<strong>Aim Camera:</strong> Point iPhone Camera at the QR code above.',
+          '<strong>Verify JSON:</strong> Confirm Safari renders status: "ok", service: "StoryReader", and uptime.'
+        ]
+      }
+    };
+
+    let activeTab = 'camera';
+
+    function updateView() {
+      const target = targets[activeTab];
+      const fullUrl = baseUrl + target.path;
+
+      document.getElementById('target-url').innerText = fullUrl;
+      document.getElementById('open-link').href = fullUrl;
+
+      const qrSrc = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=0&data=' + encodeURIComponent(fullUrl);
+      document.getElementById('qr-img').src = qrSrc;
+
+      document.getElementById('instructions-heading').innerText = target.heading;
+      const listEl = document.getElementById('instructions-list');
+      listEl.innerHTML = target.instructions.map(i => `<li>${i}</li>`).join('');
+
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.getElementById(`tab-${activeTab}`).classList.add('active');
+    }
+
+    function selectTab(tabKey) {
+      if (targets[tabKey]) {
+        activeTab = tabKey;
+        updateView();
+      }
+    }
 
     function copyUrl() {
-      navigator.clipboard.writeText(targetUrl).then(() => {
+      const fullUrl = baseUrl + targets[activeTab].path;
+      navigator.clipboard.writeText(fullUrl).then(() => {
         const toast = document.getElementById('copied-toast');
         toast.style.display = 'block';
         setTimeout(() => { toast.style.display = 'none'; }, 2000);
       });
     }
+
+    // Initialize with Camera Tray as primary view
+    updateView();
   </script>
 </body>
 </html>

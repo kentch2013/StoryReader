@@ -29,7 +29,7 @@ echo ===========================================================================
 echo   All servers and testing windows launched!
 echo ===============================================================================
 echo   - Window 1: Express Server (http://localhost:3000)
-echo   - Window 2: Zero-Lag Evaluator REPL (Type answers and test 0ms latency)
+echo   - Window 2: Zero-Lag Evaluator REPL (Type answers and test sub-50ms latency)
 echo   - Browser:  Health Check (http://localhost:3000/api/health)
 echo.
 
@@ -40,10 +40,11 @@ echo   [1] Run Tier 1 Zero-Lag Benchmark (scripts\test_evaluate_sample.js)
 echo   [2] Run Multimodal Book Analysis Sample (scripts\test_analyze_sample.js)
 echo   [3] Run Full Verification Suite & Immutability Audit (npm run verify)
 echo   [4] Open Documentation & Living Handoff Log (SESSION_LOG.md, architecture.md)
-echo   [5] Launch Cloudflare Quick Tunnel (Mobile Safari testing)
-echo   [6] Shutdown Server (:3000) and Exit
+echo   [5] Launch Cloudflare HTTPS Tunnel with QR Portal (Mobile Safari testing)
+echo   [6] Open Module 4 Camera Tray Harness in Browser (http://localhost:3000/test_camera.html)
+echo   [7] Shutdown Server (:3000) and Exit
 echo -------------------------------------------------------------------------------
-set /p CHOICE="Enter choice (1-6): "
+set /p CHOICE="Enter choice (1-7): "
 
 if "%CHOICE%"=="1" (
     echo.
@@ -76,12 +77,17 @@ if "%CHOICE%"=="4" (
 )
 if "%CHOICE%"=="5" (
     echo.
-    echo Launching Cloudflare Tunnel for http://localhost:3000...
-    echo (Copy the generated https://*.trycloudflare.com URL into iPhone 14 Plus Safari)
-    npx cloudflared tunnel --url http://localhost:3000
+    echo Launching Mobile Tunnel with QR Code Portal...
+    node scripts\mobile_tunnel.js
     goto MENU
 )
 if "%CHOICE%"=="6" (
+    echo.
+    echo Opening Camera Tray Harness in local browser...
+    start http://localhost:3000/test_camera.html
+    goto MENU
+)
+if "%CHOICE%"=="7" (
     echo.
     echo Terminating server on port 3000...
     node -e "const { execSync } = require('child_process'); try { const net = execSync('netstat -ano').toString(); for (const l of net.split('\n')) { if (l.includes(':3000') && l.includes('LISTENING')) { const pid = l.trim().split(/\s+/).pop(); execSync('taskkill /F /PID ' + pid, { stdio: 'ignore' }); } } } catch (e) {}"
@@ -89,5 +95,5 @@ if "%CHOICE%"=="6" (
     exit /b 0
 )
 
-echo Invalid choice. Please enter 1-6.
+echo Invalid choice. Please enter 1-7.
 goto MENU

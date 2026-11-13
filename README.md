@@ -54,13 +54,13 @@ Each module must pass all 4 verification gates before the next module begins:
   - [x] Digital Samples: Q3 Trial (`scripts/trial_rattles_q3.js`) 10/10 passing (100%), Q4 Trial (`scripts/trial_rattles_q4.js`) 10/10 passing (100%)
   - [x] Human Gate: Near-miss slot repairs caught in <16ms with Wh-nudges; correct answers resolved in <32ms; 0 false positives on direct contradictions
 
-- [ ] **Module 4: Mobile Camera Tray & Canvas Compression Engine (NEXT IMMEDIATE OBJECTIVE)**
-  - [ ] Pipeline: `public/js/camera_tray.js`, sequential capture, filmstrip tray, canvas downscaler ($\le 1600\text{px}$)
-  - [ ] Code Tests: Canvas compression tests ($\le 300\text{KB}$/page, $\le 1600\text{px}$)
-  - [ ] Digital Samples: Standalone camera harness page (`test_camera.html`)
-  - [ ] Human Gate: iPhone 14 Plus Safari capture test (snap 3 pages, verify tray & payload)
+- [x] **Module 4: Mobile Camera Tray & Canvas Compression Engine (Completed & Verified)**
+  - [x] Pipeline: `public/js/camera_tray.js`, continuous in-browser camera scanner (`getUserMedia`), instant snapshot capture, stationary 90° canvas rotation, multi-sequence auto-rollover (>20 pages), canvas downscaler ($\le 1600\text{px}$, $\le 300\text{KB}$)
+  - [x] Code Tests: 17 unit/integration tests (`test/camera_tray.test.js`) passing with 100% contract immutability
+  - [x] Digital Samples: Standalone mobile camera harness (`public/test_camera.html`) with camera-first layout, collapsible bottom-sheet review drawer, and $\ge 56\text{px}$ touch targets
+  - [x] Human Gate: iPhone 14 Plus Safari capture test (zero-modal rapid snapping, stationary rotate, multi-sequence pagination, and QR portal `connect.html`)
 
-- [ ] **Module 5: Safari Audio Coordinator (TTS & STT)**
+- [ ] **Module 5: Safari Audio Coordinator (TTS & STT) (NEXT IMMEDIATE OBJECTIVE)**
   - [ ] Pipeline: Web Audio unlock, `speechSynthesis` natural voice selector, `webkitSpeechRecognition` Push-to-Talk, audio cancel barrier
   - [ ] Code Tests: State machine mutual exclusivity assertions
   - [ ] Digital Samples: Standalone audio test harness page (`test_audio.html`)

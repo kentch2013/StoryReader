@@ -51,14 +51,15 @@ graph TD
 
 Before writing code, the following six core failure modes have been analyzed and designed around:
 
-### Risk 1: Mobile Safari Disables Multi-Capture when `capture` Attribute is Set
-* **Root Cause:** In iOS Safari, combining `<input type="file" accept="image/*" capture="environment" multiple>` forces Safari directly into single-shot camera mode. Safari strictly ignores the `multiple` attribute when `capture` is present, closing the camera after exactly one shot.
+### Risk 1: Mobile Safari Disables Multi-Capture & Clunky Single-Shot Camera Modals
+* **Root Cause:** In iOS Safari, combining `<input type="file" accept="image/*" capture="environment" multiple>` forces Safari directly into single-shot camera mode, ignoring `multiple`. Each shot forces a native OS modal with "Use Photo" confirmation, kicking the user out of the app flow and requiring repeated manual camera launches.
 * **Architectural Solution:**
-  1. Implement a **Sequential Page Capture Tray** in the UI.
-  2. The parent taps "Snap Page", which launches the camera for one page.
-  3. The photo is immediately drawn onto an in-memory HTML5 `<canvas>`, rendered in a thumbnail filmstrip tray with page number labels (`Page 1`, `Page 2`, `Page 3`), and stored in client memory.
-  4. Parent can tap "Add Next Page", re-order, or delete/retake blurry shots before committing.
-  5. The parent taps a prominent **"Analyze Book (N Pages)"** button when finished.
+  1. Implement a **Continuous In-Browser Live Camera Scanner** via WebRTC `navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } } })`.
+  2. The camera stream runs continuously inside the DOM with document framing guides. Tapping the circular shutter button captures an instant frame snapshot directly from `<video>` to `<canvas>` in $<15\text{ms}$ with visual flash feedback and haptic vibration (`navigator.vibrate([40])`).
+  3. **Stationary 90° Canvas Rotation:** Fixed 280px photo frame ensures that rotating a page by $90^\circ$ changes the photo orientation only—screen dimensions do not change, preventing button location shifting.
+  4. **Multi-Sequence Auto-Rollover:** When active sequence reaches 20 pages (matching backend batch limits), page 21 seamlessly initiates Sequence 2 with tabbed sequence switching.
+  5. **Camera-First Bottom-Sheet Review Drawer:** A compact floating bottom bar preserves 100% viewfinder visibility during scanning. Tapping the thumbnail pill or review button slides up the review drawer with sequence review, rotation, and on-demand analysis results.
+  6. **Resilient Fallback:** If camera permissions are denied or unavailable, automatically falls back to single-shot `<input type="file">`.
 
 ### Risk 2: High-Resolution Photo Uploads Choking the Upstream Tunnel
 * **Root Cause:** iPhone 14 Plus camera captures 12MP to 48MP images (3MB–10MB per image). Uploading 6 uncompressed pages over home Wi-Fi uplink via a reverse tunnel creates 30MB–60MB payloads, causing:
