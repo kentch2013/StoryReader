@@ -2,6 +2,7 @@ import express from 'express';
 import multer from 'multer';
 import { analyzeBookPages } from '../services/gemini_service.js';
 import { evaluateChildAnswer } from '../services/answer_evaluator.js';
+import { detectRetryCommand } from '../services/voice_command_detector.js';
 
 const router = express.Router();
 
@@ -59,6 +60,20 @@ router.post('/evaluate-answer', express.json(), async (req, res, next) => {
     }
 
     const result = await evaluateChildAnswer(req.body);
+    if (req.socket?.destroyed) {
+      return;
+    }
+
+    return res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/detect-intent', express.json(), async (req, res, next) => {
+  try {
+    const transcript = req.body?.transcript || '';
+    const result = await detectRetryCommand(transcript);
     if (req.socket?.destroyed) {
       return;
     }

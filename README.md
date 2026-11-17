@@ -66,11 +66,20 @@ Each module must pass all 4 verification gates before the next module begins:
   - [x] Digital Samples: Standalone mobile camera harness (`public/test_camera.html`) with camera-first layout, collapsible bottom-sheet review drawer, and $\ge 56\text{px}$ touch targets
   - [x] Human Gate: iPhone 14 Plus Safari capture test (zero-modal rapid snapping, stationary rotate, multi-sequence pagination, and QR portal `connect.html`)
 
-- [ ] **Module 5: Safari Audio Coordinator (TTS & STT) (NEXT IMMEDIATE OBJECTIVE)**
-  - [ ] Pipeline: Web Audio unlock, `speechSynthesis` natural voice selector, `webkitSpeechRecognition` Push-to-Talk, audio cancel barrier
-  - [ ] Code Tests: State machine mutual exclusivity assertions
-  - [ ] Digital Samples: Standalone audio test harness page (`test_audio.html`)
-  - [ ] Human Gate: iPhone 14 Plus Safari mic & speaker test (no silence cutoff, clear TTS)
+- [x] **Module 5: Safari Audio Coordinator (TTS & STT) (Completed & Verified)**
+  - [x] Pipeline: Web Audio zero-buffer unlock (`unlock()`), `speechSynthesis` natural voice selector (0.9x rate), `webkitSpeechRecognition` continuous Push-to-Talk, mutual exclusivity collision barrier
+  - [x] Hands-Free Voice Retry Detection: 0ms regex fastpath, ONNX DeBERTa-v3 System 1 NLI intent classifier (`POST /api/detect-intent`), mid-utterance splice isolation, continuous auto-listening
+  - [x] Code Tests: 24 unit/integration tests across `test/audio_manager.test.js`, `test/voice_command_detector.test.js`, and `test/voice_intent_routes.test.js`
+  - [x] Digital Samples: Standalone mobile audio harness (`public/test_audio.html`) and QR portal tab (`public/connect.html`)
+  - [x] Human Gate: iPhone 14 Plus Safari physical testing (loudspeaker playback, pause tolerance, hands-free voice retry)
+
+- [x] **Module 5.5: Robust Copyright Ingestion & Semantic Relaxation (Completed & Verified)**
+  - [x] Pipeline: 1:1 detail-preserving factual paraphrase with zero recitation blocks on copyrighted material; `story_facts` atomic propositions array with local NLI entailment validation; deterministic grayscale rotation detection (`services/rotation_detector.js`); WebKit non-JSON/HTML error resilience in camera tray (`public/js/camera_tray.js`); dynamic head-noun extraction (`extractHeadNoun`) and SIMD `head_noun_entity` probing with agent question protection (`services/semantic_evaluator.js`).
+  - [x] Code Tests: 20 unit/integration tests across `test/rotation_detector.test.js`, `test/camera_tray_resilience.test.js`, and `test/parallel_diagnostic_probing.test.js`.
+  - [x] Digital Samples: Live validation on physical copyrighted book *Robert the Rose Horse* (6 pages, 0 recitation blocks, 17.3s latency, 20 atomic propositions, 98.6% average grounding entailment); 8-answer diagnostic sweep on Chunk 1.
+  - [x] Human Gate: Empirical verification crediting non-verbatim child answers ("his friends" -> MASTERED) without false positive bleed.
+
+- [ ] **Module 6: Full SPA Orchestration & End-to-End Reading Flow (NEXT IMMEDIATE OBJECTIVE)**
 
 - [ ] **Module 6: Full SPA Orchestration & End-to-End Reading Flow**
   - [ ] Pipeline: Single-page UI (`index.html`, `style.css`, `app.js`), attempt capping ($\le 2$), CSS confetti, tunnel runbook

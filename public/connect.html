@@ -208,6 +208,9 @@
       <button class="tab-btn active" id="tab-camera" onclick="selectTab('camera')">
         📸 Camera Tray (M4)
       </button>
+      <button class="tab-btn" id="tab-audio" onclick="selectTab('audio')">
+        🎙️ Audio Coordinator (M5)
+      </button>
       <button class="tab-btn" id="tab-app" onclick="selectTab('app')">
         📖 StoryScout App
       </button>
@@ -261,6 +264,18 @@
           '<strong>Thumbnail Pill & Review Drawer:</strong> Each snap updates the live thumbnail pill and review count. Tap either to open the collapsible bottom-sheet review drawer.',
           '<strong>Swipeable Carousel & Re-orientation:</strong> Swipe through pages in the drawer. Tap <em>🔄 Rotate</em> on any sideways page to reorient it 90° right-side up, or <em>↩️ Retake</em>.',
           '<strong>Analyze Book:</strong> Tap <em>🚀 Analyze Pages (N)</em> to send compressed pages to Gemini 3.1 Flash Lite.'
+        ]
+      },
+      audio: {
+        path: '/test_audio.html',
+        heading: '🎙️ Module 5: Safari Audio Coordinator & Push-to-Talk Protocol',
+        instructions: [
+          '<strong>Scan QR & Launch:</strong> Aim your iPhone Camera at the QR code and tap the yellow banner to open /test_audio.html in Safari.',
+          '<strong>Unlock Web Audio & Speech:</strong> Tap <em>🔊 Tap to Start Audio</em> once. This executes the zero-volume Web Audio buffer unlock required by iOS Safari security policies.',
+          '<strong>Test Mutual Exclusivity:</strong> Tap <em>🔊 Read Aloud</em> on Lookout Prompt or Check-in Question. Verify crystal-clear speech playback at 0.9x child-friendly rate.',
+          '<strong>Push-to-Talk Microphone:</strong> Press and hold the large circular <em>🎙️ microphone button</em>. Notice the animated red listening pulse ring.',
+          '<strong>Hesitation Tolerance:</strong> Speak an answer with natural pauses (e.g., "The bunny... hopped into the woods"). Verify interim transcripts accumulate smoothly across pauses without cut-offs.',
+          '<strong>Check Answer & Automatic Spoken Feedback:</strong> Release the button and tap <em>🚀 Check Answer</em>. Verify evaluated status (MASTERED or SCAFFOLD) and listen as StoryScout automatically reads the feedback aloud!'
         ]
       },
       app: {

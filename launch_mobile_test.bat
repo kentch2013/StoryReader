@@ -41,8 +41,9 @@ echo   3. Point your iPhone 14 Plus Camera at the monitor.
 echo   4. Tap the yellow "trycloudflare.com" banner to open in Safari.
 echo   5. The QR Portal lets you test:
 echo      [Tab 1] Module 4: Mobile Camera Tray & Canvas Compression (/test_camera.html)
-echo      [Tab 2] Main StoryScout App (/)
-echo      [Tab 3] Server Health Gateway (/api/health)
+echo      [Tab 2] Module 5: Safari Audio Coordinator & PTT (/test_audio.html)
+echo      [Tab 3] Main StoryScout App (/)
+echo      [Tab 4] Server Health Gateway (/api/health)
 echo ===============================================================================
 echo.
 echo Starting Mobile Tunnel...

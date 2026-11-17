@@ -9,6 +9,11 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <!-- Persistent Floating "Resume Reading" button when analysis data is available -->
+  <button type="button" id="btn-floating-resume-reading" class="floating-resume-reading-btn" aria-label="Resume Reading">
+    📖 Resume Reading
+  </button>
+
   <div class="app-container">
     <!-- Header with Gemini 3.1 Flash Lite Model Badge -->
     <header class="app-header">
@@ -60,6 +65,93 @@
       <button type="button" id="btn-snap" class="visually-hidden" aria-label="Snap Page">📷 Snap Page</button>
       <button type="button" id="btn-choose" class="visually-hidden" aria-label="Choose Photo">📁 Library</button>
     </main>
+
+    <!-- Reading Mode View (Story Mode): Appears when parent taps "Start Reading" -->
+    <section id="reading-mode-section" class="reading-mode-container" style="display: none;" aria-label="StoryScout Reading Mode">
+      <div class="reading-mode-header">
+        <span id="reading-chunk-badge" class="chunk-badge">📖 Chunk 1</span>
+        <div id="reading-stepper" class="chunk-stepper"></div>
+        <button type="button" id="btn-reading-back-camera" class="btn-reading-back-camera" aria-label="Back to Camera">
+          📷 Camera
+        </button>
+      </div>
+
+      <!-- Step 1: Pre-reading Lookout Prompt Card -->
+      <div id="card-lookout-step" class="reading-step-card lookout-step">
+        <div class="step-card-header">
+          <span class="step-card-label">👀 Lookout Clue</span>
+          <button type="button" id="btn-play-lookout" class="touch-btn btn-secondary action-icon-btn" aria-label="Read clue aloud" title="Read Clue Aloud">
+            🔊
+          </button>
+        </div>
+        <div id="lookout-prompt-text" class="step-card-text">
+          Before you read, watch for what happens!
+        </div>
+        <div class="step-card-actions">
+          <button type="button" id="btn-finish-reading-chunk" class="touch-btn btn-primary" style="width: 100%;">
+            📖 I Finished Reading! Next ➡️
+          </button>
+        </div>
+      </div>
+
+      <!-- Step 2: Post-reading Check-in Question Card -->
+      <div id="card-checkin-step" class="reading-step-card checkin-step" style="display: none;">
+        <div class="step-card-header">
+          <span class="step-card-label">❓ Check-in Question</span>
+          <button type="button" id="btn-play-checkin" class="touch-btn btn-secondary action-icon-btn" aria-label="Read question aloud" title="Read Question Aloud">
+            🔊
+          </button>
+        </div>
+        <div id="checkin-question-text" class="step-card-text">
+          What did the character do?
+        </div>
+
+        <!-- Push to Talk Microphone & Feedback Section -->
+        <div class="ptt-section">
+          <div class="ptt-button-wrap">
+            <button type="button" id="btn-ptt-reading" class="ptt-btn" aria-label="Hold to speak your answer">
+              <div class="ptt-pulse-ring" aria-hidden="true"></div>
+              <div class="ptt-inner-circle">
+                <span class="ptt-icon">🎙️</span>
+              </div>
+            </button>
+          </div>
+          <p id="ptt-status-reading" class="ptt-instruction">Hold mic to speak answer 🎙️</p>
+
+          <!-- Speech bubble showing transcript -->
+          <div id="speech-bubble-reading" class="speech-bubble" style="display: none;">
+            <div class="speech-bubble-header">
+              <span class="speech-bubble-label">I heard:</span>
+            </div>
+            <div id="transcript-display-reading" class="transcript-text"></div>
+            <div class="audio-actions-grid" style="margin-top: 10px;">
+              <button type="button" id="btn-check-answer-reading" class="touch-btn btn-primary">
+                🚀 Check Answer
+              </button>
+              <button type="button" id="btn-retry-speech-reading" class="touch-btn btn-secondary">
+                🔄 Retry
+              </button>
+            </div>
+          </div>
+
+          <!-- Socratic Evaluation Feedback Card -->
+          <div id="feedback-card-reading" class="feedback-card">
+            <div class="feedback-header">
+              <span id="feedback-badge-reading" class="feedback-status-badge">Status</span>
+              <button type="button" id="btn-replay-feedback-reading" class="btn-replay-feedback">🔊 Replay</button>
+            </div>
+            <div class="spoken-feedback-bubble">
+              <p id="feedback-text-reading"></p>
+            </div>
+            <div id="feedback-next-actions-reading" style="display: none; margin-top: 10px;">
+              <button type="button" id="btn-advance-chunk" class="touch-btn btn-primary" style="width: 100%;">
+                🎉 Next Reading Chunk ➡️
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
 
     <!-- Compact Floating Bottom Control Bar -->
     <nav class="floating-bottom-bar" aria-label="Camera Controls">
@@ -113,6 +205,9 @@
 
       <!-- Inside Drawer: Carousel, Filmstrip, Large Analyze, Metrics, Status, Results -->
       <div class="drawer-body">
+        <!-- Celebratory "Start Reading" Hero Card on Analysis Completion -->
+        <div id="analysis-success-container"></div>
+
         <!-- Backward-compatible Latest Page Card -->
         <div id="latest-page-card" class="latest-page-card" aria-label="Most recently captured page preview"></div>
 
@@ -127,6 +222,9 @@
               <span id="active-sequence-badge" class="badge sequence-badge" style="display: none;">Sequence 1</span>
             </div>
             <div class="sequence-badge-cluster">
+              <button type="button" id="btn-auto-straighten" class="touch-btn btn-auto-straighten" aria-label="Auto-straighten all sideways pages" title="Auto-Straighten Sideways Pages" disabled>
+                ✨ Auto-Straighten
+              </button>
               <span id="page-count-badge" class="badge page-badge">0 / 20 Pages</span>
               <span id="carousel-count-badge" class="badge page-badge">0 Pages</span>
             </div>
@@ -172,6 +270,15 @@
 
   <script type="module">
     import { CameraTrayUI, CameraTrayState } from './js/camera_tray.js';
+    import { SafariAudioManager, AUDIO_STATE } from './js/audio_manager.js';
+
+    const params = new URLSearchParams(window.location.search);
+    const authSecret = params.get('auth') || sessionStorage.getItem('storyreader_auth') || '';
+    if (params.get('auth')) {
+      sessionStorage.setItem('storyreader_auth', params.get('auth'));
+    }
+
+    const audioManager = new SafariAudioManager();
 
     const shutterBtn = document.getElementById('btn-shutter');
     const toggleFallbackBtn = document.getElementById('btn-toggle-fallback');
@@ -190,6 +297,40 @@
     const toggleResultsBtn = document.getElementById('btn-toggle-results');
     const closeResultsBtn = document.getElementById('btn-close-results');
 
+    // Reading Mode DOM Elements
+    const readingModeSection = document.getElementById('reading-mode-section');
+    const viewfinderSection = document.querySelector('.viewfinder-section');
+    const floatingBottomBar = document.querySelector('.floating-bottom-bar');
+    const btnFloatingResume = document.getElementById('btn-floating-resume-reading');
+    const readingChunkBadge = document.getElementById('reading-chunk-badge');
+    const readingStepper = document.getElementById('reading-stepper');
+    const btnReadingBackCamera = document.getElementById('btn-reading-back-camera');
+    const cardLookoutStep = document.getElementById('card-lookout-step');
+    const lookoutPromptText = document.getElementById('lookout-prompt-text');
+    const btnPlayLookout = document.getElementById('btn-play-lookout');
+    const btnFinishReadingChunk = document.getElementById('btn-finish-reading-chunk');
+    const cardCheckinStep = document.getElementById('card-checkin-step');
+    const checkinQuestionText = document.getElementById('checkin-question-text');
+    const btnPlayCheckin = document.getElementById('btn-play-checkin');
+    const btnPttReading = document.getElementById('btn-ptt-reading');
+    const pttStatusReading = document.getElementById('ptt-status-reading');
+    const speechBubbleReading = document.getElementById('speech-bubble-reading');
+    const transcriptDisplayReading = document.getElementById('transcript-display-reading');
+    const btnCheckAnswerReading = document.getElementById('btn-check-answer-reading');
+    const btnRetrySpeechReading = document.getElementById('btn-retry-speech-reading');
+    const feedbackCardReading = document.getElementById('feedback-card-reading');
+    const feedbackBadgeReading = document.getElementById('feedback-badge-reading');
+    const feedbackTextReading = document.getElementById('feedback-text-reading');
+    const btnReplayFeedbackReading = document.getElementById('btn-replay-feedback-reading');
+    const feedbackNextActionsReading = document.getElementById('feedback-next-actions-reading');
+    const btnAdvanceChunk = document.getElementById('btn-advance-chunk');
+
+    let activeReadingData = null;
+    let currentChunkIndex = 0;
+    let currentTranscript = '';
+    let attemptCount = 0;
+    let isPTTPressed = false;
+
     // Button triggers
     fallbackLibraryBtn?.addEventListener('click', () => fileInput.click());
     toggleFallbackBtn?.addEventListener('click', () => fileInput.click());
@@ -204,12 +345,471 @@
       }
     });
 
+    // Reading Mode Navigation Controller
+    function startReadingMode(data) {
+      if (!data || !data.chunks || data.chunks.length === 0) return;
+      activeReadingData = data;
+      currentChunkIndex = 0;
+      attemptCount = 0;
+      currentTranscript = '';
+
+      if (viewfinderSection) viewfinderSection.style.display = 'none';
+      if (floatingBottomBar) floatingBottomBar.style.display = 'none';
+      if (btnFloatingResume) btnFloatingResume.style.display = 'none';
+      if (readingModeSection) readingModeSection.style.display = 'flex';
+
+      audioManager.unlock().catch(() => {});
+      renderCurrentChunk();
+    }
+
+    function exitReadingMode() {
+      audioManager.reset();
+      if (readingModeSection) readingModeSection.style.display = 'none';
+      if (viewfinderSection) viewfinderSection.style.display = 'flex';
+      if (floatingBottomBar) floatingBottomBar.style.display = 'flex';
+      if (btnFloatingResume && activeReadingData) {
+        btnFloatingResume.style.display = 'inline-flex';
+      }
+    }
+
+    function resumeReadingMode() {
+      if (!activeReadingData) return;
+      if (viewfinderSection) viewfinderSection.style.display = 'none';
+      if (floatingBottomBar) floatingBottomBar.style.display = 'none';
+      if (btnFloatingResume) btnFloatingResume.style.display = 'none';
+      if (readingModeSection) readingModeSection.style.display = 'flex';
+      renderCurrentChunk();
+    }
+
+    function renderCurrentChunk() {
+      if (!activeReadingData || !activeReadingData.chunks) return;
+      const chunks = activeReadingData.chunks;
+      const chunk = chunks[currentChunkIndex];
+      if (!chunk) return;
+
+      attemptCount = 0;
+      currentTranscript = '';
+
+      // Update Header & Stepper
+      if (readingChunkBadge) {
+        readingChunkBadge.textContent = `📖 Chunk ${currentChunkIndex + 1} of ${chunks.length} (${chunk.page_range || 'Pages'})`;
+      }
+      if (readingStepper) {
+        readingStepper.innerHTML = chunks.map((_, i) => {
+          let cls = 'stepper-dot';
+          if (i === currentChunkIndex) cls += ' active';
+          else if (i < currentChunkIndex) cls += ' completed';
+          return `<div class="${cls}"></div>`;
+        }).join('');
+      }
+
+      // Show Step 1: Lookout Prompt
+      if (cardLookoutStep) cardLookoutStep.style.display = 'flex';
+      if (cardCheckinStep) cardCheckinStep.style.display = 'none';
+      if (lookoutPromptText) lookoutPromptText.textContent = chunk.lookout_prompt || 'Read this section and look for clues!';
+
+      // Reset Check-in & Speech State
+      if (speechBubbleReading) speechBubbleReading.style.display = 'none';
+      if (transcriptDisplayReading) transcriptDisplayReading.textContent = '';
+      if (feedbackCardReading) {
+        feedbackCardReading.style.display = 'none';
+        feedbackCardReading.className = 'feedback-card';
+      }
+      if (feedbackNextActionsReading) feedbackNextActionsReading.style.display = 'none';
+
+      // Automatically speak the lookout prompt aloud on iOS
+      setTimeout(() => {
+        if (chunk.lookout_prompt) {
+          audioManager.speak(chunk.lookout_prompt).catch(() => {});
+        }
+      }, 300);
+    }
+
+    function advanceToNextChunk() {
+      if (!activeReadingData || !activeReadingData.chunks) return;
+      if (currentChunkIndex + 1 < activeReadingData.chunks.length) {
+        currentChunkIndex += 1;
+        renderCurrentChunk();
+      } else {
+        // Book finished celebration
+        if (cardLookoutStep) cardLookoutStep.style.display = 'none';
+        if (cardCheckinStep) cardCheckinStep.style.display = 'none';
+        if (readingChunkBadge) readingChunkBadge.textContent = '🏆 Storybook Complete!';
+        if (readingStepper) readingStepper.innerHTML = '';
+
+        const celebrationCard = document.createElement('div');
+        celebrationCard.className = 'reading-step-card lookout-step';
+        celebrationCard.innerHTML = `
+          <div class="step-card-header">
+            <span class="step-card-label">🏆 Awesome Reader!</span>
+          </div>
+          <div class="step-card-text">
+            You finished all ${activeReadingData.chunks.length} reading chunks in this storybook! Super job!
+          </div>
+          <div class="step-card-actions">
+            <button type="button" id="btn-done-celebrate" class="touch-btn btn-primary" style="width: 100%;">
+              📸 Scan Another Book ➡️
+            </button>
+          </div>
+        `;
+        readingModeSection.appendChild(celebrationCard);
+        celebrationCard.querySelector('#btn-done-celebrate')?.addEventListener('click', () => {
+          celebrationCard.remove();
+          activeReadingData = null;
+          exitReadingMode();
+        });
+        audioManager.speak("Awesome job! You finished the whole storybook!").catch(() => {});
+      }
+    }
+
+    // Voice Command and Hands-Free State
+    let silenceTimer = null;
+    let intentCheckDebounce = null;
+    let isProcessingVoiceRetry = false;
+
+    const RETRY_FASTPATH_REGEX = /\b(retry|try\s+again|start\s+over|let\s+me\s+try\s+again|can\s+i\s+try\s+again|can\s+i\s+start\s+over|restart|redo|scratch\s+that|clear\s+that|erase\s+that)\b/i;
+    const MID_SPLICE_REGEX = /\b(?:wait\s+no\s+start\s+over|wait\s+start\s+over|no\s+wait\s+try\s+again|start\s+over|try\s+again|scratch\s+that|erase\s+that)\b/i;
+
+    function showVoiceToast(message) {
+      const existing = document.querySelector('.voice-command-toast');
+      if (existing) existing.remove();
+      const toast = document.createElement('div');
+      toast.className = 'voice-command-toast';
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+      }, 2500);
+    }
+
+    async function triggerVoiceRetry(source = 'Voice Command') {
+      if (isProcessingVoiceRetry) return;
+      isProcessingVoiceRetry = true;
+      if (silenceTimer) clearTimeout(silenceTimer);
+      if (intentCheckDebounce) clearTimeout(intentCheckDebounce);
+
+      showVoiceToast('🔄 Voice Command: Trying Again!');
+      currentTranscript = '';
+      if (transcriptDisplayReading) transcriptDisplayReading.textContent = '';
+      if (pttStatusReading) pttStatusReading.textContent = 'Restarting listening... 🎙️';
+
+      audioManager.clearTranscript();
+      await audioManager.cancelListening();
+
+      // Auditory acknowledgment for the child
+      try {
+        await audioManager.speak('Sure, let us try again!');
+      } catch (e) {}
+
+      isProcessingVoiceRetry = false;
+      startHandsFreeListening();
+    }
+
+    async function checkIntentWithBackend(transcript) {
+      if (!transcript || isProcessingVoiceRetry) return;
+      try {
+        const headers = { 'Content-Type': 'application/json' };
+        if (authSecret) headers['Authorization'] = `Bearer ${authSecret}`;
+        const res = await fetch('/api/detect-intent', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ transcript }),
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.isRetry && !isProcessingVoiceRetry) {
+          triggerVoiceRetry('NLI Intent');
+        }
+      } catch (e) {
+        console.warn('Intent detection check failed:', e);
+      }
+    }
+
+    async function startHandsFreeListening() {
+      if (isProcessingVoiceRetry) return;
+      if (silenceTimer) clearTimeout(silenceTimer);
+      if (intentCheckDebounce) clearTimeout(intentCheckDebounce);
+
+      btnPttReading?.classList.add('listening');
+      if (pttStatusReading) pttStatusReading.textContent = 'I am listening! Speak your answer 🎙️';
+      if (speechBubbleReading) speechBubbleReading.style.display = 'block';
+
+      try {
+        await audioManager.startListening({
+          onTranscript: ({ full }) => {
+            if (isProcessingVoiceRetry) return;
+            const clean = (full || '').trim();
+            if (!clean) return;
+
+            // 1. Check mid-utterance splice (e.g. "she was red wait start over she lived in the barn")
+            const spliceMatch = clean.match(MID_SPLICE_REGEX);
+            if (spliceMatch) {
+              const idx = clean.toLowerCase().lastIndexOf(spliceMatch[0].toLowerCase());
+              const after = clean.slice(idx + spliceMatch[0].length).replace(/^[^a-zA-Z0-9]+/, '').trim();
+              if (after.length > 0) {
+                currentTranscript = after;
+                if (transcriptDisplayReading) transcriptDisplayReading.textContent = after;
+                if (silenceTimer) clearTimeout(silenceTimer);
+                silenceTimer = setTimeout(() => {
+                  submitChildAnswer();
+                }, 2500);
+                return;
+              }
+            }
+
+            // 2. Direct regex fastpath retry check (<= 8 words)
+            const words = clean.split(/\s+/).filter(Boolean);
+            if (words.length <= 8 && RETRY_FASTPATH_REGEX.test(clean)) {
+              triggerVoiceRetry('Fastpath');
+              return;
+            }
+
+            // Update visible transcript bubble
+            currentTranscript = clean;
+            if (transcriptDisplayReading) transcriptDisplayReading.textContent = clean;
+
+            // 3. Debounce semantic NLI intent check for conversational retry phrases
+            if (words.length >= 3) {
+              if (intentCheckDebounce) clearTimeout(intentCheckDebounce);
+              intentCheckDebounce = setTimeout(() => {
+                checkIntentWithBackend(clean);
+              }, 600);
+            }
+
+            // 4. Hands-Free auto-submit on 2.5s silence after answering
+            if (words.length >= 2) {
+              if (silenceTimer) clearTimeout(silenceTimer);
+              if (pttStatusReading) pttStatusReading.textContent = 'Listening... (pause when done) 🎙️';
+              silenceTimer = setTimeout(() => {
+                submitChildAnswer();
+              }, 2500);
+            }
+          },
+          onError: (err) => {
+            const errType = err?.error;
+            // Benign events (no-speech pause or aborted during restart) are ignored
+            if (errType === 'no-speech' || errType === 'aborted') {
+              return;
+            }
+            console.warn('Speech recognition non-fatal error:', err);
+            if (errType === 'not-allowed') {
+              if (pttStatusReading) pttStatusReading.textContent = 'Microphone permission denied. Allow mic in Safari settings.';
+            } else {
+              if (pttStatusReading) pttStatusReading.textContent = 'Microphone paused. Tap to resume 🎙️';
+            }
+          }
+        });
+      } catch (err) {
+        console.error('Hands-free listen error:', err);
+      }
+    }
+
+    // Step 1 -> Step 2 transition
+    btnFinishReadingChunk?.addEventListener('click', () => {
+      if (!activeReadingData || !activeReadingData.chunks) return;
+      const chunk = activeReadingData.chunks[currentChunkIndex];
+      if (!chunk) return;
+
+      if (cardLookoutStep) cardLookoutStep.style.display = 'none';
+      if (cardCheckinStep) cardCheckinStep.style.display = 'flex';
+      if (checkinQuestionText) checkinQuestionText.textContent = chunk.checkin_question || 'What happened?';
+
+      // Read question aloud and immediately begin hands-free listening upon completion
+      if (chunk.checkin_question) {
+        audioManager.speak(chunk.checkin_question).then(() => {
+          startHandsFreeListening();
+        }).catch(() => {
+          startHandsFreeListening();
+        });
+      } else {
+        startHandsFreeListening();
+      }
+    });
+
+    // TTS Triggers
+    btnPlayLookout?.addEventListener('click', () => {
+      const chunk = activeReadingData?.chunks?.[currentChunkIndex];
+      if (chunk?.lookout_prompt) audioManager.speak(chunk.lookout_prompt).catch(() => {});
+    });
+
+    btnPlayCheckin?.addEventListener('click', () => {
+      const chunk = activeReadingData?.chunks?.[currentChunkIndex];
+      if (chunk?.checkin_question) {
+        if (silenceTimer) clearTimeout(silenceTimer);
+        audioManager.speak(chunk.checkin_question).then(() => {
+          startHandsFreeListening();
+        }).catch(() => {});
+      }
+    });
+
+    btnReplayFeedbackReading?.addEventListener('click', () => {
+      const text = feedbackTextReading?.textContent;
+      if (text) audioManager.speak(text).catch(() => {});
+    });
+
+    btnReadingBackCamera?.addEventListener('click', () => {
+      if (silenceTimer) clearTimeout(silenceTimer);
+      if (intentCheckDebounce) clearTimeout(intentCheckDebounce);
+      audioManager.reset();
+      exitReadingMode();
+    });
+
+    btnFloatingResume?.addEventListener('click', resumeReadingMode);
+
+    // Tap Mic to toggle or restart listening
+    btnPttReading?.addEventListener('click', async () => {
+      if (silenceTimer) clearTimeout(silenceTimer);
+      if (audioManager.state === 'LISTENING') {
+        if (currentTranscript.trim().length >= 2) {
+          submitChildAnswer();
+        } else {
+          audioManager.clearTranscript();
+          startHandsFreeListening();
+        }
+      } else {
+        startHandsFreeListening();
+      }
+    });
+
+    // Clean Manual Retry Button: restarts hands-free listening fresh without errors
+    btnRetrySpeechReading?.addEventListener('click', async () => {
+      if (silenceTimer) clearTimeout(silenceTimer);
+      if (intentCheckDebounce) clearTimeout(intentCheckDebounce);
+      currentTranscript = '';
+      if (transcriptDisplayReading) transcriptDisplayReading.textContent = '';
+      if (pttStatusReading) pttStatusReading.textContent = 'Restarting listening... 🎙️';
+      audioManager.clearTranscript();
+      await audioManager.restartListening({
+        onTranscript: ({ full }) => {
+          if (isProcessingVoiceRetry) return;
+          const clean = (full || '').trim();
+          if (!clean) return;
+          currentTranscript = clean;
+          if (transcriptDisplayReading) transcriptDisplayReading.textContent = clean;
+        }
+      });
+      startHandsFreeListening();
+    });
+
+    btnAdvanceChunk?.addEventListener('click', advanceToNextChunk);
+
+    // Evaluate Answer via API
+    async function submitChildAnswer() {
+      if (silenceTimer) clearTimeout(silenceTimer);
+      if (intentCheckDebounce) clearTimeout(intentCheckDebounce);
+
+      const answerToEvaluate = currentTranscript.trim();
+      if (!answerToEvaluate) {
+        if (pttStatusReading) pttStatusReading.textContent = 'Please speak an answer first! 🎙️';
+        return;
+      }
+      const chunk = activeReadingData?.chunks?.[currentChunkIndex];
+      if (!chunk) return;
+
+      btnPttReading?.classList.remove('listening');
+      await audioManager.stopListening();
+
+      attemptCount += 1;
+      if (pttStatusReading) pttStatusReading.textContent = 'Evaluating your answer... 🧠';
+      if (btnCheckAnswerReading) btnCheckAnswerReading.disabled = true;
+
+      try {
+        const headers = { 'Content-Type': 'application/json' };
+        if (authSecret) headers['Authorization'] = `Bearer ${authSecret}`;
+
+        const payload = {
+          checkin_question: chunk.checkin_question,
+          target_answer_concept: chunk.target_answer_concept,
+          keyword_clusters: chunk.keyword_clusters || [],
+          acceptable_phrasings: chunk.acceptable_phrasings || [],
+          canonical_prototypes: chunk.canonical_prototypes || [],
+          diagnostic_probes: chunk.diagnostic_probes || {},
+          entity_graph: chunk.entity_graph || { characters: [], social_relations: [], discourse_referents: {} },
+          hint_level_1: chunk.hint_level_1 || chunk.scaffold_hint || '',
+          hint_level_2: chunk.hint_level_2 || '',
+          scaffold_hint: chunk.scaffold_hint || '',
+          child_transcript: answerToEvaluate,
+          attempt_count: attemptCount,
+          microturn_used: false
+        };
+
+        const response = await fetch('/api/evaluate-answer', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(payload)
+        });
+
+        let data = null;
+        let rawText = '';
+        try {
+          rawText = await response.text();
+          if (rawText && rawText.trim().length > 0) {
+            data = JSON.parse(rawText);
+          }
+        } catch (_) {
+          data = null;
+        }
+
+        if (btnCheckAnswerReading) btnCheckAnswerReading.disabled = false;
+
+        if (!response.ok) {
+          const errorMsg = data?.error_message || data?.error || data?.message || (rawText ? rawText.slice(0, 100) : `HTTP ${response.status}`);
+          if (pttStatusReading) pttStatusReading.textContent = `Evaluation error: ${errorMsg}`;
+          return;
+        }
+
+        // Render Feedback Card
+        if (feedbackCardReading) {
+          feedbackCardReading.style.display = 'flex';
+          feedbackCardReading.className = `feedback-card ${data.status}`;
+        }
+        if (feedbackBadgeReading) {
+          feedbackBadgeReading.textContent = data.status === 'mastered' ? '🎉 Great Job!' : '💡 Reading Hint';
+        }
+        if (feedbackTextReading) {
+          feedbackTextReading.textContent = data.spoken_feedback || '';
+        }
+
+        // Automatically speak feedback aloud
+        if (data.spoken_feedback) {
+          audioManager.speak(data.spoken_feedback).then(() => {
+            // If child has another attempt, automatically resume hands-free listening
+            if (data.status !== 'mastered' && attemptCount < 2 && !data.resolved) {
+              currentTranscript = '';
+              if (transcriptDisplayReading) transcriptDisplayReading.textContent = '';
+              startHandsFreeListening();
+            }
+          }).catch(() => {});
+        }
+
+        // Handle progression
+        if (data.status === 'mastered' || attemptCount >= 2 || data.resolved) {
+          if (feedbackNextActionsReading) feedbackNextActionsReading.style.display = 'block';
+          if (pttStatusReading) pttStatusReading.textContent = 'Awesome! Ready for the next chunk?';
+        } else {
+          if (feedbackNextActionsReading) feedbackNextActionsReading.style.display = 'none';
+          if (pttStatusReading) pttStatusReading.textContent = 'Try one more time! 🎙️';
+        }
+      } catch (err) {
+        if (btnCheckAnswerReading) btnCheckAnswerReading.disabled = false;
+        console.error('Evaluation fetch error:', err);
+        if (pttStatusReading) pttStatusReading.textContent = 'Server error evaluating answer.';
+      }
+    }
+
+    btnCheckAnswerReading?.addEventListener('click', () => {
+      submitChildAnswer();
+    });
+
     const trayUI = new CameraTrayUI({
       videoElement: '#camera-feed',
       viewfinderElement: '#camera-viewfinder',
       shutterButton: '#btn-shutter',
       retakeButton: '#btn-retake-viewfinder',
       rotateViewfinderButton: '#btn-rotate-viewfinder',
+      autoStraightenButton: '#btn-auto-straighten',
       toggleFallbackButton: '#btn-toggle-fallback',
       drawerElement: '#review-drawer',
       backdropElement: '#drawer-backdrop',
@@ -233,6 +833,11 @@
       cameraInput,
       fileInput,
       apiEndpoint: '/api/analyze-book',
+      headers: authSecret ? { Authorization: `Bearer ${authSecret}` } : {},
+      getHeaders: () => {
+        const secret = sessionStorage.getItem('storyreader_auth') || authSecret;
+        return secret ? { Authorization: `Bearer ${secret}` } : {};
+      },
       onPagesChanged: (pages) => {
         const totalInActive = pages.length;
         const totalAll = trayUI.state.getTotalPageCount();
@@ -258,7 +863,12 @@
           rotateViewfinderBtn.disabled = totalInActive === 0;
         }
       },
+      onStartReading: (data) => {
+        startReadingMode(data);
+      },
       onAnalyzeSuccess: (data) => {
+        activeReadingData = data;
+        if (btnFloatingResume) btnFloatingResume.style.display = 'inline-flex';
         if (resultsJson) resultsJson.textContent = JSON.stringify(data, null, 2);
         if (toggleResultsBtn) {
           toggleResultsBtn.style.display = 'inline-flex';
@@ -280,6 +890,7 @@
 
     // Expose instance for automated testing
     window.__cameraTrayUI = trayUI;
+    window.__audioManager = audioManager;
   </script>
 </body>
 </html>

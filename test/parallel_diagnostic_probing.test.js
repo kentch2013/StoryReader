@@ -197,3 +197,79 @@ test('POST /api/evaluate-answer awards MASTERED on "his nana knitted it" and use
     server.close();
   }
 });
+
+test('POST /api/evaluate-answer awards MASTERED on head noun "his friends" for compound concept "farm friends"', async () => {
+  const app = createServer();
+  const server = app.listen(0);
+  const port = server.address().port;
+
+  const robertChunkRubric = {
+    checkin_question: "Who came to Robert's birthday party?",
+    question_type: "agent_identification",
+    target_answer_concept: "All his farm friends came to his party.",
+    keyword_clusters: [
+      {
+        concept_name: "farm friends",
+        synonyms: ["farm buddies", "animal pals", "the animals on the farm"]
+      },
+      {
+        concept_name: "birthday celebration",
+        synonyms: ["birthday party", "his birthday", "party time"]
+      }
+    ],
+    canonical_prototypes: [
+      { type: "formal_full", text: "All of his farm friends came to the party." },
+      { type: "colloquial", text: "His farm friends came to see him." },
+      { type: "minimal_core", text: "His farm friends." },
+      { type: "functional_circumlocution", text: "The animals that live on the farm." },
+      { type: "partial_action", text: "Friends came." },
+      { type: "common_distractor", text: "His mother and father came." }
+    ],
+    diagnostic_probes: {
+      target_mastery: {
+        hypothesis: "All the farm friends came to the birthday party.",
+        feedback: "Exactly! His friends from the farm all arrived for his birthday."
+      },
+      minimal_core: {
+        hypothesis: "The farm friends came.",
+        feedback: "Correct, his friends were there for the party."
+      },
+      character_confusion: {
+        hypothesis: "The mother and father came to the party.",
+        scaffold: "They live with him, but look at the other animals—who joined the party?"
+      },
+      superficial_attribute: {
+        hypothesis: "Robert wears a blue hat.",
+        scaffold: "Look at the animals in the picture—who are they?"
+      },
+      premise_echo: {
+        hypothesis: "Came to the party",
+        scaffold: "Look at the animals in the picture—who are they?"
+      },
+      distractor_misconception: {
+        hypothesis: "Only the cat came.",
+        scaffold: "Look at the other animals!"
+      }
+    }
+  };
+
+  try {
+    const res = await fetch(`http://127.0.0.1:${port}/api/evaluate-answer`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...robertChunkRubric,
+        child_transcript: 'his friends',
+        attempt_count: 1,
+      }),
+    });
+
+    assert.equal(res.status, 200);
+    const data = await res.json();
+    assert.equal(data.status, 'mastered', 'Child answer "his friends" must be awarded MASTERED without requiring verbatim modifier "farm"');
+    assert.equal(data.resolved, true);
+    assert.equal(data.diagnostics?.cognitive_diagnosis, 'MASTERED');
+  } finally {
+    server.close();
+  }
+});

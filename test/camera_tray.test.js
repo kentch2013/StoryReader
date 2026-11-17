@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   calculateDownscaleDimensions,
   CameraTrayState,
+  CameraTrayUI,
   compressImageToBlob,
   createPageRecord,
   rotateImageBlob,
@@ -322,6 +323,102 @@ test('CameraTrayState auto-starts new sequence when maxPages is exceeded with au
   assert.equal(tray.pages.length, 1);
   assert.equal(tray.getTotalPageCount(), 3);
 });
+
+test('CameraTrayUI.handleAnalyze safely handles non-JSON / HTML error responses without throwing', async () => {
+  const originalFetch = globalThis.fetch;
+  try {
+    const mockStatusElement = { textContent: '', className: '' };
+
+    globalThis.fetch = async () => ({
+      ok: false,
+      status: 504,
+      statusText: 'Gateway Timeout',
+      headers: {
+        get: (h) => (h.toLowerCase() === 'content-type' ? 'text/html' : null),
+      },
+      json: async () => {
+        throw new SyntaxError('The string did not match the expected pattern.');
+      },
+      text: async () => '<html><head><title>504 Gateway Time-out</title></head><body><h1>504 Gateway Time-out</h1></body></html>',
+    });
+
+    const ui = new CameraTrayUI({
+      autoStartCamera: false,
+      statusElement: mockStatusElement,
+    });
+
+    ui.state.addPage({ blob: new Blob(['test-page'], { type: 'image/jpeg' }) });
+
+    await ui.handleAnalyze();
+
+    assert.ok(!mockStatusElement.textContent.toLowerCase().includes('the string did not match the expected pattern'));
+    assert.ok(mockStatusElement.textContent.includes('504'));
+    assert.ok(mockStatusElement.className.includes('status-error'));
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('CameraTrayUI passes authorization headers if headers or getHeaders option is configured', async () => {
+  const originalFetch = globalThis.fetch;
+  let capturedHeaders = null;
+  try {
+    globalThis.fetch = async (url, opts) => {
+      capturedHeaders = opts?.headers;
+      return {
+        ok: true,
+        status: 200,
+        headers: { get: () => 'application/json' },
+        json: async () => ({ chunks: [] }),
+        text: async () => JSON.stringify({ chunks: [] }),
+      };
+    };
+
+    const ui = new CameraTrayUI({
+      autoStartCamera: false,
+      headers: { Authorization: 'Bearer test-secret-token' },
+    });
+
+    ui.state.addPage({ blob: new Blob(['test-page'], { type: 'image/jpeg' }) });
+    await ui.handleAnalyze();
+
+    assert.ok(capturedHeaders);
+    assert.equal(capturedHeaders.Authorization, 'Bearer test-secret-token');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('CameraTrayUI.handleAnalyze safely handles 200 with empty body without unhandled rejection', async () => {
+  const originalFetch = globalThis.fetch;
+  try {
+    const mockStatusElement = { textContent: '', className: '' };
+    globalThis.fetch = async () => ({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      headers: { get: () => 'application/json' },
+      json: async () => {
+        throw new SyntaxError('The string did not match the expected pattern.');
+      },
+      text: async () => '',
+    });
+
+    const ui = new CameraTrayUI({
+      autoStartCamera: false,
+      statusElement: mockStatusElement,
+    });
+
+    ui.state.addPage({ blob: new Blob(['test-page'], { type: 'image/jpeg' }) });
+    await ui.handleAnalyze();
+
+    assert.ok(!mockStatusElement.textContent.toLowerCase().includes('the string did not match the expected pattern'));
+    assert.ok(mockStatusElement.className.includes('status-error'));
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 
 
 

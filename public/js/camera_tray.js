@@ -3,6 +3,8 @@
  * Client-side camera capture, canvas downsampling, sequence management, and upload harness.
  */
 
+import { detectDeviceRotation, detectCanvasOrientation } from './orientation_detector.js';
+
 let pageIdCounter = 0;
 
 /**
@@ -642,6 +644,8 @@ export class CameraTrayUI {
     this.maxDimension = options.maxDimension ?? 1600;
     this.quality = options.quality ?? 0.8;
     this.apiEndpoint = options.apiEndpoint || '/api/analyze-book';
+    this.headers = options.headers || null;
+    this.getHeaders = options.getHeaders || null;
 
     this.fileInput = this._resolveElement(options.fileInput);
     this.cameraInput = this._resolveElement(options.cameraInput);
@@ -660,6 +664,7 @@ export class CameraTrayUI {
     this.carouselElement = this._resolveElement(options.carouselElement || '#book-carousel');
     this.carouselDotsElement = this._resolveElement(options.carouselDotsElement || '#book-carousel-dots');
     this.rotateViewfinderButton = this._resolveElement(options.rotateViewfinderButton || '#btn-rotate-viewfinder');
+    this.autoStraightenButton = this._resolveElement(options.autoStraightenButton || '#btn-auto-straighten');
     this.drawerElement = this._resolveElement(options.drawerElement || '#review-drawer');
     this.backdropElement = this._resolveElement(options.backdropElement || '#drawer-backdrop');
     this.closeDrawerButton = this._resolveElement(options.closeDrawerButton || '#btn-close-drawer');
@@ -671,9 +676,14 @@ export class CameraTrayUI {
     this.resultsDisplay = this._resolveElement(options.resultsDisplay || '#results-display');
     this.activeSequenceBadge = this._resolveElement(options.activeSequenceBadge || '#active-sequence-badge');
 
+    this.canvasFactory = options.canvasFactory || null;
+    this.windowObj = options.windowObj || null;
+
     this.onAnalyzeSuccess = options.onAnalyzeSuccess || null;
     this.onAnalyzeError = options.onAnalyzeError || null;
     this.onPagesChanged = options.onPagesChanged || null;
+    this.onStartReading = options.onStartReading || null;
+    this.lastAnalysisData = null;
 
     this.activeStream = null;
     this.cameraActive = false;
@@ -707,6 +717,9 @@ export class CameraTrayUI {
     if (this.rotateViewfinderButton) {
       this.rotateViewfinderButton.addEventListener('click', () => this.rotateLastPage());
     }
+    if (this.autoStraightenButton) {
+      this.autoStraightenButton.addEventListener('click', () => this.autoStraightenAll());
+    }
     if (this.toggleFallbackButton) {
       this.toggleFallbackButton.addEventListener('click', () => this.toggleFallback());
     }
@@ -730,13 +743,83 @@ export class CameraTrayUI {
     }
     if (this.closeDrawerButton) {
       this.closeDrawerButton.addEventListener('click', () => this.closeDrawer());
+      this.closeDrawerButton.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        this.closeDrawer();
+      });
     }
     if (this.backdropElement) {
       this.backdropElement.addEventListener('click', () => this.closeDrawer());
+      this.backdropElement.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        this.closeDrawer();
+      });
     }
     if (this.toggleResultsButton) {
       this.toggleResultsButton.addEventListener('click', () => this.toggleResults());
     }
+
+    // Touch swipe-down drag-to-dismiss gesture for the review drawer
+    if (this.drawerElement) {
+      let touchStartY = 0;
+      let currentDeltaY = 0;
+      let isDragging = false;
+
+      const onTouchStart = (e) => {
+        if (!this.isDrawerOpen() || !e.touches || e.touches.length === 0) return;
+        const target = e.target;
+        const isHandleOrHeader = target.closest && (target.closest('.drawer-handle-bar') || target.closest('.drawer-header'));
+        const isAtTop = (this.drawerElement.scrollTop || 0) <= 2;
+
+        if (isHandleOrHeader || isAtTop) {
+          touchStartY = e.touches[0].clientY;
+          currentDeltaY = 0;
+          isDragging = true;
+          this.drawerElement.style.transition = 'none';
+        }
+      };
+
+      const onTouchMove = (e) => {
+        if (!isDragging || !e.touches || e.touches.length === 0) return;
+        const currentY = e.touches[0].clientY;
+        const delta = currentY - touchStartY;
+
+        if (delta > 0) {
+          currentDeltaY = delta;
+          this.drawerElement.style.transform = `translateY(${delta}px)`;
+          if (this.backdropElement) {
+            const opacity = Math.max(0, 1 - delta / 350);
+            this.backdropElement.style.opacity = String(opacity);
+          }
+          if (e.cancelable) e.preventDefault();
+        } else {
+          currentDeltaY = 0;
+          this.drawerElement.style.transform = '';
+        }
+      };
+
+      const onTouchEnd = () => {
+        if (!isDragging) return;
+        isDragging = false;
+        this.drawerElement.style.transition = '';
+
+        if (currentDeltaY > 80) {
+          this.closeDrawer();
+        } else {
+          this.drawerElement.style.transform = '';
+          if (this.backdropElement) {
+            this.backdropElement.style.opacity = '';
+          }
+        }
+        currentDeltaY = 0;
+      };
+
+      this.drawerElement.addEventListener('touchstart', onTouchStart, { passive: true });
+      this.drawerElement.addEventListener('touchmove', onTouchMove, { passive: false });
+      this.drawerElement.addEventListener('touchend', onTouchEnd, { passive: true });
+      this.drawerElement.addEventListener('touchcancel', onTouchEnd, { passive: true });
+    }
+
     if (typeof document !== 'undefined') {
       document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && this.isDrawerOpen()) {
@@ -846,6 +929,9 @@ export class CameraTrayUI {
       this.backdropElement.classList.add('backdrop-active');
       this.backdropElement.setAttribute('aria-hidden', 'false');
     }
+    this.scanSidewaysPages().catch((err) => {
+      console.warn('Background scanSidewaysPages error:', err);
+    });
   }
 
   /**
@@ -853,10 +939,13 @@ export class CameraTrayUI {
    */
   closeDrawer() {
     if (this.drawerElement) {
+      this.drawerElement.style.transform = '';
+      this.drawerElement.style.transition = '';
       this.drawerElement.classList.remove('drawer-open');
       this.drawerElement.setAttribute('aria-hidden', 'true');
     }
     if (this.backdropElement) {
+      this.backdropElement.style.opacity = '';
       this.backdropElement.classList.remove('backdrop-active');
       this.backdropElement.setAttribute('aria-hidden', 'true');
     }
@@ -920,13 +1009,33 @@ export class CameraTrayUI {
       const origWidth = this.videoElement.videoWidth;
       const origHeight = this.videoElement.videoHeight;
 
-      const compressedBlob = await compressImageToBlob(this.videoElement, {
-        maxDimension: this.maxDimension,
-        quality: this.quality,
-      });
+      const windowObj = this.windowObj || (typeof window !== 'undefined' ? window : null);
+      const deviceRotation = detectDeviceRotation(windowObj);
+
+      let compressedBlob;
+      let compDims;
+      if (deviceRotation !== 0) {
+        compressedBlob = await rotateImageBlob(this.videoElement, deviceRotation, {
+          maxDimension: this.maxDimension,
+          quality: this.quality,
+          canvasFactory: this.canvasFactory,
+        });
+        const dims = calculateDownscaleDimensions(origWidth, origHeight, this.maxDimension);
+        const isSwap = deviceRotation === 90 || deviceRotation === 270;
+        compDims = {
+          width: isSwap ? dims.height : dims.width,
+          height: isSwap ? dims.width : dims.height,
+        };
+      } else {
+        compressedBlob = await compressImageToBlob(this.videoElement, {
+          maxDimension: this.maxDimension,
+          quality: this.quality,
+          canvasFactory: this.canvasFactory,
+        });
+        compDims = calculateDownscaleDimensions(origWidth, origHeight, this.maxDimension);
+      }
 
       const captureDurationMs = Math.round(performance.now() - startTime);
-      const compDims = calculateDownscaleDimensions(origWidth, origHeight, this.maxDimension);
       const compSizeKB = (compressedBlob.size / 1024).toFixed(1);
 
       const previewUrl = typeof URL !== 'undefined' ? URL.createObjectURL(compressedBlob) : null;
@@ -1047,6 +1156,223 @@ export class CameraTrayUI {
     return this.rotatePage(lastPage.id, degrees);
   }
 
+  /**
+   * Automatically inspects text line orientation without AI using detectCanvasOrientation
+   * and straightens sideways pages (90° rotation) if detected.
+   *
+   * @param {string} pageId - ID of page to analyze and straighten
+   * @returns {Promise<Object|null>} Updated page record or null if not found
+   */
+  async autoStraightenPage(pageId) {
+    const page = this.state.pages.find((p) => p.id === pageId);
+    if (!page || !page.blob) return null;
+
+    try {
+      this.setStatus(`Detecting text orientation for Page ${page.pageNumber}...`, 'info');
+
+      let imageElement = null;
+      let objectUrlToRevoke = null;
+
+      if (typeof createImageBitmap === 'function') {
+        try {
+          imageElement = await createImageBitmap(page.blob);
+        } catch (_) {}
+      }
+
+      if (!imageElement && typeof Image !== 'undefined' && typeof URL !== 'undefined') {
+        imageElement = await new Promise((resolve, reject) => {
+          const img = new Image();
+          objectUrlToRevoke = URL.createObjectURL(page.blob);
+          img.onload = () => resolve(img);
+          img.onerror = () => reject(new Error('Failed to load image for orientation detection'));
+          img.src = objectUrlToRevoke;
+        });
+      }
+
+      const imgWidth = imageElement?.width || page.width || 240;
+      const imgHeight = imageElement?.height || page.height || 240;
+      const testDims = calculateDownscaleDimensions(imgWidth, imgHeight, 240);
+
+      let canvas;
+      if (typeof this.canvasFactory === 'function') {
+        canvas = this.canvasFactory();
+      } else if (typeof document !== 'undefined' && document.createElement) {
+        canvas = document.createElement('canvas');
+      } else {
+        throw new Error('Canvas unavailable for orientation analysis');
+      }
+
+      canvas.width = testDims.width;
+      canvas.height = testDims.height;
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Could not obtain canvas context');
+
+      if (imageElement) {
+        ctx.drawImage(imageElement, 0, 0, testDims.width, testDims.height);
+      }
+
+      if (objectUrlToRevoke && typeof URL !== 'undefined') {
+        URL.revokeObjectURL(objectUrlToRevoke);
+      }
+      if (imageElement && typeof imageElement.close === 'function') {
+        imageElement.close();
+      }
+
+      const orientation = detectCanvasOrientation(canvas);
+
+      if (orientation.isSideways && orientation.recommendedRotation > 0) {
+        this.setStatus(`Page ${page.pageNumber} detected sideways. Auto-straightening (${orientation.recommendedRotation}°)...`, 'info');
+        const updated = await this.rotatePage(pageId, orientation.recommendedRotation);
+        if (updated) {
+          updated.isSidewaysDetected = false;
+        }
+        page.isSidewaysDetected = false;
+        this._updateAutoStraightenButton();
+        this.setStatus(`✨ Page ${page.pageNumber} automatically straightened!`, 'success');
+        return updated;
+      } else {
+        page.isSidewaysDetected = false;
+        this._updateAutoStraightenButton();
+        this.setStatus(`Page ${page.pageNumber} is already upright!`, 'info');
+        return page;
+      }
+    } catch (err) {
+      console.error('Auto-straighten failed:', err);
+      this.setStatus(`Auto-straighten failed: ${err.message}`, 'error');
+      return null;
+    }
+  }
+
+  /**
+   * Fast non-AI inspection checking whether a page is sideways using a downscaled 240px canvas.
+   *
+   * @param {Object} page
+   * @returns {Promise<boolean>}
+   */
+  async checkPageSideways(page) {
+    if (!page || !page.blob) return false;
+    try {
+      let imageElement = null;
+      let objectUrlToRevoke = null;
+
+      if (typeof createImageBitmap === 'function') {
+        try {
+          imageElement = await createImageBitmap(page.blob);
+        } catch (_) {}
+      }
+
+      if (!imageElement && typeof Image !== 'undefined' && typeof URL !== 'undefined') {
+        imageElement = await new Promise((resolve, reject) => {
+          const img = new Image();
+          objectUrlToRevoke = URL.createObjectURL(page.blob);
+          img.onload = () => resolve(img);
+          img.onerror = () => reject(new Error('Failed to load image for orientation detection'));
+          img.src = objectUrlToRevoke;
+        });
+      }
+
+      const imgWidth = imageElement?.width || page.width || 240;
+      const imgHeight = imageElement?.height || page.height || 240;
+      const testDims = calculateDownscaleDimensions(imgWidth, imgHeight, 240);
+
+      let canvas;
+      if (typeof this.canvasFactory === 'function') {
+        canvas = this.canvasFactory();
+      } else if (typeof document !== 'undefined' && document.createElement) {
+        canvas = document.createElement('canvas');
+      } else {
+        return false;
+      }
+
+      canvas.width = testDims.width;
+      canvas.height = testDims.height;
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return false;
+
+      if (imageElement) {
+        ctx.drawImage(imageElement, 0, 0, testDims.width, testDims.height);
+      }
+
+      if (objectUrlToRevoke && typeof URL !== 'undefined') {
+        URL.revokeObjectURL(objectUrlToRevoke);
+      }
+      if (imageElement && typeof imageElement.close === 'function') {
+        imageElement.close();
+      }
+
+      const orientation = detectCanvasOrientation(canvas);
+      return Boolean(orientation.isSideways && orientation.recommendedRotation > 0);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /**
+   * Proactively scans all pages in active sequence in the background,
+   * tagging pages with isSidewaysDetected and updating UI badges.
+   *
+   * @returns {Promise<Array<Object>>} List of detected sideways pages
+   */
+  async scanSidewaysPages() {
+    if (this.state.isEmpty()) return [];
+    let detectedCount = 0;
+    for (const page of this.state.pages) {
+      try {
+        const isSideways = await this.checkPageSideways(page);
+        page.isSidewaysDetected = isSideways;
+        if (isSideways) detectedCount++;
+      } catch (err) {
+        console.warn('Scan sideways error for page', page.pageNumber, err);
+      }
+    }
+    this.renderCarousel();
+    this._updateAutoStraightenButton();
+    return this.state.pages.filter((p) => p.isSidewaysDetected);
+  }
+
+  /**
+   * Updates the auto-straighten button state and text with detected sideways count.
+   */
+  _updateAutoStraightenButton() {
+    if (this.autoStraightenButton) {
+      this.autoStraightenButton.disabled = this.state.isEmpty();
+      const detectedCount = this.state.pages.filter((p) => p.isSidewaysDetected).length;
+      if (detectedCount > 0) {
+        this.autoStraightenButton.textContent = `✨ Auto-Straighten (${detectedCount} Detected)`;
+        this.autoStraightenButton.classList.add('has-detected');
+      } else {
+        this.autoStraightenButton.textContent = '✨ Auto-Straighten';
+        this.autoStraightenButton.classList.remove('has-detected');
+      }
+    }
+  }
+
+  /**
+   * Automatically straightens the most recently captured page.
+   * @returns {Promise<Object|null>}
+   */
+  async autoStraightenLastPage() {
+    if (this.state.isEmpty()) return null;
+    const lastPage = this.state.pages[this.state.pages.length - 1];
+    return this.autoStraightenPage(lastPage.id);
+  }
+
+  /**
+   * Automatically straightens all pages in active sequence.
+   * @returns {Promise<Array<Object>>}
+   */
+  async autoStraightenAll() {
+    if (this.state.isEmpty()) return [];
+    const results = [];
+    for (const page of [...this.state.pages]) {
+      const res = await this.autoStraightenPage(page.id);
+      if (res) results.push(res);
+    }
+    return results;
+  }
+
   async handleFileSelection(event) {
     const files = event.target?.files ? Array.from(event.target.files) : [];
     if (!files.length) return;
@@ -1156,16 +1482,57 @@ export class CameraTrayUI {
 
     try {
       const formData = this.state.createFormData('images');
-      const response = await fetch(this.apiEndpoint, {
+      let requestHeaders = undefined;
+      if (typeof this.getHeaders === 'function') {
+        requestHeaders = this.getHeaders();
+      } else if (this.headers && typeof this.headers === 'object') {
+        requestHeaders = { ...this.headers };
+      }
+
+      const fetchOptions = {
         method: 'POST',
         body: formData,
-      });
+      };
+      if (requestHeaders && Object.keys(requestHeaders).length > 0) {
+        fetchOptions.headers = requestHeaders;
+      }
 
-      const data = await response.json();
+      const response = await fetch(this.apiEndpoint, fetchOptions);
+
+      // Safely read response text first so non-JSON responses (e.g. 504 Gateway Timeout HTML, 413, 500)
+      // do not cause Safari to throw "The string did not match the expected pattern" in response.json()
+      let data = null;
+      let rawText = '';
+      try {
+        rawText = await response.text();
+        if (rawText && rawText.trim().length > 0) {
+          data = JSON.parse(rawText);
+        }
+      } catch (_) {
+        data = null;
+      }
 
       if (!response.ok) {
-        const errorMsg = data.error_message || data.error || `HTTP ${response.status}`;
-        this.setStatus(`Analysis failed: ${errorMsg}`, 'error');
+        let errorMsg = data?.error_message || data?.error || data?.message;
+        if (!errorMsg && rawText) {
+          const titleMatch = rawText.match(/<title>([^<]+)<\/title>/i);
+          const h1Match = rawText.match(/<h1>([^<]+)<\/h1>/i);
+          if (titleMatch && titleMatch[1]) {
+            errorMsg = titleMatch[1].trim();
+          } else if (h1Match && h1Match[1]) {
+            errorMsg = h1Match[1].trim();
+          } else {
+            const stripped = rawText.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+            if (stripped.length > 0 && stripped.length < 200) {
+              errorMsg = stripped;
+            }
+          }
+        }
+        if (!errorMsg) {
+          errorMsg = `HTTP ${response.status}${response.statusText ? ' ' + response.statusText : ''}`;
+        }
+
+        this.setStatus(`Analysis failed (${response.status}): ${errorMsg}`, 'error');
         if (this.toggleResultsButton) {
           this.toggleResultsButton.style.display = 'inline-flex';
           this.toggleResultsButton.textContent = '📊 View Analysis Results';
@@ -1175,12 +1542,18 @@ export class CameraTrayUI {
           this.resultsDisplay.style.display = 'none';
         }
         if (this.onAnalyzeError) {
-          this.onAnalyzeError(data, response.status);
+          this.onAnalyzeError(data || { error: errorMsg, status: response.status }, response.status);
         }
         return;
       }
 
+      if (!data) {
+        throw new Error(`Server returned status ${response.status} with empty or non-JSON response.`);
+      }
+
       this.setStatus(`✅ Book analysis complete! Extracted ${data.chunks?.length || 0} reading chunk(s).`, 'success');
+      this.lastAnalysisData = data;
+      this._renderAnalysisSuccessCard(data);
       if (this.toggleResultsButton) {
         this.toggleResultsButton.style.display = 'inline-flex';
         this.toggleResultsButton.textContent = '📊 View Analysis Results';
@@ -1229,6 +1602,53 @@ export class CameraTrayUI {
         this.toggleResultsButton.textContent = '📊 View Analysis Results';
         this.toggleResultsButton.setAttribute('aria-expanded', 'false');
       }
+    }
+  }
+
+  /**
+   * Renders celebratory "Start Reading" hero card inside the review drawer upon analysis completion.
+   */
+  _renderAnalysisSuccessCard(data) {
+    if (typeof document === 'undefined') return;
+    let container = document.getElementById('analysis-success-container');
+    if (!container && this.drawerElement) {
+      const drawerBody = this.drawerElement.querySelector('.drawer-body');
+      if (drawerBody) {
+        container = document.createElement('div');
+        container.id = 'analysis-success-container';
+        drawerBody.prepend(container);
+      }
+    }
+    if (!container) return;
+
+    const chunkCount = data.chunks?.length || 0;
+    container.innerHTML = `
+      <div class="analysis-success-card">
+        <div class="analysis-success-title">
+          <span>🎉</span>
+          <span>Storybook Ready to Read!</span>
+        </div>
+        <p class="analysis-success-desc">
+          ${data.summary ? `<strong>${data.summary}</strong><br>` : ''}
+          Gemini organized your pages into <strong>${chunkCount} reading chunk${chunkCount === 1 ? '' : 's'}</strong>.
+        </p>
+        <button type="button" id="btn-start-reading-hero" class="touch-btn btn-start-reading-hero" aria-label="Start Reading Storybook">
+          🚀 Start Reading (Chunk 1) ➡️
+        </button>
+      </div>
+    `;
+
+    const startBtn = container.querySelector('#btn-start-reading-hero');
+    if (startBtn) {
+      const handleStart = (e) => {
+        if (e) e.preventDefault();
+        this.closeDrawer();
+        if (this.onStartReading) {
+          this.onStartReading(data);
+        }
+      };
+      startBtn.addEventListener('click', handleStart);
+      startBtn.addEventListener('touchend', handleStart);
     }
   }
 
@@ -1345,6 +1765,9 @@ export class CameraTrayUI {
           <div class="latest-card-title">Latest: Page ${lastPage.pageNumber}</div>
           <div class="latest-card-meta">${lastPage.width}×${lastPage.height} &bull; ${lastPage.metrics?.compressedSizeKB || ''} KB${lastPage.rotation ? ` &bull; ${lastPage.rotation}°` : ''}</div>
           <div class="latest-card-btn-group">
+            <button type="button" class="touch-btn btn-auto-straighten-quick" id="btn-auto-straighten-latest" aria-label="Auto-straighten Page ${lastPage.pageNumber}">
+              ✨ Auto-Straighten
+            </button>
             <button type="button" class="touch-btn btn-rotate-quick" id="btn-rotate-latest" aria-label="Rotate Page ${lastPage.pageNumber} 90 degrees">
               🔄 Rotate
             </button>
@@ -1355,6 +1778,13 @@ export class CameraTrayUI {
         </div>
       </div>
     `;
+
+    const autoStraightenBtn = this.latestCardElement.querySelector('#btn-auto-straighten-latest');
+    if (autoStraightenBtn) {
+      autoStraightenBtn.addEventListener('click', () => {
+        this.autoStraightenPage(lastPage.id);
+      });
+    }
 
     const rotateBtn = this.latestCardElement.querySelector('#btn-rotate-latest');
     if (rotateBtn) {
@@ -1376,14 +1806,14 @@ export class CameraTrayUI {
 
     if (this.state.isEmpty()) {
       this.nextStepPromptElement.textContent = 'Align Page 1 inside viewfinder & tap Snap 📷';
-      this.nextStepPromptElement.className = 'next-step-prompt prompt-initial';
+      this.nextStepPromptElement.className = 'next-step-prompt floating-prompt prompt-initial';
     } else if (this.state.isFull()) {
       this.nextStepPromptElement.textContent = `All ${this.state.maxPages} pages captured! Tap Analyze below 🚀`;
-      this.nextStepPromptElement.className = 'next-step-prompt prompt-full';
+      this.nextStepPromptElement.className = 'next-step-prompt floating-prompt prompt-full';
     } else {
       const nextNum = this.state.pages.length + 1;
       this.nextStepPromptElement.textContent = `Page ${this.state.pages.length} Captured! Flip to Page ${nextNum} and tap Snap 📷`;
-      this.nextStepPromptElement.className = 'next-step-prompt prompt-next';
+      this.nextStepPromptElement.className = 'next-step-prompt floating-prompt prompt-next';
     }
   }
 
@@ -1417,12 +1847,16 @@ export class CameraTrayUI {
       slide.innerHTML = `
         <div class="carousel-slide-header">
           <span class="badge page-badge">Page ${page.pageNumber} of ${total}</span>
+          ${page.isSidewaysDetected ? '<span class="badge badge-sideways-alert">⚠️ Sideways Detected</span>' : ''}
           <span class="carousel-slide-meta">${page.width}×${page.height}${page.rotation ? ` &bull; ${page.rotation}°` : ''}</span>
         </div>
         <div class="carousel-img-wrap">
           <img src="${page.previewUrl || ''}" alt="Book Page ${page.pageNumber} of ${total}" class="carousel-img" />
         </div>
         <div class="carousel-slide-actions">
+          <button type="button" class="touch-btn btn-auto-straighten-slide" data-action="auto-straighten" data-id="${page.id}" aria-label="Auto-straighten Page ${page.pageNumber}">
+            ✨ Auto-Straighten
+          </button>
           <button type="button" class="touch-btn btn-rotate-slide" data-action="rotate" data-id="${page.id}" aria-label="Rotate Page ${page.pageNumber} 90 degrees">
             🔄 Rotate 90°
           </button>
@@ -1434,6 +1868,18 @@ export class CameraTrayUI {
           </button>
         </div>
       `;
+
+      const autoStraightenBtn = slide.querySelector('.btn-auto-straighten-slide');
+      if (autoStraightenBtn) {
+        autoStraightenBtn.addEventListener('click', async () => {
+          autoStraightenBtn.disabled = true;
+          try {
+            await this.autoStraightenPage(page.id);
+          } finally {
+            autoStraightenBtn.disabled = false;
+          }
+        });
+      }
 
       const rotateBtn = slide.querySelector('.btn-rotate-slide');
       if (rotateBtn) {
@@ -1553,6 +1999,8 @@ export class CameraTrayUI {
       this.rotateViewfinderButton.disabled = this.state.isEmpty();
     }
 
+    this._updateAutoStraightenButton();
+
     this.renderSequenceSwitcher();
     this.renderNextStepPrompt();
     this.renderLatestCard();
@@ -1579,7 +2027,7 @@ export class CameraTrayUI {
       item.setAttribute('data-page-number', page.pageNumber);
 
       const isFirst = index === 0;
-      const isLast = index === total - 1;
+      const isLast = index === totalInSeq - 1;
 
       item.innerHTML = `
         <div class="card-header">
@@ -1590,6 +2038,9 @@ export class CameraTrayUI {
           <img src="${page.previewUrl || ''}" alt="Page ${page.pageNumber} thumbnail" class="thumb-img" />
         </div>
         <div class="card-actions">
+          <button type="button" class="touch-btn action-icon-btn btn-auto-straighten-tray" data-action="auto-straighten" data-id="${page.id}" aria-label="Auto-straighten page ${page.pageNumber}" title="Auto-Straighten">
+            ✨
+          </button>
           <button type="button" class="touch-btn action-icon-btn btn-rotate-tray" data-action="rotate" data-id="${page.id}" aria-label="Rotate page ${page.pageNumber}" title="Rotate 90°">
             🔄
           </button>
@@ -1604,6 +2055,13 @@ export class CameraTrayUI {
           </button>
         </div>
       `;
+
+      const autoStraightenBtn = item.querySelector('.btn-auto-straighten-tray');
+      if (autoStraightenBtn) {
+        autoStraightenBtn.addEventListener('click', () => {
+          this.autoStraightenPage(page.id);
+        });
+      }
 
       const rotateBtn = item.querySelector('.btn-rotate-tray');
       if (rotateBtn) {

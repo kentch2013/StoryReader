@@ -226,6 +226,21 @@ export async function evaluateSemanticMatch(normalizedTranscript, rubric = {}) {
   };
 }
 
+export function extractHeadNoun(phrase) {
+  if (!phrase || typeof phrase !== 'string') return null;
+  const cleaned = phrase.replace(/[^\w\s]/g, '').trim();
+  const words = cleaned.split(/\s+/).filter(Boolean);
+  if (words.length <= 1) return null;
+
+  const lastWord = words[words.length - 1];
+  const firstWord = words[0].toLowerCase();
+
+  if (['his', 'her', 'their', 'my', 'your', 'our', 'the', 'a', 'an'].includes(firstWord) && words.length >= 3) {
+    return `${firstWord} ${lastWord}`;
+  }
+  return lastWord;
+}
+
 export function synthesizeProbesFromRubric(rubric = {}) {
   const targetConcept = rubric.target_answer_concept || 'The target concept.';
   const protos = Array.isArray(rubric.canonical_prototypes) ? rubric.canonical_prototypes : [];
@@ -339,6 +354,8 @@ export async function evaluateDiagnosticProbes(normalizedTranscript, rubric = {}
   const atomicKeyword = (rubric.keyword_clusters?.[0]?.synonyms?.[0] || (isAgentQuestion ? (rubric.entity_graph?.characters?.[0]?.canonical_name || rubric.story_context?.actor) : null)) || null;
   const coreEntity = minimalCoreText || atomicKeyword || null;
   const atomicEntity = (atomicKeyword && atomicKeyword !== coreEntity) ? atomicKeyword : null;
+  const rawCandidate = minimalCoreText || rubric.target_answer_concept || atomicKeyword;
+  const headNoun = extractHeadNoun(rawCandidate);
 
   // Find if child matched any approved synonym from keyword clusters
   let matchedClusterSynonym = null;
@@ -406,6 +423,9 @@ export async function evaluateDiagnosticProbes(normalizedTranscript, rubric = {}
   if (atomicEntity) {
     stage1Keys.push('atomic_entity');
   }
+  if (headNoun) {
+    stage1Keys.push('head_noun_entity');
+  }
   if (matchedClusterSynonym) {
     stage1Keys.push('matched_cluster_synonym');
   }
@@ -436,6 +456,7 @@ export async function evaluateDiagnosticProbes(normalizedTranscript, rubric = {}
     ...probes,
     core_entity: { hypothesis: coreEntity || '' },
     atomic_entity: { hypothesis: atomicEntity || '' },
+    head_noun_entity: { hypothesis: headNoun ? (headNoun.includes(' ') ? headNoun : `It was ${headNoun}.`) : '' },
     matched_cluster_synonym: { hypothesis: matchedClusterSynonym ? `It was ${matchedClusterSynonym}.` : '' },
     partial_action: { hypothesis: partialActionText || '' },
     functional_circumlocution: { hypothesis: circumlocutionText || '' },
@@ -495,11 +516,11 @@ export async function evaluateDiagnosticProbes(normalizedTranscript, rubric = {}
   let minimalE = probeScores.minimal_core?.fwd_e ?? 0;
   let minimalC = probeScores.minimal_core?.fwd_c ?? 1;
 
-  for (const entityKey of ['core_entity', 'atomic_entity']) {
+  for (const entityKey of ['core_entity', 'atomic_entity', 'head_noun_entity']) {
     if (probeScores[entityKey]) {
       const ceE = probeScores[entityKey].entailment ?? 0;
       const ceC = probeScores[entityKey].contradiction ?? 1;
-      const isTerseEntity = entityKey === 'core_entity' ? (wordCount <= 6) : (wordCount <= 3);
+      const isTerseEntity = (entityKey === 'core_entity' || entityKey === 'head_noun_entity') ? (wordCount <= 6) : (wordCount <= 3);
       if (isTerseEntity && ceE >= 0.50 && ceC < 0.35) {
         if (ceE > minimalE) {
           minimalE = ceE;
@@ -736,7 +757,8 @@ export async function evaluateDiagnosticProbes(normalizedTranscript, rubric = {}
       (circumE >= 0.50 && circumC < 0.35));
 
   // 1. Dynamic Argmax: highest-confidence explicit error probe wins
-  if (topError.score >= 0.50 && topError.score >= masteryScore) {
+  const skipPartialAction = isAgentQuestion && isMasteredCandidatePostStage2 && topError.type === 'PARTIAL_ACTION';
+  if (!skipPartialAction && topError.score >= 0.50 && topError.score >= masteryScore) {
     cognitive_diagnosis = topError.type;
     spoken_feedback = topError.feedback;
     topEntailment = topError.score;

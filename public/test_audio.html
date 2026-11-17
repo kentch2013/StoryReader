@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>StoryReader - Safari Audio Coordinator (M5)</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header with Active Audio State Badge -->
+    <header class="app-header">
+      <div class="header-badge-row">
+        <span id="audio-state-badge" class="badge audio-state-badge state-locked" role="status" aria-live="polite">
+          🔒 AUDIO LOCKED
+        </span>
+      </div>
+      <h1 class="app-title">🎙️ Audio Coordinator</h1>
+      <p class="app-subtitle">iOS Safari Web Audio & Web Speech mutual exclusivity</p>
+    </header>
+
+    <!-- Audio Unlock Hero Card (shown until unlocked on mobile Safari) -->
+    <section id="unlock-card" class="audio-unlock-card" aria-label="Audio Unlock Section">
+      <h2>🔊 Enable Sound & Microphone</h2>
+      <p>Safari requires a single tap gesture to activate Web Audio playback and child speech recognition.</p>
+      <button type="button" id="btn-unlock-audio" class="btn-unlock-audio touch-btn" aria-label="Tap to enable audio and speech">
+        🔊 Tap to Start Audio
+      </button>
+    </section>
+
+    <!-- Sample Interactive Prompt Cards (TTS Playback) -->
+    <section class="prompts-container" aria-label="Reading Companion Prompts">
+      <!-- Lookout Prompt Card -->
+      <article class="prompt-card" id="card-lookout">
+        <div class="prompt-card-header">
+          <span class="prompt-type-badge">👀 Lookout Prompt</span>
+        </div>
+        <p class="prompt-text" id="lookout-text">
+          Look closely at the picture! Can you see where the little bunny is hiding behind the tall grass?
+        </p>
+        <div class="prompt-actions">
+          <button type="button" id="btn-speak-lookout" class="btn-listen-prompt touch-btn" aria-label="Listen to Lookout prompt aloud">
+            🔊 Read Aloud
+          </button>
+        </div>
+      </article>
+
+      <!-- Check-in Question Card -->
+      <article class="prompt-card" id="card-checkin">
+        <div class="prompt-card-header">
+          <span class="prompt-type-badge">❓ Check-in Question</span>
+        </div>
+        <p class="prompt-text" id="checkin-text">
+          Why was the mother rabbit looking for her baby in the woods?
+        </p>
+        <div class="prompt-actions">
+          <button type="button" id="btn-speak-checkin" class="btn-listen-prompt touch-btn" aria-label="Listen to Check-in question aloud">
+            🔊 Read Aloud
+          </button>
+        </div>
+      </article>
+    </section>
+
+    <!-- Push-to-Talk (PTT) Section -->
+    <main class="ptt-section" aria-label="Push to Talk Speech Recognition">
+      <div id="ptt-wrapper" class="ptt-btn-wrapper">
+        <div class="ptt-pulse-ring" aria-hidden="true"></div>
+        <button type="button" id="btn-ptt" class="ptt-button" aria-label="Push to Talk: Hold to speak, release to stop" disabled>
+          <span id="ptt-icon" aria-hidden="true">🎙️</span>
+        </button>
+      </div>
+      <div id="ptt-label" class="ptt-instruction-label" role="status" aria-live="polite">
+        🔒 Tap "Tap to Start Audio" above first
+      </div>
+
+      <!-- Live Speech Transcript Bubble -->
+      <div class="transcript-card" aria-label="Live Speech Transcript Display">
+        <div class="transcript-header">
+          <span class="transcript-title">💬 Child's Answer</span>
+          <span id="transcript-status" class="badge" style="display: none;">Listening...</span>
+        </div>
+        <div id="transcript-display" class="transcript-body" role="region" aria-live="polite">
+          <span class="transcript-empty">Hold the big microphone button and speak your answer...</span>
+        </div>
+        <textarea id="transcript-editor" class="transcript-editor" rows="2" placeholder="Edit transcript here..." aria-label="Edit speech transcript"></textarea>
+      </div>
+
+      <!-- Action Buttons Grid -->
+      <div class="audio-actions-grid">
+        <button type="button" id="btn-check-answer" class="touch-btn btn-primary" disabled aria-label="Check answer with AI evaluator">
+          🚀 Check Answer
+        </button>
+        <button type="button" id="btn-try-again" class="touch-btn btn-secondary" aria-label="Try speaking again">
+          🔄 Try Again
+        </button>
+        <button type="button" id="btn-edit-transcript" class="touch-btn btn-secondary" aria-label="Edit transcript text">
+          ✏️ Edit
+        </button>
+      </div>
+    </main>
+
+    <!-- Evaluation Result Feedback Card -->
+    <section id="feedback-card" class="feedback-card" role="region" aria-label="AI Evaluation Feedback" aria-live="polite">
+      <div class="feedback-header">
+        <span id="feedback-status-badge" class="feedback-status-badge">🌟 MASTERED!</span>
+        <button type="button" id="btn-replay-feedback" class="btn-replay-feedback" aria-label="Replay feedback audio">
+          🔊 Hear Again
+        </button>
+      </div>
+      <div class="spoken-feedback-bubble">
+        <p id="feedback-spoken-text">Great job finding the clue!</p>
+      </div>
+      <div id="follow-up-box" style="display: none;">
+        <p id="feedback-follow-up" style="font-size: 0.95rem; color: #4b5563;"></p>
+      </div>
+    </section>
+
+    <!-- Status & Diagnostic Box -->
+    <footer id="status-panel" class="status-panel" role="status" aria-live="polite" style="margin-top: 8px;">
+      Ready.
+    </footer>
+  </div>
+
+  <script type="module">
+    import { AUDIO_STATE, SafariAudioManager } from './js/audio_manager.js';
+
+    // DOM Elements
+    const audioBadge = document.getElementById('audio-state-badge');
+    const unlockCard = document.getElementById('unlock-card');
+    const btnUnlock = document.getElementById('btn-unlock-audio');
+    const btnSpeakLookout = document.getElementById('btn-speak-lookout');
+    const btnSpeakCheckin = document.getElementById('btn-speak-checkin');
+    const lookoutText = document.getElementById('lookout-text').textContent.trim();
+    const checkinText = document.getElementById('checkin-text').textContent.trim();
+    const btnPtt = document.getElementById('btn-ptt');
+    const pttWrapper = document.getElementById('ptt-wrapper');
+    const pttLabel = document.getElementById('ptt-label');
+    const transcriptDisplay = document.getElementById('transcript-display');
+    const transcriptEditor = document.getElementById('transcript-editor');
+    const transcriptStatus = document.getElementById('transcript-status');
+    const btnCheckAnswer = document.getElementById('btn-check-answer');
+    const btnTryAgain = document.getElementById('btn-try-again');
+    const btnEditTranscript = document.getElementById('btn-edit-transcript');
+    const feedbackCard = document.getElementById('feedback-card');
+    const feedbackStatusBadge = document.getElementById('feedback-status-badge');
+    const feedbackSpokenText = document.getElementById('feedback-spoken-text');
+    const feedbackFollowUp = document.getElementById('feedback-follow-up');
+    const followUpBox = document.getElementById('follow-up-box');
+    const btnReplayFeedback = document.getElementById('btn-replay-feedback');
+    const statusPanel = document.getElementById('status-panel');
+
+    // State Variables
+    let currentTranscript = '';
+    let isEditing = false;
+    let lastSpokenFeedback = '';
+
+    // Initialize SafariAudioManager
+    const audioManager = new SafariAudioManager({
+      settlingDelayMs: 150,
+      defaultRate: 0.9,
+      defaultPitch: 1.0,
+      defaultLang: 'en-US',
+    });
+
+    // Update UI when audio coordinator state transitions
+    audioManager.onStateChange = (state) => {
+      audioBadge.className = 'badge audio-state-badge';
+      switch (state) {
+        case AUDIO_STATE.LOCKED:
+          audioBadge.classList.add('state-locked');
+          audioBadge.textContent = '🔒 AUDIO LOCKED';
+          btnPtt.disabled = true;
+          pttLabel.textContent = '🔒 Tap "Tap to Start Audio" above first';
+          break;
+        case AUDIO_STATE.IDLE:
+          audioBadge.classList.add('state-ready');
+          audioBadge.textContent = '✅ AUDIO READY';
+          btnPtt.disabled = false;
+          pttWrapper.classList.remove('listening');
+          btnPtt.classList.remove('active');
+          pttLabel.classList.remove('active');
+          pttLabel.textContent = '👆 Hold button to talk, release when finished';
+          transcriptStatus.style.display = 'none';
+          break;
+        case AUDIO_STATE.SPEAKING:
+          audioBadge.classList.add('state-speaking');
+          audioBadge.textContent = '🔊 STORYSCOUT SPEAKING...';
+          pttWrapper.classList.remove('listening');
+          btnPtt.classList.remove('active');
+          pttLabel.textContent = '🔊 StoryScout is talking...';
+          break;
+        case AUDIO_STATE.LISTENING:
+          audioBadge.classList.add('state-listening');
+          audioBadge.textContent = '🎙️ LISTENING TO CHILD...';
+          pttWrapper.classList.add('listening');
+          btnPtt.classList.add('active');
+          pttLabel.classList.add('active');
+          pttLabel.textContent = '🔴 Listening... Release button when done';
+          transcriptStatus.style.display = 'inline-block';
+          transcriptStatus.textContent = 'Listening...';
+          transcriptStatus.className = 'badge page-badge';
+          break;
+        case AUDIO_STATE.PROCESSING:
+          audioBadge.classList.add('state-processing');
+          audioBadge.textContent = '⚡ PROCESSING SPEECH...';
+          pttWrapper.classList.remove('listening');
+          btnPtt.classList.remove('active');
+          pttLabel.textContent = '⚡ Finalizing answer...';
+          break;
+        case AUDIO_STATE.ERROR:
+          audioBadge.classList.add('state-error');
+          audioBadge.textContent = '⚠️ AUDIO / MIC ERROR';
+          pttWrapper.classList.remove('listening');
+          btnPtt.classList.remove('active');
+          pttLabel.textContent = '⚠️ Microphone error. Check Safari permissions.';
+          break;
+      }
+    };
+
+    // Unlock Web Audio & Speech on user tap
+    async function handleUnlock() {
+      try {
+        statusPanel.textContent = 'Unlocking Web Audio & SpeechSynthesis...';
+        await audioManager.unlock();
+        unlockCard.style.display = 'none';
+        statusPanel.textContent = '✅ Audio unlocked! Ready for speech playback and recognition.';
+      } catch (err) {
+        statusPanel.textContent = `⚠️ Unlock error: ${err.message}`;
+      }
+    }
+    btnUnlock.addEventListener('click', handleUnlock);
+
+    // Speak Prompts with mutual exclusivity
+    btnSpeakLookout.addEventListener('click', async () => {
+      if (!audioManager.isUnlocked) await handleUnlock();
+      statusPanel.textContent = 'Playing Lookout Prompt aloud...';
+      await audioManager.speak(lookoutText);
+      statusPanel.textContent = 'Lookout Prompt finished.';
+    });
+
+    btnSpeakCheckin.addEventListener('click', async () => {
+      if (!audioManager.isUnlocked) await handleUnlock();
+      statusPanel.textContent = 'Playing Check-in Question aloud...';
+      await audioManager.speak(checkinText);
+      statusPanel.textContent = 'Check-in Question finished.';
+    });
+
+    // Transcript Renderer
+    function renderTranscript(finalText = '', interimText = '') {
+      if (!finalText && !interimText) {
+        transcriptDisplay.innerHTML = '<span class="transcript-empty">Hold the big microphone button and speak your answer...</span>';
+        btnCheckAnswer.disabled = true;
+        currentTranscript = '';
+        return;
+      }
+
+      let html = '';
+      if (finalText) {
+        html += `<span class="transcript-final">${escapeHtml(finalText)}</span> `;
+      }
+      if (interimText) {
+        html += `<span class="transcript-interim">${escapeHtml(interimText)}</span>`;
+      }
+      transcriptDisplay.innerHTML = html;
+      currentTranscript = (finalText + ' ' + interimText).trim();
+      btnCheckAnswer.disabled = currentTranscript.length === 0;
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Push to Talk (PTT) Logic
+    let isPressing = false;
+
+    async function startPTT(e) {
+      if (e) {
+        if (e.cancelable) e.preventDefault();
+      }
+      if (isPressing) return;
+      isPressing = true;
+
+      if (!audioManager.isUnlocked) {
+        await handleUnlock();
+      }
+
+      if (isEditing) {
+        toggleEdit(false);
+      }
+
+      statusPanel.textContent = '🎙️ Push-to-Talk active: listening...';
+      await audioManager.startListening({
+        onTranscript: ({ interim, final, full }) => {
+          renderTranscript(final, interim);
+        },
+        onError: (err) => {
+          statusPanel.textContent = `Mic error: ${err.error || err.message}`;
+        },
+      });
+    }
+
+    async function stopPTT(e) {
+      if (e) {
+        if (e.cancelable) e.preventDefault();
+      }
+      if (!isPressing) return;
+      isPressing = false;
+
+      statusPanel.textContent = 'Processing speech transcript...';
+      const result = await audioManager.stopListening();
+      const finalTranscript = result.transcript || audioManager.getFullTranscript();
+      renderTranscript(finalTranscript, '');
+      currentTranscript = finalTranscript;
+      statusPanel.textContent = currentTranscript ? `Answer captured: "${currentTranscript}"` : 'No speech detected.';
+    }
+
+    // Prevent Safari zoom/scroll gestures on PTT button
+    btnPtt.addEventListener('touchstart', startPTT, { passive: false });
+    btnPtt.addEventListener('touchend', stopPTT, { passive: false });
+    btnPtt.addEventListener('touchcancel', stopPTT, { passive: false });
+    btnPtt.addEventListener('mousedown', startPTT);
+    btnPtt.addEventListener('mouseup', stopPTT);
+    btnPtt.addEventListener('mouseleave', () => { if (isPressing) stopPTT(); });
+
+    // Try Again
+    btnTryAgain.addEventListener('click', () => {
+      audioManager.cancelSpeech();
+      audioManager.cancelListening();
+      renderTranscript('', '');
+      feedbackCard.style.display = 'none';
+      statusPanel.textContent = 'Transcript reset. Hold the button to try again!';
+    });
+
+    // Edit Transcript
+    function toggleEdit(forceState) {
+      isEditing = forceState !== undefined ? forceState : !isEditing;
+      if (isEditing) {
+        transcriptEditor.value = currentTranscript;
+        transcriptEditor.style.display = 'block';
+        transcriptDisplay.style.display = 'none';
+        btnEditTranscript.textContent = '💾 Save';
+        transcriptEditor.focus();
+      } else {
+        currentTranscript = transcriptEditor.value.trim();
+        renderTranscript(currentTranscript, '');
+        transcriptEditor.style.display = 'none';
+        transcriptDisplay.style.display = 'block';
+        btnEditTranscript.textContent = '✏️ Edit';
+      }
+    }
+    btnEditTranscript.addEventListener('click', () => toggleEdit());
+
+    // Check Answer via POST /api/evaluate-answer
+    btnCheckAnswer.addEventListener('click', async () => {
+      if (isEditing) toggleEdit(false);
+      const answer = currentTranscript.trim();
+      if (!answer) return;
+
+      btnCheckAnswer.disabled = true;
+      btnCheckAnswer.textContent = '⏳ Evaluating...';
+      statusPanel.textContent = 'Sending answer to StoryScout AI Evaluator...';
+
+      const payload = {
+        checkin_question: checkinText,
+        target_answer_concept: 'The mother rabbit was looking for her baby because the baby bunny hopped into the woods.',
+        keyword_clusters: [
+          ['bunny', 'baby', 'rabbit', 'child', 'little one'],
+          ['hopped', 'ran', 'went', 'lost', 'away', 'left'],
+          ['woods', 'forest', 'trees', 'grass']
+        ],
+        acceptable_phrasings: [
+          'her baby ran away',
+          'the little bunny hopped into the woods',
+          'she wanted to find her baby',
+          'because he hopped away',
+          'the bunny went into the woods'
+        ],
+        child_transcript: answer,
+        attempt_count: 1,
+      };
+
+      try {
+        const headers = { 'Content-Type': 'application/json' };
+        // Check for auth secret in URL or env
+        const urlParams = new URLSearchParams(window.location.search);
+        const secret = urlParams.get('token') || '';
+        if (secret) {
+          headers['Authorization'] = `Bearer ${secret}`;
+        }
+
+        const res = await fetch('/api/evaluate-answer', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(payload),
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || `HTTP ${res.status}`);
+        }
+
+        const result = await res.json();
+        showFeedback(result);
+        statusPanel.textContent = `Evaluation complete: ${result.status.toUpperCase()}`;
+      } catch (err) {
+        statusPanel.textContent = `Evaluation error: ${err.message}`;
+      } finally {
+        btnCheckAnswer.disabled = false;
+        btnCheckAnswer.textContent = '🚀 Check Answer';
+      }
+    });
+
+    // Display Feedback & Speak aloud
+    async function showFeedback(result) {
+      feedbackCard.style.display = 'flex';
+      feedbackCard.className = `feedback-card ${result.status}`;
+
+      if (result.status === 'mastered') {
+        feedbackStatusBadge.textContent = '🌟 MASTERED!';
+      } else {
+        feedbackStatusBadge.textContent = '💡 KEEP GOING! (SCAFFOLD)';
+      }
+
+      lastSpokenFeedback = result.spoken_feedback || 'Good try!';
+      feedbackSpokenText.textContent = lastSpokenFeedback;
+
+      if (result.follow_up_prompt) {
+        followUpBox.style.display = 'block';
+        feedbackFollowUp.textContent = `Hint: ${result.follow_up_prompt}`;
+      } else {
+        followUpBox.style.display = 'none';
+      }
+
+      // Automatically speak the returned spoken_feedback aloud
+      if (lastSpokenFeedback) {
+        await audioManager.speak(lastSpokenFeedback);
+      }
+    }
+
+    // Replay spoken feedback
+    btnReplayFeedback.addEventListener('click', async () => {
+      if (lastSpokenFeedback) {
+        await audioManager.speak(lastSpokenFeedback);
+      }
+    });
+  </script>
+</body>
+</html>

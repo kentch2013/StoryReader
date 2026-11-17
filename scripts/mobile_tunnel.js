@@ -26,6 +26,7 @@ function handleOutput(data) {
       urlFound = true;
       const tunnelUrl = match[0];
       const cameraUrl = `${tunnelUrl}/test_camera.html`;
+      const audioUrl = `${tunnelUrl}/test_audio.html`;
       const healthUrl = `${tunnelUrl}/api/health`;
       const connectUrl = `http://localhost:${port}/connect.html?url=${encodeURIComponent(tunnelUrl)}`;
 
@@ -34,6 +35,7 @@ function handleOutput(data) {
       console.log('===============================================================================');
       console.log(`  🔗 Root Webapp URL:        ${tunnelUrl}`);
       console.log(`  📸 Module 4 Camera Tray:   ${cameraUrl}`);
+      console.log(`  🎙️ Module 5 Audio Coord:   ${audioUrl}`);
       console.log(`  🩺 API Health Check:       ${healthUrl}`);
       console.log('-------------------------------------------------------------------------------');
       console.log('  📋 Tunnel URL automatically copied to Windows Clipboard!');

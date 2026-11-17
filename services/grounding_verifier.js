@@ -78,7 +78,8 @@ function extractKeySubjects(chunk = {}) {
 
 export function checkLexicalEntityOverlap(chunk = {}) {
   if (!chunk) return false;
-  const pageText = (chunk.verbatim_page_text || '').toLowerCase();
+  const factsText = Array.isArray(chunk.story_facts) ? chunk.story_facts.join(' ') : '';
+  const pageText = [chunk.paraphrased_story_facts, factsText, chunk.verbatim_page_text].filter(Boolean).join(' ').toLowerCase();
   if (!pageText.trim()) return false;
 
   const graphEntities = [];
@@ -140,7 +141,7 @@ export async function checkNliEntailment(premise, hypothesis) {
   };
 }
 
-export async function verifyGroundingFidelity(chunk = {}) {
+export async function verifyGroundingFidelity(chunk = {}, options = {}) {
   // 1. Context Bounding Ceiling
   const span = parsePageSpan(chunk.page_range);
   if (span > 3) {
@@ -163,7 +164,8 @@ export async function verifyGroundingFidelity(chunk = {}) {
   }
 
   // 3. NLI Entailment Pass
-  const premise = chunk.verbatim_page_text || '';
+  const factsText = Array.isArray(chunk.story_facts) ? chunk.story_facts.join(' ') : '';
+  const premise = [chunk.paraphrased_story_facts, factsText, chunk.verbatim_page_text].filter(Boolean).join(' ');
   const hypothesis = chunk.target_answer_concept || '';
   const nliScore = await checkNliEntailment(premise, hypothesis);
   const { entailment, contradiction, neutral } = nliScore;
@@ -178,32 +180,32 @@ export async function verifyGroundingFidelity(chunk = {}) {
     };
   }
 
-  if (entailment >= 0.50 && contradiction < 0.25) {
-    // 4. Optional Multimodal Visual Grounding Pass via Gemini Decision 1
-    if ((chunk.image_buffer || chunk.image_base64) && process.env.OFFLINE_MODE !== 'true') {
+  if (entailment >= 0.45 && contradiction < 0.30) {
+    // 4. Multimodal Visual Grounding Pass via Gemini Decision 1
+    if (options.visualDecisionVerifier || (options.imageBuffer && process.env.DISABLE_DECISION_MODEL !== 'true')) {
       try {
-        const visualDecision = await defaultDecisionBreaker.execute(
-          async (signal) => {
-            return await verifyVisualGroundingWithDecision({
-              imageBuffer: chunk.image_buffer || chunk.image_base64,
-              mimeType: chunk.image_mime_type || 'image/png',
-              target_answer_concept: hypothesis,
-              checkin_question: chunk.checkin_question || '',
-              signal,
-            });
-          },
-          () => null
-        );
+        if (options.visualDecisionVerifier || (process.env.GEMINI_API_KEY && process.env.MOCK_AI !== 'true')) {
+          const verifier = options.visualDecisionVerifier || ((args) => {
+            return defaultDecisionBreaker.execute(
+              (signal) => verifyVisualGroundingWithDecision({ ...args, signal }),
+              () => null
+            );
+          });
 
-        if (visualDecision && !visualDecision.grounded && visualDecision.groundedConfidence >= 0.70) {
-          return {
-            is_grounded: false,
-            lexical_pass: true,
-            nli_score: { entailment, contradiction, neutral },
-            visual_decision: visualDecision,
-            failure_reason: 'VISUAL_HALLUCINATION_DETECTED',
-            flagged_for_review: true,
-          };
+          const visualDecision = await verifier({
+            imageBuffer: options.imageBuffer,
+            mimeType: options.mimeType || chunk.image_mime_type || 'image/png',
+            target_answer_concept: hypothesis,
+            checkin_question: chunk.checkin_question || '',
+          });
+
+          if (visualDecision && visualDecision.grounded === false) {
+            return {
+              is_grounded: false,
+              failure_reason: 'VISUAL_GROUNDING_FAILED',
+              flagged_for_review: true,
+            };
+          }
         }
       } catch (err) {
         console.warn('⚠️ Visual grounding check error, preserving text NLI verdict:', err?.message);

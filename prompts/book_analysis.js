@@ -11,40 +11,47 @@ Pedagogical Framework:
 Output must be objectively gradeable by an automated speech judge in Module 3. Subjectivity is strictly forbidden. Every answer must be verifiable directly from printed text or illustration details.
 
 Strict Generation Rules:
-1. "verbatim_page_text":
-   - Exact verbatim transcription of all printed story text present on the page or pages of the chunk. Transcribe this first to ground all subsequent questions and answers.
-2. "lookout_prompt":
+1. "paraphrased_story_facts":
+   - Detailed 1:1 factual narrative rewrite of every event, action, and description on these pages.
+   - ZERO DETAIL LOSS: Preserve EVERY character name, setting detail, physical object, color, number/count, spatial location (e.g. under, next to, inside), sensory description, and sequential micro-action.
+   - 1:1 COVERAGE: Do NOT condense multiple sentences into a generic summary. Every distinct story sentence or event on the page must have a corresponding paraphrased statement.
+   - ANTI-RECITATION TECHNIQUE: Alter sentence structure, clause order, voice (active/passive), and non-entity phrasing (e.g. "awakened" -> "woke up", "sauntered down" -> "walked along"), but NEVER omit the concrete nouns, locations, or attributes. Do NOT copy full sentences verbatim from the book to prevent copyright recitation blocks.
+2. "story_facts":
+   - Array of discrete, atomic single-sentence factual propositions capturing every concrete detail from these pages (e.g. ["Pip woke up inside an old teapot.", "The teapot was under an oak tree next to the fence.", "Pip put on yellow boots."]).
+   - Minimum 3-6 distinct propositions per chunk. This ensures comprehension check-ins can test specific story details without hallucination.
+3. "lookout_prompt":
    - Format: "Before you read, watch for [character action/clue]."
    - Under 15 words. NO spoilers.
-3. "checkin_question":
+4. "checkin_question":
    - Factual question directly resolving the lookout clue. Focus on cause-and-effect or key actions.
    - Under 13 words.
-4. "target_answer_concept":
+5. "target_answer_concept":
    - The necessary and sufficient factual kernel for full credit. Under 14 words.
-5. "keyword_clusters":
+6. "keyword_clusters":
    - Exactly 2 concept clusters required for mastery.
    - Each cluster has a "concept_name" and 2-4 acceptable synonyms, common inflections, or functional action phrases a 7-year-old might naturally speak (e.g. for gardener: "gardener", "garden worker", "watering plants", "plant keeper").
+   - When a concept is a compound noun (e.g. "farm friends", "red hat", "blueberry pie"), ALWAYS include common natural head nouns and phrases (e.g. "friends", "his friends", "hat", "pie") in synonyms so children are credited when they answer the core concept without needing verbatim modifiers.
    - For physical actions, include both dynamic actions and resulting states or stative equivalents (e.g. for "jumped onto", include "sat on", "was on", "hopped up"; for "purred", include "rumbled", "sounded like a rattle").
    - For metaphors, similes, or sound descriptions (e.g. "purred like a rattle"), synonyms must describe the sound/action, NEVER literal physical objects (NEVER include toys, objects, or animals like "baby rattle toy" or "rattlesnake" as synonyms; those are common distractors).
-6. "acceptable_phrasings":
+7. "acceptable_phrasings":
    - Exactly 2 natural spoken examples of how a real Grade 2 child would answer, including common colloquial or stative variants.
-7. "hint_level_1" (Spatial Anchor):
+8. "hint_level_1" (Spatial Anchor):
    - Directs the child's eyes to the exact location on the page. Under 15 words.
-8. "hint_level_2" (Socratic Leading Question):
+9. "hint_level_2" (Socratic Leading Question):
    - A simpler leading question to prompt the child on Attempt 2. Under 14 words.
-9. "scaffold_hint":
+10. "scaffold_hint":
    - Concise primary hint (matches hint_level_1). Under 15 words.
-10. "canonical_prototypes":
+11. "canonical_prototypes":
    - Exactly 6 standardized response archetypes for deterministic speech matching:
      1. "formal_full": Complete, well-structured answer.
      2. "colloquial": Natural informal child phrasing.
-     3. "minimal_core": Shortest 2-4 word factual kernel.
+     3. "minimal_core": Shortest 1-4 word factual kernel (e.g. "his friends", "his grandma", "the hat"). For compound concepts, include the base head noun (e.g. "his friends") as an acceptable minimal core answer.
      4. "functional_circumlocution": Describing what the character does, uses, or looks like without naming the key noun (e.g. "someone who catches fish with a net or pole", "the lady who waters plants", "the air that blows").
-     5. "partial_action": Key verb/action without full context.
+     5. "partial_action": Key verb/action without full context (e.g. "knitted", "went up"). Must NOT include the full correct agent or noun (e.g. "friends came" should NOT be partial_action if "friends" is the correct agent).
      6. "common_distractor": A plausible misunderstanding to catch and scaffold.
-11. "question_type":
+12. "question_type":
    - One of 'cause_and_effect', 'character_motivation', 'literal_fact', 'sequential_action'.
-12. "diagnostic_probes":
+13. "diagnostic_probes":
    - Parallel probing hypotheses and scaffolds/feedback for 6 diagnostic conditions.
    - CRITICAL REQUIREMENT FOR HYPOTHESES: Every hypothesis MUST be stated as a direct factual story proposition or concrete event/action description (e.g. "The mother will catch fish with a net or pole", "The mother is a gardener who waters plants"). NEVER use meta-commentary about the child (e.g. NEVER write "Child understands...", "Child identified the word...", or "Child confused...").
    - CRITICAL REQUIREMENT FOR ATTEMPT 1 SCAFFOLDS (ZERO ANSWER SPOILERS):
@@ -57,7 +64,7 @@ Strict Generation Rules:
      - premise_echo: Exact repetition of the question premise & Socratic redirect scaffold.
      - character_confusion: Statement where wrong character/agent performs the action & Socratic who-redirect scaffold.
      - distractor_misconception: Plausible incorrect story event/misconception & Socratic redirect scaffold without revealing the answer.
-13. "entity_graph":
+14. "entity_graph":
    - Character and relational entity network for discourse and kinship resolution:
      - "characters": Array of character entities with canonical_id, canonical_name, gender, aliases, and kinship_compositions.
      - "social_relations": Array of relations with subject_id, relation, target_id, and aliases.
@@ -94,9 +101,19 @@ export const BOOK_ANALYSIS_SCHEMA = {
           chunk_id: { type: Type.INTEGER },
           page_range: { type: Type.STRING },
           chunk_type: { type: Type.STRING, enum: ['scene', 'page'] },
+          paraphrased_story_facts: {
+            type: Type.STRING,
+            description: 'Exhaustive 1:1 factual narrative rewrite of every event and description on these pages without verbatim copying.',
+          },
+          story_facts: {
+            type: Type.ARRAY,
+            items: { type: Type.STRING },
+            description: 'Array of discrete, atomic single-sentence story facts capturing every concrete detail (objects, colors, locations, characters, actions) from these pages.',
+          },
           verbatim_page_text: {
             type: Type.STRING,
-            description: 'Exact verbatim transcription of all printed story text across the chunk page range',
+            description: 'Optional legacy text field or brief sentence fragment',
+            nullable: true,
           },
           lookout_prompt: { type: Type.STRING },
           checkin_question: { type: Type.STRING },
@@ -228,7 +245,7 @@ export const BOOK_ANALYSIS_SCHEMA = {
           'chunk_id',
           'page_range',
           'chunk_type',
-          'verbatim_page_text',
+          'paraphrased_story_facts',
           'lookout_prompt',
           'checkin_question',
           'question_type',

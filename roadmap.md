@@ -20,8 +20,8 @@
 | **M3.7** | Gemini Decision 1 Hybrid & Circuit Breaker (Completed) | `services/connectivity_circuit_breaker.js`, `services/gemini_decision_service.js`, zero output tokens, Tier 2.5 circumlocution arbiter | 85/85 tests passing, 29-case comprehensive benchmark: 86% overall accuracy (+17%), 100% circumlocution accuracy (6/6), 100% offline resilience | Automated benchmark on physical screenshots (`rattles3.png`) & offline simulation |
 | **Bench** | Rattles Real Pipeline Validation (Completed) | `prompts/book_analysis.js`, `services/discourse_resolver.js`, `services/semantic_evaluator.js`, `services/slot_delta_engine.js` | Q3 Trial: 10/10 passing (100%), Q4 Trial: 10/10 passing (100%), 68/68 regression tests | Live Gemini API + local ONNX evaluation with zero runtime LLM calls during speech |
 | **M4** | Camera & Canvas Tray (Completed & Verified) | `public/js/camera_tray.js`, continuous in-browser scanner, canvas downscaler, stationary rotation, multi-sequence | 85/85 tests passing, 17/17 camera tests, resolution capping ($\le 1600\text{px}$), payload compression ($\le 300\text{KB}$/page) | iPhone 14 Plus Safari: continuous rapid snap, stationary 90° rotate, multi-sequence pagination |
-| **M5** | Safari Audio Coordinator (NEXT ACTIVE GATE) | `public/js/audio_manager.js`, gesture unlock, TTS synthesizer, STT Push-to-Talk | Audio state lockouts, collision safety (`speechSynthesis.cancel()` before mic) | iPhone 14 Plus Safari: speak sentence, check for no silence cutoff and clean audio output |
-| **M6** | Full SPA Orchestration | `public/index.html`, `public/style.css`, `public/js/app.js`, Cloudflare Tunnel runbook | FSM state transitions, attempt limit counter ($\le 2$), chunk progression | Full parent-child reading test with physical book over HTTPS tunnel |
+| **M5** | Safari Audio Coordinator (Completed & Verified) | `public/js/audio_manager.js`, gesture unlock, TTS synthesizer, STT Push-to-Talk | 99/99 tests passing, 14/14 audio tests, mutual exclusivity collision guard, silence hesitation tolerance | iPhone 14 Plus Safari: speak sentence, check for no silence cutoff and clean audio output |
+| **M6** | Full SPA Orchestration (NEXT ACTIVE GATE) | `public/index.html`, `public/style.css`, `public/js/app.js`, Cloudflare Tunnel runbook | FSM state transitions, attempt limit counter ($\le 2$), chunk progression | Full parent-child reading test with physical book over HTTPS tunnel |
 
 ---
 
@@ -157,23 +157,56 @@
 
 ---
 
-### Module 5: Safari Audio Coordinator (TTS & STT)
+### Module 5: Safari Audio Coordinator (TTS & STT) (Completed & Verified)
 * **1. Pipeline Extension:**
-  - Implement `public/js/audio_manager.js`:
-    - **Audio Unlock:** Fires a zero-volume Web Audio buffer on initial user gesture to unlock Safari audio playback.
-    - **TTS Manager:** `window.speechSynthesis` wrapper with voice resolution (selecting natural English voice), rate control (0.9x for Grade 2 clarity), and error recovery.
-    - **STT Push-to-Talk Manager:** `webkitSpeechRecognition` wrapper with `interimResults = true`, manual start/stop, and silence protection.
-    - **Collision Barrier:** Automatically invokes `window.speechSynthesis.cancel()` before enabling the microphone.
+  - Implemented `public/js/audio_manager.js`:
+    - **Audio Unlock:** Fires a zero-volume Web Audio buffer on initial user gesture to unlock Safari audio playback and prime `speechSynthesis`.
+    - **TTS Manager:** `window.speechSynthesis` wrapper with voice resolution (Samantha/Daniel/English fallback), rate control (0.9x for Grade 2 clarity), and Promise completion resolution.
+    - **STT Push-to-Talk Manager:** `webkitSpeechRecognition` wrapper with `interimResults = true`, `continuous = true`, multi-event transcript accumulation, and auto-restart on premature Safari VAD silence triggers.
+    - **Collision Barrier:** Mutual exclusivity ensuring `speechSynthesis.cancel()` runs before enabling microphone, and speech recognition terminates with settling delay before TTS playback to avoid iOS earpiece routing.
 * **2. Code Verification:**
-  - State machine tests validating mutual exclusivity between listening and speaking states.
+  - State machine & collision contract test (`test/audio_manager.test.js`) passing 14/14 tests:
+    - Verifies `LOCKED` -> `IDLE` state transition upon gesture unlock.
+    - Verifies 0.9x default playback rate and custom options.
+    - Verifies mutual exclusivity barriers in both directions.
+    - Verifies transcript accumulation across pause intervals.
+    - Verifies auto-restart on premature silence cutoff.
+    - Verifies error trapping and recovery without unhandled exceptions.
+  - Full project regression suite passing 99/99 tests across 16 suites (`npm run verify`).
+  - Contract audit: 100% immutable (`✅ Contract Audit: Test files remained 100% immutable.`).
 * **3. Digital Samples:**
-  - Audio harness page `public/test_audio.html` testing:
-    - Sequential speech triggers without audio lockup.
-    - Live transcript rendering in DOM element.
+  - Standalone mobile audio harness page `public/test_audio.html` testing:
+    - Audio unlock trigger with active state badge.
+    - Prompt cards (Lookout Prompt & Check-in Question) with natural TTS playback.
+    - Push-to-Talk microphone button with animated red pulse and iOS touch gesture prevention (`touch-action: none`).
+    - Live speech transcript speech bubble with [Check Answer], [Try Again], and [Edit] actions.
+    - Full end-to-end integration with `POST /api/evaluate-answer` including Bearer token support.
+  - QR Code portal `public/connect.html` updated with dedicated `🎙️ Audio Coordinator (M5)` tab.
+  - `launch_mobile_test.bat`, `start_server.bat`, and `scripts/mobile_tunnel.js` updated to advertise audio test endpoint.
 * **4. Human Verification:**
-  - Test on iPhone 14 Plus Safari:
-    - Tap "Test TTS": Hear prompt clearly at 0.9x speed.
-    - Tap "Hold to Speak": Speak test phrase ("Leo lost his favorite hat"). Verify transcript displays accurately in speech bubble without premature cutoff.
+  - Launch mobile test environment (`launch_mobile_test.bat`).
+  - Scan QR code from iPhone 14 Plus Camera and open `/test_audio.html` in Safari.
+  - Tap "Tap to Start Audio" to unlock Web Audio.
+  - Test Lookout & Check-in TTS: Hear prompts clearly from bottom loudspeaker at 0.9x speed.
+  - Hold Push-to-Talk button, speak with pauses, verify full transcript renders and submits cleanly to `/api/evaluate-answer`.
+
+---
+
+### Module 5.5: Robust Copyright Ingestion & Semantic Relaxation (Completed & Verified)
+* **1. Pipeline Extension:**
+  - **Factual Paraphrase & Atomic Story Facts:** Redesigned `prompts/book_analysis.js` to eliminate recitation blocks on copyrighted publications while guaranteeing 1:1 detail fidelity without over-condensation. Added required `story_facts` atomic proposition array with local DeBERTa-v3 NLI premise-entailment validation in `services/grounding_verifier.js`.
+  - **Deterministic Non-AI Rotation Detection:** Implemented `services/rotation_detector.js` utilizing screen orientation API and fast grayscale text line pattern variance analysis, bypassing expensive vision API calls for page orientation.
+  - **Analysis Error Classification & 503 Fallback:** Implemented `classifyModelResponse` in `services/gemini_service.js` distinguishing recitation blocks, safety blocks, and transient model dropouts with automatic retry.
+  - **Camera Tray WebKit Resilience:** Hardened `public/js/camera_tray.js` against empty 200 responses and non-JSON HTML error pages in Safari WebKit; added authentication header forwarding.
+  - **Head Noun Core Entity Relaxation:** Implemented `extractHeadNoun` in `services/semantic_evaluator.js` and wired `head_noun_entity` SIMD probe into Stage 1 batch evaluation. Terse answers ($\le 6$ words) matching base head nouns (e.g. *"his friends"* for compound concept *"farm friends"*) receive `minimal_core` credit with $\ge 50\%$ entailment. Added agent question guard preventing `PARTIAL_ACTION` from overriding valid agents.
+* **2. Code Verification:**
+  - Full test suite passing 129/129 tests across 21 test suites (`npm run verify`).
+  - Contract audit: 100% immutable (`✅ Contract Audit: Test files remained 100% immutable.`).
+* **3. Digital Samples:**
+  - Live validation on physical copyrighted book *Robert the Rose Horse* (6 HEIC pages, 0 recitation blocks, 17.3s latency, 20 atomic propositions, 98.6% grounding entailment).
+  - 8-Answer child diagnostic sweep on Chunk 1 (*"Who came to Robert's birthday party?"*), verifying mastery on *"his friends"*, *"farm animals"*, and *"animals from the farm"*, with appropriate scaffolds for distractors and fragments.
+* **4. Human Verification:**
+  - Verified live copyrighted book processing with zero text recitation errors and zero detail loss.
 
 ---
 

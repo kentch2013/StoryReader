@@ -25,6 +25,82 @@ export function safeJsonParse(text) {
   }
 }
 
+/**
+ * Classifies Gemini model output for error diagnosis, retryability, and health tracking.
+ *
+ * @param {Object} response - Gemini API response object
+ * @returns {{ status: 'ok'|'retryable'|'error', code?: string, message?: string, retryableStatus?: number, text?: string }}
+ */
+export function classifyModelResponse(response) {
+  if (!response) {
+    return {
+      status: 'retryable',
+      retryableStatus: 503,
+      message: 'Invalid JSON received from model: empty response text',
+    };
+  }
+
+  // 1. Check prompt-level blocks
+  if (response.promptFeedback && response.promptFeedback.blockReason) {
+    return {
+      status: 'error',
+      code: 'PROMPT_BLOCKED',
+      message: `Prompt was blocked by safety filters: ${response.promptFeedback.blockReason}`,
+    };
+  }
+
+  // 2. Check candidate-level finish reasons
+  const candidate = response.candidates && response.candidates[0];
+  const finishReason = candidate ? candidate.finishReason : null;
+
+  if (finishReason === 'SAFETY') {
+    return {
+      status: 'error',
+      code: 'SAFETY_BLOCKED',
+      message: 'Model response was blocked due to safety policy violations.',
+    };
+  }
+
+  if (finishReason === 'RECITATION') {
+    return {
+      status: 'error',
+      code: 'RECITATION_BLOCKED',
+      message: 'Model response was blocked due to recitation/copyright policy.',
+    };
+  }
+
+  if (finishReason === 'MAX_TOKENS') {
+    return {
+      status: 'error',
+      code: 'MAX_TOKENS_EXCEEDED',
+      message: 'Model response exceeded maximum token allocation.',
+    };
+  }
+
+  if (finishReason === 'PROMPT_BLOCKED' || finishReason === 'BLOCKLIST' || finishReason === 'PROHIBITED_CONTENT') {
+    return {
+      status: 'error',
+      code: 'PROMPT_BLOCKED',
+      message: `Model candidate was blocked with reason: ${finishReason}`,
+    };
+  }
+
+  // 3. Check for empty response text (transient model dropout)
+  const rawText = typeof response.text === 'string' ? response.text.trim() : '';
+  if (!rawText) {
+    return {
+      status: 'retryable',
+      retryableStatus: 503,
+      message: 'Invalid JSON received from model: empty response text',
+    };
+  }
+
+  return {
+    status: 'ok',
+    text: response.text,
+  };
+}
+
 export function getMockBookAnalysis(files = []) {
   const hasBlurry = files.some((file) =>
     (file.originalname || '').toLowerCase().includes('blurry')
@@ -37,7 +113,7 @@ export function getMockBookAnalysis(files = []) {
     };
   }
 
-  return {
+  const mockAnalysis = {
     is_legible: true,
     error_message: null,
     book_type: 'fiction',
@@ -48,6 +124,14 @@ export function getMockBookAnalysis(files = []) {
         chunk_id: 1,
         page_range: 'Pages 1-2',
         chunk_type: 'scene',
+        paraphrased_story_facts:
+          'Leo was upset when his hat blew away in the park because his grandmother knitted the warm red hat for him and it was special.',
+        story_facts: [
+          'Leo was playing outside in the park on a windy day.',
+          'Leo was wearing a warm red hat that his grandmother knitted for him.',
+          'A strong gust of wind blew the red hat right off Leo\'s head.',
+          'Leo became very upset because the hat was a special gift from his grandmother.',
+        ],
         verbatim_page_text:
           'Leo was upset when his hat blew away in the park because his grandmother knitted the warm red hat for him and it was special.',
         lookout_prompt:
@@ -109,6 +193,16 @@ export function getMockBookAnalysis(files = []) {
       },
     ],
   };
+
+  if (Array.isArray(mockAnalysis.chunks)) {
+    for (const chunk of mockAnalysis.chunks) {
+      if (!chunk.paraphrased_story_facts && chunk.verbatim_page_text) {
+        chunk.paraphrased_story_facts = chunk.verbatim_page_text;
+      }
+    }
+  }
+
+  return mockAnalysis;
 }
 
 export function sanitizeAnalysisProbes(analysis) {
@@ -138,6 +232,45 @@ export function sanitizeAnalysisProbes(analysis) {
   return analysis;
 }
 
+/**
+ * Executes a book analysis API function with primary model and automatic fallback on 503 high demand.
+ * Safely parses and sanitizes the response.
+ *
+ * @param {Function} apiFn - Async function (modelName) => rawResponse
+ * @param {Object} [options]
+ * @param {string} [options.primaryModel]
+ * @param {string} [options.fallbackModel]
+ * @returns {Promise<Object>} Parsed and sanitized analysis object
+ */
+export async function executeBookAnalysisWithFallback(apiFn, options = {}) {
+  const primaryModel = options.primaryModel || process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite';
+  const fallbackModel = options.fallbackModel || process.env.GEMINI_FALLBACK_MODEL || 'gemini-2.5-flash';
+
+  let rawResponse;
+  try {
+    rawResponse = await apiFn(primaryModel);
+  } catch (err) {
+    const errMsg = (err && typeof err.message === 'string') ? err.message : '';
+    const is503 = err?.status === 503 ||
+      errMsg.includes('503') ||
+      errMsg.toLowerCase().includes('high demand');
+
+    if (is503) {
+      console.warn(`⚠️ [GEMINI 503 FALLBACK] Primary model '${primaryModel}' unavailable (503/high demand). Falling back to '${fallbackModel}'. Reason: ${errMsg}`);
+      rawResponse = await apiFn(fallbackModel);
+    } else {
+      throw err;
+    }
+  }
+
+  const responseText = rawResponse && typeof rawResponse.text === 'string'
+    ? rawResponse.text
+    : (typeof rawResponse === 'string' ? rawResponse : JSON.stringify(rawResponse));
+
+  const parsed = safeJsonParse(responseText);
+  return sanitizeAnalysisProbes(parsed);
+}
+
 export async function analyzeBookPages(files) {
   if (!files || !Array.isArray(files) || files.length === 0) {
     throw new Error('No files provided');
@@ -151,7 +284,9 @@ export async function analyzeBookPages(files) {
     const analysis = sanitizeAnalysisProbes(getMockBookAnalysis(files));
     if (analysis && Array.isArray(analysis.chunks)) {
       for (const chunk of analysis.chunks) {
-        chunk.grounding_verification = await verifyGroundingFidelity(chunk);
+        chunk.grounding_verification = await verifyGroundingFidelity(chunk, {
+          imageBuffer: files[0]?.buffer,
+        });
       }
     }
     return analysis;
@@ -159,7 +294,6 @@ export async function analyzeBookPages(files) {
 
   const apiKey = process.env.GEMINI_API_KEY;
   const ai = new GoogleGenAI({ apiKey });
-  const model = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite';
 
   const contents = files.map((file) => ({
     inlineData: {
@@ -170,22 +304,41 @@ export async function analyzeBookPages(files) {
 
   contents.push('Analyze these book pages in sequence according to Grade 2 reading standards.');
 
-  const response = await rateLimiter.executeWithRetry(() =>
-    ai.models.generateContent({
-      model,
-      contents,
-      config: {
-        systemInstruction: BOOK_ANALYSIS_SYSTEM_PROMPT,
-        responseMimeType: 'application/json',
-        responseSchema: BOOK_ANALYSIS_SCHEMA,
-      },
-    })
-  );
+  const analysis = await executeBookAnalysisWithFallback(async (modelName) => {
+    return await rateLimiter.executeWithRetry(async () => {
+      const res = await ai.models.generateContent({
+        model: modelName,
+        contents,
+        config: {
+          systemInstruction: BOOK_ANALYSIS_SYSTEM_PROMPT,
+          responseMimeType: 'application/json',
+          responseSchema: BOOK_ANALYSIS_SCHEMA,
+          maxOutputTokens: 8192,
+          thinkingConfig: { thinkingBudget: 0 },
+        },
+      });
 
-  const analysis = sanitizeAnalysisProbes(safeJsonParse(response.text));
+      const outcome = classifyModelResponse(res);
+      if (outcome.status === 'retryable') {
+        const err = new Error(outcome.message);
+        err.status = outcome.retryableStatus || 503;
+        throw err;
+      }
+      if (outcome.status === 'error') {
+        const err = new Error(outcome.message);
+        err.code = outcome.code;
+        throw err;
+      }
+
+      return res;
+    });
+  });
+
   if (analysis && Array.isArray(analysis.chunks)) {
     for (const chunk of analysis.chunks) {
-      chunk.grounding_verification = await verifyGroundingFidelity(chunk);
+      chunk.grounding_verification = await verifyGroundingFidelity(chunk, {
+        imageBuffer: files[0]?.buffer,
+      });
     }
   }
   return analysis;
@@ -271,6 +424,8 @@ export async function classifyAnswerSemantic(data = {}) {
 export default {
   analyzeBookPages,
   classifyAnswerSemantic,
+  classifyModelResponse,
+  executeBookAnalysisWithFallback,
   getMockAnswerClassification,
   getMockBookAnalysis,
   safeJsonParse,
