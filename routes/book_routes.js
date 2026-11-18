@@ -6,7 +6,7 @@ import { detectRetryCommand } from '../services/voice_command_detector.js';
 
 const router = express.Router();
 
-const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif']);
 
 const storage = multer.memoryStorage();
 const upload = multer({

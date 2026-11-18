@@ -79,13 +79,14 @@ Each module must pass all 4 verification gates before the next module begins:
   - [x] Digital Samples: Live validation on physical copyrighted book *Robert the Rose Horse* (6 pages, 0 recitation blocks, 17.3s latency, 20 atomic propositions, 98.6% average grounding entailment); 8-answer diagnostic sweep on Chunk 1.
   - [x] Human Gate: Empirical verification crediting non-verbatim child answers ("his friends" -> MASTERED) without false positive bleed.
 
-- [ ] **Module 6: Full SPA Orchestration & End-to-End Reading Flow (NEXT IMMEDIATE OBJECTIVE)**
-
-- [ ] **Module 6: Full SPA Orchestration & End-to-End Reading Flow**
-  - [ ] Pipeline: Single-page UI (`index.html`, `style.css`, `app.js`), attempt capping ($\le 2$), CSS confetti, tunnel runbook
-  - [ ] Code Tests: State transition and DOM rendering lifecycle tests
-  - [ ] Digital Samples: Scripted simulation running a multi-chunk session replay
-  - [ ] Human Gate: Live co-reading session with a physical Grade 2 book over Cloudflare Tunnel
+- [x] **Module 6: Full SPA Orchestration & End-to-End Reading Flow (Completed, Hardened, Calibrated & Ready for Live Test)**
+  - [x] Pipeline: Single-page UI (`index.html`, `style.css`, `app.js`), attempt capping ($\le 2$), CSS confetti, tunnel runbook (`npm run tunnel`)
+  - [x] Safeguards & Optimizations: Rubric payload forwarding, empty transcript guard, re-entrancy locks, clue re-prompting, confetti container cleanup, `sessionStorage` persistence, and client-side AbortController fetch timeouts (`test/app_safeguards.test.js` - 7/7 passing)
+  - [x] Native iPhone HEIC/HEIF Ingestion: Direct support for `image/heic` and `image/heif` in Express routes and Gemini multimodal service
+  - [x] Pipeline Calibration & Threshold Tuning: Genitive possessive pronoun resolution in `discourse_resolver.js`, Tier 1 prototype fast-path precedence in `answer_evaluator.js`, meta-cognitive leak sanitization in `gemini_service.js`, stop-word filtering in `rubric_matcher.js`, and strict chunk ceiling ($\le 3$ pages) in `prompts/book_analysis.js` (`test/pipeline_calibration.test.js` - 5/5 passing)
+  - [x] Code Tests: 150/150 tests across 24 test suites with 100% test contract immutability (`npm run verify`)
+  - [x] Digital Samples: Autonomous UI & pipeline audit (`scripts/autonomous_pipeline_ui_audit.js`), copyrighted book audit on *The Runaway Bunny* and *Rattles* (`scripts/test_copyrighted_screenshots.js`), and full 6-page iPhone HEIC audit on *Robert the Rose Horse* (`scripts/audit_robert_all_pages.js`)
+  - [ ] Human Gate: Live co-reading session with a physical Grade 2 book over Cloudflare Tunnel on iPhone 14 Plus Safari
 
 ---
 

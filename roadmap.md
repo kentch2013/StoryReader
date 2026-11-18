@@ -210,20 +210,42 @@
 
 ---
 
-### Module 6: Full SPA Orchestration & End-to-End Reading Flow
+### Module 6: Full SPA Orchestration & End-to-End Reading Flow (Completed, Hardened, Calibrated & Ready for Live Test)
 * **1. Pipeline Extension:**
-  - Implement `public/index.html` and `public/style.css` (accessible Grade 2 design, large touch targets $\ge 56\text{px}$, readable typography).
-  - Implement `public/js/app.js` managing the Finite State Machine:
-    `STATE_SCAN` $\rightarrow$ `STATE_ANALYZING` $\rightarrow$ `STATE_LOOKOUT` $\rightarrow$ `STATE_CHECKIN` $\rightarrow$ `STATE_FEEDBACK` $\rightarrow$ `STATE_COMPLETE`.
-  - Integrate attempt counter (max 2 attempts before gentle resolution).
-  - Add celebration animations (CSS confetti / stars) on mastery.
-  - Add Cloudflare Tunnel startup scripts (`npm run tunnel`).
+  - Implemented `public/index.html` and `public/style.css` (accessible Grade 2 design, high contrast palette, large touch targets $\ge 56\text{px}$, responsive layout, CSS falling confetti animation).
+  - Implemented `public/js/app.js` orchestrating the 9-state Finite State Machine (`STATE_SCAN`, `STATE_ANALYZING`, `STATE_LOOKOUT`, `STATE_CHECKIN`, `STATE_RECORDING`, `STATE_TRANSCRIPT_REVIEW`, `STATE_EVALUATING`, `STATE_FEEDBACK`, `STATE_COMPLETE`).
+  - Integrated 2-attempt counter capping with No-Spoiler pedagogical scaffolding and auto-reveal resolution on Attempt 2.
+  - Implemented free clarification micro-turns (`is_microturn: true`) preserving attempt counter.
+  - Added Cloudflare Tunnel script (`npm run tunnel`) in `package.json` and updated `public/connect.html` navigation.
+  - **Module 6 Safeguards & Optimizations:**
+    1. Complete rubric payload forwarding from active chunk to `/api/evaluate-answer`.
+    2. Empty and whitespace-only transcript submission guard with non-incrementing user guidance.
+    3. Re-entrancy locks (`_actionLock`) on check-in and analyze buttons preventing double-tap race conditions.
+    4. Socratic clue spoken before re-prompting check-in question on Attempt 2.
+    5. Automatic confetti container lifecycle cleanup on screen transitions.
+    6. Transparent session state serialization and restoration via `sessionStorage`.
+    7. Client-side AbortController fetch timeouts with graceful error banners.
+  - **Native iPhone HEIC/HEIF Direct Ingestion:** Added `image/heic` and `image/heif` support to Express upload filter and Gemini service, enabling direct upload of raw Apple photos without client re-encoding failures.
+  - **Pipeline Calibration & Threshold Tuning:**
+    1. Possessive genitive case resolution in `services/discourse_resolver.js` (`"his"` $\rightarrow$ `"Robert's"`).
+    2. Tier 1 prototype fast-path precedence ahead of NLI probe sweep in `services/answer_evaluator.js`.
+    3. Meta-cognitive leak sanitization in `services/gemini_service.js`.
+    4. Content-word filtering in `services/rubric_matcher.js` to eliminate stop-word false passes.
+    5. Strict chunk ceiling ($\le 3$ pages) in `prompts/book_analysis.js`.
 * **2. Code Verification:**
-  - End-to-end integration test (`test/e2e_flow.test.js`) simulating the complete lifecycle with mocked AI endpoints.
+  - End-to-end integration test (`test/e2e_flow.test.js` - 9/9 passing).
+  - Module 6 safeguards test (`test/app_safeguards.test.js` - 7/7 passing).
+  - Pipeline calibration test (`test/pipeline_calibration.test.js` - 5/5 passing).
+  - Full project regression suite passing **150/150 tests across 24 test suites** (`npm run verify`).
+  - Contract audit: 100% immutable (`✅ Contract Audit: Test files remained 100% immutable.`).
 * **3. Digital Samples:**
-  - Scripted session runner replaying a multi-chunk storybook session from fixture data.
+  - Scripted session runner (`scripts/simulate_reading_session.js`) replaying a multi-chunk storybook session from fixture data with 100% success.
+  - Autonomous UI & pipeline audit (`scripts/autonomous_pipeline_ui_audit.js`) validating 8/8 HTTP endpoints, 17/17 visual criteria, 10/10 state transitions, and 7/7 cognitive categories.
+  - Copyrighted screenshot audit (`scripts/test_copyrighted_screenshots.js`) on *The Runaway Bunny* and *Rattles* with 0 recitation blocks.
+  - Real 6-page iPhone HEIC audit (`scripts/audit_robert_all_pages.js`) on *Robert the Rose Horse*.
+  - Calibration verification on *Robert* Chunk 1 (`scripts/verify_calibration_robert.js`): `"his friends"` $\rightarrow$ `mastered` in 2ms; `"his mother and father"` $\rightarrow$ `needs_scaffold` in 0ms.
 * **4. Human Verification:**
-  - Launch server + Cloudflare Tunnel.
-  - Open tunnel URL on iPhone 14 Plus Safari.
+  - Launch server + Cloudflare Tunnel via `launch_mobile_test.bat` (or `npm run tunnel`).
+  - Open tunnel URL on iPhone 14 Plus in Safari.
   - Conduct live co-reading session with a physical Grade 2 book (4–6 pages):
     - Parent snaps pages $\rightarrow$ child listens to lookout prompt $\rightarrow$ child reads book $\rightarrow$ child speaks answer $\rightarrow$ child hears feedback $\rightarrow$ next chunk.

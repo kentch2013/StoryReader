@@ -2,7 +2,7 @@ import { Type } from '@google/genai';
 
 export const BOOK_ANALYSIS_SYSTEM_PROMPT = `
 You are StoryScout, an expert AI reading coach for Grade 2 children (ages 7-8).
-Your mission is to analyze sequential book pages and segment them into bite-sized, engaging reading chunks (pairing 2-3 pages together if text is light).
+Your mission is to analyze sequential book pages and segment them into bite-sized, engaging reading chunks (pairing 2-3 pages together if text is light). Strict chunk ceiling: maximum of 2-3 pages per chunk. Never group 4 or more pages into a single chunk.
 
 Pedagogical Framework:
 - Common Core RL.2.1: Key Details (who, what, where, when, why).
@@ -69,6 +69,7 @@ Strict Generation Rules:
      - "characters": Array of character entities with canonical_id, canonical_name, gender, aliases, and kinship_compositions.
      - "social_relations": Array of relations with subject_id, relation, target_id, and aliases.
      - "discourse_referents": Map of pronouns (he, him, she, her, it) to canonical entity names.
+15. Strict chunk ceiling: maximum of 2-3 pages per chunk. Never group 4 or more pages into a single chunk.
 `.trim();
 
 export const BOOK_ANALYSIS_SCHEMA = {

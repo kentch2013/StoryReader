@@ -226,6 +226,64 @@ export async function evaluateChildAnswer(data = {}) {
     }
   }
 
+  // Tier 1 Deterministic: Canonical Prototypes Token Matcher (0ms)
+  if (Array.isArray(data.canonical_prototypes) && data.canonical_prototypes.length > 0) {
+    const protoResult = scoreMultiReference(grounded, data.canonical_prototypes);
+    diagnostics.tier1.prototype_token_match = protoResult;
+
+    if (protoResult.isDistractor) {
+      diagnostics.tier_resolved = 'TIER_1_DISTRACTOR_TOKEN_MATCH';
+      diagnostics.cognitive_diagnosis = 'DISTRACTOR_MISCONCEPTION';
+
+      if (attempt >= 2) {
+        return makeEvalResult({
+          status: 'off_track',
+          spoken_feedback: feedback.reveal_attempt_2,
+          follow_up_prompt: null,
+          attempt_count: attempt,
+          resolved: true,
+          is_microturn: false,
+          microturn_used: data.microturn_used === true,
+          diagnostics,
+        });
+      }
+
+      const distractorScaffold =
+        data.diagnostic_probes?.distractor_misconception?.scaffold ||
+        feedback.hint_attempt_1;
+
+      return makeEvalResult({
+        status: 'needs_scaffold',
+        spoken_feedback: distractorScaffold,
+        follow_up_prompt: distractorScaffold,
+        attempt_count: attempt,
+        resolved: false,
+        is_microturn: false,
+        microturn_used: data.microturn_used === true,
+        diagnostics,
+      });
+    }
+
+    if (protoResult.matched) {
+      diagnostics.tier_resolved = `TIER_1_PROTOTYPE_${protoResult.prototypeType?.toUpperCase()}`;
+      diagnostics.cognitive_diagnosis = 'MASTERED';
+      const spokenFeedback =
+        data.diagnostic_probes?.target_mastery?.feedback ||
+        feedback.praise;
+
+      return makeEvalResult({
+        status: 'mastered',
+        spoken_feedback: spokenFeedback,
+        follow_up_prompt: null,
+        attempt_count: attempt,
+        resolved: true,
+        is_microturn: false,
+        microturn_used: data.microturn_used === true,
+        diagnostics,
+      });
+    }
+  }
+
   // Parallel Diagnostic Probing Architecture (System 1 Single-Pass Diagnostic Evaluator)
   if (data.diagnostic_probes) {
     let result = null;
@@ -362,57 +420,6 @@ export async function evaluateChildAnswer(data = {}) {
       microturn_used: data.microturn_used === true,
       diagnostics,
     });
-  }
-
-  // Tier 1 Deterministic: Canonical Prototypes Token Matcher (0ms)
-  if (Array.isArray(data.canonical_prototypes) && data.canonical_prototypes.length > 0) {
-    const protoResult = scoreMultiReference(grounded, data.canonical_prototypes);
-    diagnostics.tier1.prototype_token_match = protoResult;
-
-    if (protoResult.isDistractor) {
-      diagnostics.tier_resolved = 'TIER_1_DISTRACTOR_TOKEN_MATCH';
-      diagnostics.cognitive_diagnosis = 'DISTRACTOR_MISCONCEPTION';
-
-      if (attempt >= 2) {
-        return makeEvalResult({
-          status: 'off_track',
-          spoken_feedback: feedback.reveal_attempt_2,
-          follow_up_prompt: null,
-          attempt_count: attempt,
-          resolved: true,
-          is_microturn: false,
-          microturn_used: data.microturn_used === true,
-          diagnostics,
-        });
-      }
-
-      return makeEvalResult({
-        status: 'needs_scaffold',
-        spoken_feedback: feedback.hint_attempt_1,
-        follow_up_prompt: feedback.hint_attempt_1,
-        attempt_count: attempt,
-        resolved: false,
-        is_microturn: false,
-        microturn_used: data.microturn_used === true,
-        diagnostics,
-      });
-    }
-
-    const hasSlotContext = Boolean(data.story_context?.recipient || data.story_context?.object);
-    if (!hasSlotContext && protoResult.matched) {
-      diagnostics.tier_resolved = `TIER_1_PROTOTYPE_${protoResult.prototypeType?.toUpperCase()}`;
-      diagnostics.cognitive_diagnosis = 'MASTERED';
-      return makeEvalResult({
-        status: 'mastered',
-        spoken_feedback: feedback.praise,
-        follow_up_prompt: null,
-        attempt_count: attempt,
-        resolved: true,
-        is_microturn: false,
-        microturn_used: data.microturn_used === true,
-        diagnostics,
-      });
-    }
   }
 
   // Tier 1 Deterministic: Exact Keyword Clusters or Acceptable Phrasings Match (0ms)

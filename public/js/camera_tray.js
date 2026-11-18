@@ -1711,6 +1711,18 @@ export class CameraTrayUI {
     }
   }
 
+  getPages() {
+    return this.state ? this.state.pages : [];
+  }
+
+  createFormData(fieldName = 'images') {
+    return this.state ? this.state.createFormData(fieldName) : new FormData();
+  }
+
+  reset() {
+    this.clear();
+  }
+
   setAnalyzing(isAnalyzing) {
     if (this.analyzeButton) {
       this.analyzeButton.disabled = isAnalyzing || this.state.isEmpty();

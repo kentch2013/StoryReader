@@ -205,14 +205,14 @@
 
     <!-- Target Switcher Tabs -->
     <div class="target-tabs">
-      <button class="tab-btn active" id="tab-camera" onclick="selectTab('camera')">
+      <button class="tab-btn active" id="tab-app" onclick="selectTab('app')">
+        📖 StoryScout App
+      </button>
+      <button class="tab-btn" id="tab-camera" onclick="selectTab('camera')">
         📸 Camera Tray (M4)
       </button>
       <button class="tab-btn" id="tab-audio" onclick="selectTab('audio')">
         🎙️ Audio Coordinator (M5)
-      </button>
-      <button class="tab-btn" id="tab-app" onclick="selectTab('app')">
-        📖 StoryScout App
       </button>
       <button class="tab-btn" id="tab-health" onclick="selectTab('health')">
         🩺 API Health
@@ -279,12 +279,12 @@
         ]
       },
       app: {
-        path: '/',
-        heading: '📖 StoryScout Reader Protocol',
+        path: '/index.html',
+        heading: '📖 StoryScout Reading Companion Protocol',
         instructions: [
           '<strong>Aim Camera:</strong> Point your iPhone Camera at the QR code above.',
-          '<strong>Open Safari:</strong> Tap the yellow banner to launch StoryScout.',
-          '<strong>Navigation:</strong> Access the reading companion and test harnesses directly from the home screen.'
+          '<strong>Open Safari:</strong> Tap the yellow banner to launch StoryScout Reading Companion.',
+          '<strong>Full Reading Journey:</strong> Capture book pages with live camera, listen to lookout clues, answer check-in questions with push-to-talk, and celebrate reading mastery with confetti!'
         ]
       },
       health: {
@@ -297,7 +297,7 @@
       }
     };
 
-    let activeTab = 'camera';
+    let activeTab = 'app';
 
     function updateView() {
       const target = targets[activeTab];
@@ -333,7 +333,7 @@
       });
     }
 
-    // Initialize with Camera Tray as primary view
+    // Initialize with Reading Companion SPA as primary view
     updateView();
   </script>
 </body>

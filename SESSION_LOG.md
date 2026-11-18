@@ -1,9 +1,9 @@
 # StoryScout Session Handoff Log
 
-**Session Date:** 2026-11-16 (Wrapup: Module 5 Safari Audio Coordinator & Module 5.5 Robust Copyright Ingestion & Semantic Relaxation)  
+**Session Date:** 2026-11-17 / 2026-11-18 (Wrapup: Module 6 Full SPA Orchestration, Safeguards, Native HEIC Support & Pipeline Calibration)  
 **Repository:** `kentch2013/StoryReader`  
 **Current Branch:** `main`  
-**Milestone:** **Modules 1 through 5.5** Completed, Hardened & Verified across **129 automated tests (21 suites)** with 0 failures and 100% test contract immutability. Safari Audio Coordinator (TTS & STT), hands-free continuous auto-listening, 0ms fastpath voice retry detection, ONNX DeBERTa-v3 System 1 NLI intent detection (`/api/detect-intent`), 1:1 detail-preserving factual paraphrase with atomic `story_facts` grounding, deterministic non-AI rotation detection, Safari WebKit error resilience, and head-noun core entity mastery relaxation fully verified. Ready for **Module 6: Full SPA Orchestration & End-to-End Reading Flow**.
+**Milestone:** **Modules 1 through 6** Completed, Hardened, Calibrated & Verified across **150 automated tests (24 suites)** with 0 failures and 100% test contract immutability. Module 6 Single-Page App (`public/js/app.js`), 9-state Finite State Machine, accessible mobile layout with $\ge 56\text{px}$ touch targets, 7 critical safeguards & optimizations (`test/app_safeguards.test.js`), native iPhone HEIC/HEIF direct upload support, full autonomous UI & pipeline audit, live multimodal ingestion of copyrighted fixtures (*The Runaway Bunny* & *Rattles*) with 0 recitation blocks, and 5-point pipeline calibration eliminating false-strict/false-lenient biases (`test/pipeline_calibration.test.js`) are 100% verified. Ready for **Live Human Co-Reading Gate**.
 
 ---
 
@@ -11,17 +11,18 @@
 
 To eliminate context loss between sessions, every handoff must maintain:
 1. **Target Architecture & Hardware Reality:**
-   - Client device: iPhone 14 Plus (iOS Safari).
-   - Host OS: Windows 11 host running Express HTTPS gateway.
-   - Stage 1 Multimodal Book Ingestion: Google Gen AI SDK (`@google/genai`) targeting `gemini-3.1-flash-lite` for chunking, lookout prompts, check-in questions, keyword clusters, canonical prototypes, diagnostic probes, and atomic `story_facts`.
-   - Stage 2 Socratic Answer Evaluation: System 1 local ONNX `Xenova/nli-deberta-v3-xsmall` + Frame Semantics Slot Delta Engine + Discourse Resolver + Dynamic Head-Noun Probing (<35ms on correct answers, zero runtime cloud network calls).
+   - Client device: iPhone 14 Plus (iOS Safari 17/18).
+   - Host OS: Windows 11 host running Express HTTPS gateway (:3000).
+   - Stage 1 Multimodal Book Ingestion: Google Gen AI SDK (`@google/genai`) targeting `gemini-3.1-flash-lite` with fallback to `gemini-2.5-flash` for chunking, lookout prompts, check-in questions, keyword clusters, canonical prototypes, diagnostic probes, and atomic `story_facts`. Supports JPEG, PNG, WebP, and native Apple HEIC/HEIF.
+   - Stage 2 Socratic Answer Evaluation: System 1 local ONNX `Xenova/nli-deberta-v3-xsmall` + Frame Semantics Slot Delta Engine + Discourse Resolver + Dynamic Head-Noun Probing + Tier 1 Fast-Path Priority (<10ms on exact prototype matches, zero runtime cloud network calls).
    - Mobile Camera Engine: WebRTC `navigator.mediaDevices.getUserMedia` continuous in-browser viewfinder + HTML5 `<canvas>` downsampling ($\le 1600\text{px}$, $\le 300\text{KB}$/page) + stationary 90° rotation + multi-sequence auto-rollover (>20 pages) + Safari WebKit HTML/empty error resilience.
    - Audio Coordinator Engine: Web Audio zero-buffer gesture unlock, natural 0.9x TTS cadence, `webkitSpeechRecognition` continuous transcript accumulation, mutual exclusivity collision barriers, hands-free auto-listening, and DeBERTa NLI voice retry detection.
-   - Network Transport: Cloudflare Tunnel (`https://*.trycloudflare.com`) / Local HTTPS with desktop QR code portal (`public/connect.html`).
+   - Full Single-Page Application (`public/js/app.js`): 9-state FSM (`STATE_SCAN`, `STATE_ANALYZING`, `STATE_LOOKOUT`, `STATE_CHECKIN`, `STATE_RECORDING`, `STATE_TRANSCRIPT_REVIEW`, `STATE_EVALUATING`, `STATE_FEEDBACK`, `STATE_COMPLETE`), attempt capping ($\le 2$), microturn support, confetti animations, re-entrancy locks, AbortController timeouts, and transparent `sessionStorage` persistence.
+   - Network Transport: Cloudflare Tunnel (`npm run tunnel` / `https://*.trycloudflare.com`) / Local HTTPS with desktop QR code portal (`public/connect.html`).
 
 2. **Current State & Progress Gate:**
-   - Modules 1, 2, 3, 3.5, 3.6, 3.7, 4, 5, and 5.5 are 100% complete, hardened, and verified across **129 automated tests (21 suites)** with 0 failures and 100% contract immutability.
-   - Full regression suite passing 129/129 tests (`npm run verify`).
+   - Modules 1, 2, 3, 3.5, 3.6, 3.7, 4, 5, 5.5, and 6 are 100% complete, hardened, calibrated, and verified across **150 automated tests (24 suites)** with 0 failures and 100% contract immutability.
+   - Full regression suite passing 150/150 tests (`npm run verify`).
 
 3. **Key Defect Fixes & Solutions Applied in this Session:**
    - **Deterministic Non-AI Rotation & Orientation Detection:**
@@ -46,12 +47,37 @@ To eliminate context loss between sessions, every handoff must maintain:
        3. Added an agent question guard preventing `PARTIAL_ACTION` from overriding valid agent nouns.
        4. Verified all 8 child test answers on Chunk 1: *"his friends"*, *"farm animals"*, and *"animals from the farm"* all awarded `MASTERED`, while unmentioned species (*"dogs"*, *"goats"*) and distractors receive targeted visual scaffolds.
 
+   - **Module 6 Safeguards & Optimizations Implemented:**
+     *Defect:* Potential edge cases identified in pre-mortem audit: partial rubric payloads, empty transcript submissions, double-tap re-entrancy on mobile buttons, clue loss on retries, DOM confetti clutter, session loss on page refresh, and hanging fetches on flaky networks.
+     *Fix:* Implemented 7 targeted safeguards in `public/js/app.js` and verified with 7 unit tests in `test/app_safeguards.test.js` (commit `35f4611`).
+   - **Autonomous UI & Pipeline Audit:**
+     *Verification:* Authored `scripts/autonomous_pipeline_ui_audit.js` validating 8 HTTP routes/assets, 17 visual/touch criteria ($\ge 56\text{px}$ targets, ARIA tags), 10 FSM state transitions, and 7 cognitive diagnostic categories.
+   - **Copyrighted Screenshot Pipeline Ingestion (*The Runaway Bunny* & *Rattles*):**
+     *Verification:* Authored `scripts/test_copyrighted_screenshots.js`. Ingested real PNG screenshots with live Gemini 3.1 Flash-Lite without mock AI. Verified 0 recitation blocks, 1:1 detail-preserving factual paraphrase, atomic propositions in `story_facts`, and local DeBERTa-v3 Socratic evaluations.
+   - **Native iPhone HEIC/HEIF Direct Ingestion (*Robert the Rose Horse*):**
+     *Defect:* Raw Apple camera captures (.HEIC) failed upload filter on backend (`ALLOWED_MIME_TYPES` only permitted JPEG/PNG/WebP).
+     *Fix:* Enhanced `routes/book_routes.js` and `services/gemini_service.js` to accept `image/heic` and `image/heif`, passing buffers directly to Gemini's native multimodal HEIC vision engine. Tested all 6 high-res iPhone photos (10.18 MB total) in `scripts/audit_robert_all_pages.js`.
+   - **Pipeline Calibration & Bias Elimination (5-Point Plan):**
+     *Defect:* In live testing of *Robert the Rose Horse* Chunk 1, child answering *"his friends"* was given a scaffold instead of mastery because:
+       1. Pronoun replacement produced ungrammatical `"Robert friends"` (missing genitive possessive).
+       2. Tier 1 prototype matching was shadowed by NLI probe evaluation.
+       3. Gemini generated leaky meta-cognitive hypothesis (`"The reader says..."`).
+       4. Chunk 3 grouped 4 pages (183–186), violating the Grade 2 3-page cognitive limit.
+       5. Acceptable phrasing overlap included common stopwords.
+     *Fix:*
+       1. Added genitive inflection in `services/discourse_resolver.js` (`"his"` $\rightarrow$ `"Robert's"`), restoring DeBERTa NLI entailment from 0.045 to >0.95.
+       2. Reordered `services/answer_evaluator.js` so Tier 1 prototype matcher evaluates first, granting `mastered` in $\le 2\text{ms}$ on exact author-vetted minimal cores.
+       3. Expanded `META_COGNITIVE_REGEX` in `services/gemini_service.js` to strip `"The reader says..."`.
+       4. Filtered stopwords in `services/rubric_matcher.js` `matchAcceptablePhrasings()`.
+       5. Added hard 2–3 page chunk ceiling in `prompts/book_analysis.js`.
+       6. Verified with `test/pipeline_calibration.test.js` (5/5 pass) and `scripts/verify_calibration_robert.js` (*"his friends"* $\rightarrow$ `mastered` in 2ms; *"his mother and father"* $\rightarrow$ `needs_scaffold` in 0ms).
+
 4. **Environment & Secrets:** Local `.env` holding `GEMINI_API_KEY` and `GEMINI_MODEL=gemini-3.1-flash-lite`.
-5. **Exact Next Command / Red State Action:** Implement **Module 6: Full SPA Orchestration & End-to-End Reading Flow** (`public/js/app.js`):
-   - Finite State Machine transitions (`STATE_SCAN` -> `STATE_ANALYZING` -> `STATE_LOOKOUT` -> `STATE_CHECKIN` -> `STATE_FEEDBACK` -> `STATE_COMPLETE`).
-   - Socratic attempt counter (max 2 attempts before gentle resolution).
-   - Celebration animations on mastery.
-   - Live parent-child reading test over Cloudflare HTTPS tunnel.
+5. **Exact Next Command / Red State Action:** Execute **Module 6 Human Gate**:
+   - Run `npm start` (or `launch_mobile_test.bat`).
+   - In another terminal, run `npm run tunnel` to expose port 3000 via Cloudflare.
+   - On an iPhone 14 Plus on Wi-Fi, open the tunnel URL (or scan QR code from `public/connect.html`).
+   - Conduct live physical co-reading test with a Grade 2 book.
 
 ---
 
@@ -62,6 +88,7 @@ To eliminate context loss between sessions, every handoff must maintain:
 * **Roadmap & Gates:** [roadmap.md](roadmap.md)
 * **Repository Entry & Live Checklist:** [README.md](README.md)
 * **Rattles Testing Benchmark:** [docs/rattles_testing_benchmark.md](docs/rattles_testing_benchmark.md)
+* **Calibration Plan Artifact:** [plan_pipeline_calibration.md](file:///C:/Users/kentc/.gemini/antigravity/brain/b2d3b0fa-d0db-4c58-889c-a73733db17eb/plan_pipeline_calibration.md)
 * **Session Log (This Document):** [SESSION_LOG.md](SESSION_LOG.md)
 
 ---
@@ -125,20 +152,30 @@ To eliminate context loss between sessions, every handoff must maintain:
   - [x] Dynamic head-noun extraction (`extractHeadNoun`) and SIMD `head_noun_entity` probing (`services/semantic_evaluator.js`)
   - [x] Agent question guard preventing `PARTIAL_ACTION` from overriding valid agents
   - [x] Live validation on physical book *Robert the Rose Horse* (6 pages, 0 recitation blocks, 17.3s latency, 20 facts, 98.6% entailment)
-- [ ] **Module 6: Full SPA Orchestration & End-to-End Reading Flow** (NEXT IMMEDIATE OBJECTIVE)
+- [x] **Module 6: Full SPA Orchestration & End-to-End Reading Flow** (Completed, Hardened & Calibrated)
+  - [x] Single-page UI (`index.html`, `style.css`, `app.js`), attempt capping ($\le 2$), CSS confetti, tunnel runbook (`npm run tunnel`)
+  - [x] 7 critical safeguards & optimizations in `public/js/app.js` (`test/app_safeguards.test.js`)
+  - [x] Autonomous UI & pipeline audit script (`scripts/autonomous_pipeline_ui_audit.js`)
+  - [x] Native iPhone HEIC/HEIF direct upload support in Express routes and Gemini multimodal service
+  - [x] Real copyrighted screenshot pipeline verification on *The Runaway Bunny* & *Rattles* (`scripts/test_copyrighted_screenshots.js`)
+  - [x] Live 6-page iPhone HEIC audit on *Robert the Rose Horse* (`scripts/audit_robert_all_pages.js`)
+  - [x] 5-point pipeline calibration eliminating false-strict and false-lenient biases (`test/pipeline_calibration.test.js`)
+  - [x] Full regression suite passing 150/150 tests across 24 suites with 100% contract immutability
+  - [ ] **Live Human Co-Reading Gate** (READY FOR USER LIVE TEST)
 
 ---
 
-## 4. Verification Commands for Resuming Agent
+## 4. Verification Commands for Resuming Agent / Human Operator
 
 To verify baseline health immediately upon resume:
 ```powershell
-# 1. Run full project regression suite (must pass 129/129 tests across 21 suites):
+# 1. Run full project regression suite (must pass 150/150 tests across 24 suites):
 npm test
 
 # 2. Verify test contract immutability:
 npm run verify
 
-# 3. Launch mobile testing environment with QR code portal:
-launch_mobile_test.bat
+# 3. Launch server + Cloudflare Tunnel for live iPhone testing:
+npm start
+npm run tunnel
 ```

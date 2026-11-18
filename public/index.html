@@ -4,23 +4,293 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>StoryScout - Grade 2 Reading Companion</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <!-- Fullscreen Confetti Particle Container -->
+  <div id="confetti-container" class="confetti-container" aria-hidden="true"></div>
+
+  <!-- Persistent Safari Audio Unlock Banner -->
+  <aside class="audio-unlock-banner">
+    <button type="button" id="btn-start-audio" class="touch-btn btn-unlock-audio" aria-label="Tap to enable audio and speech">
+      <span class="icon" aria-hidden="true">🔊</span>
+      <span class="text">Tap to Enable Sound & Speech</span>
+    </button>
+  </aside>
+
+  <!-- Global Error Banner -->
+  <div id="error-banner" class="error-banner" role="alert" aria-live="assertive" hidden></div>
+
   <div class="app-container">
+    <!-- Header with Active Model & Stage Status -->
     <header class="app-header">
+      <div class="header-badge-row">
+        <span class="badge model-badge">⚡ Gemini 3.1 Flash Lite</span>
+        <span id="status-badge" class="badge status-badge" role="status" aria-live="polite">📖 Ready to Read</span>
+      </div>
       <h1 class="app-title">📖 StoryScout</h1>
-      <p class="app-subtitle">Grade 2 Reading Companion & Camera Reader</p>
+      <p class="app-subtitle">Grade 2 Interactive Reading Companion</p>
     </header>
 
+    <!-- Hidden file/camera inputs for camera capture & fallback library -->
+    <input type="file" id="camera-input" accept="image/*" capture="environment" class="visually-hidden" aria-label="Take photo with camera">
+    <input type="file" id="file-input" accept="image/*" multiple class="visually-hidden" aria-label="Upload photos from library">
+
     <main id="main-content">
-      <div class="controls-card">
-        <a href="test_camera.html" class="touch-btn btn-primary" style="text-decoration: none;">
-          📸 Open Camera Tray Harness
-        </a>
-      </div>
+      <!-- =========================================================================
+           SCREEN 1: SCAN (Camera Viewfinder & Page Capture Tray)
+           ========================================================================= -->
+      <section id="screen-scan" class="screen-section screen-active" aria-label="Scan Book Pages Section">
+        <div class="card scan-card">
+          <div class="scan-card-header">
+            <h2 class="card-title">📸 Scan Your Storybook</h2>
+            <p class="card-desc">Aim the camera at page 1 and snap each page of the story!</p>
+          </div>
+
+          <!-- Camera Viewfinder -->
+          <div id="camera-viewfinder" class="camera-viewfinder">
+            <video id="camera-feed" autoplay playsinline muted></video>
+            <div class="shutter-flash" aria-hidden="true"></div>
+
+            <!-- Framing Guide -->
+            <div class="framing-guide-overlay" aria-hidden="true">
+              <div class="corner corner-tl"></div>
+              <div class="corner corner-tr"></div>
+              <div class="corner corner-bl"></div>
+              <div class="corner corner-br"></div>
+              <div class="framing-guide-box">
+                <span class="framing-hint">Align Book Page Inside Frame</span>
+              </div>
+            </div>
+
+            <!-- Dynamic next step prompt -->
+            <div id="next-step-prompt" class="next-step-prompt floating-prompt" role="status" aria-live="polite">
+              Align Page 1 inside viewfinder & tap Snap 📷
+            </div>
+
+            <!-- Viewfinder auxiliary controls -->
+            <div class="viewfinder-top-bar">
+              <button type="button" id="btn-toggle-fallback" class="touch-btn btn-viewfinder-aux" aria-label="Upload from Library" title="Upload from Library">
+                📁
+              </button>
+              <button type="button" id="btn-rotate-viewfinder" class="touch-btn btn-viewfinder-aux" aria-label="Rotate last page 90 degrees" title="Rotate 90°" disabled>
+                🔄
+              </button>
+            </div>
+          </div>
+
+          <!-- Viewfinder Bottom Action Controls -->
+          <div class="viewfinder-actions">
+            <button type="button" id="btn-retake-viewfinder" class="touch-btn btn-secondary action-btn-md" aria-label="Retake last captured page" disabled>
+              ↩️ Retake
+            </button>
+            <button type="button" id="btn-shutter" class="touch-btn shutter-button" aria-label="Take snapshot of current page">
+              <div class="shutter-inner"></div>
+            </button>
+            <button type="button" id="btn-open-review" class="touch-btn btn-secondary action-btn-md" aria-label="Review captured pages">
+              📖 Review (<span id="drawer-count-badge">0</span>)
+            </button>
+          </div>
+
+          <!-- Live Preview Pill -->
+          <div id="pill-latest-preview" class="latest-preview-pill" style="display: none;" role="button" aria-label="Open review drawer">
+            <span class="pill-dot"></span>
+            <span id="pill-text">1 Page Ready</span>
+          </div>
+
+          <!-- Analysis Action Bar -->
+          <div class="scan-submit-bar">
+            <button type="button" id="btn-analyze" class="touch-btn btn-primary btn-cta" aria-label="Analyze captured story pages with AI">
+              🚀 Analyze & Begin Story ➡️
+            </button>
+            <button type="button" id="btn-clear" class="touch-btn btn-danger btn-clear-compact" aria-label="Clear all captured pages" title="Clear All Pages">
+              🗑️
+            </button>
+          </div>
+
+          <!-- Live Metrics & Status -->
+          <div id="metrics-container" class="metrics-container" aria-live="polite"></div>
+          <div id="status-panel" class="status-panel" role="status" aria-live="polite"></div>
+        </div>
+
+        <!-- Collapsible Review Drawer -->
+        <div id="drawer-backdrop" class="drawer-backdrop" style="display: none;"></div>
+        <aside id="review-drawer" class="review-drawer collapsed" aria-label="Page Review Drawer" role="region">
+          <div class="drawer-handle-bar">
+            <div class="drawer-handle"></div>
+          </div>
+          <div class="drawer-header">
+            <h3>📖 Book Pages Carousel</h3>
+            <button type="button" id="btn-close-drawer" class="touch-btn btn-text-close" aria-label="Close page review drawer">✕</button>
+          </div>
+          <div class="drawer-body">
+            <!-- Multi-sequence tab container -->
+            <div id="sequence-switcher-container" class="sequence-switcher" style="display: none;"></div>
+            <span id="active-sequence-badge" class="badge" style="display: none;"></span>
+
+            <!-- Carousel -->
+            <div id="book-carousel" class="book-carousel"></div>
+            <div id="book-carousel-dots" class="book-carousel-dots"></div>
+
+            <!-- Auto-straighten helper button -->
+            <button type="button" id="btn-auto-straighten" class="touch-btn btn-secondary auto-straighten-btn" style="width: 100%; margin-top: 10px;" aria-label="Auto-straighten all sideways pages">
+              ✨ Auto-Straighten Sideways Pages
+            </button>
+
+            <!-- Filmstrip tray -->
+            <div id="filmstrip-tray" class="filmstrip-tray"></div>
+
+            <!-- Analysis results toggle -->
+            <button type="button" id="btn-toggle-results" class="touch-btn btn-secondary" style="display: none; width: 100%; margin-top: 10px;" aria-expanded="false">
+              📊 View Analysis Results
+            </button>
+            <div id="results-display" class="results-box" style="display: none;">
+              <pre id="results-json"></pre>
+            </div>
+          </div>
+        </aside>
+      </section>
+
+      <!-- =========================================================================
+           SCREEN 2: ANALYZING (Progress Indicator)
+           ========================================================================= -->
+      <section id="screen-analyzing" class="screen-section" aria-label="Analyzing Story Pages" hidden>
+        <div class="card status-hero-card">
+          <div class="spinner-pulse" aria-hidden="true"></div>
+          <h2 class="card-title">✨ Gemini is Reading Your Book...</h2>
+          <p class="card-desc">Finding the exciting story moments and setting up your reading adventure!</p>
+          <div class="loading-bar-container">
+            <div class="loading-bar-indicator"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =========================================================================
+           SCREEN 3: LOOKOUT (Pre-reading Scaffolding & Prompt)
+           ========================================================================= -->
+      <section id="screen-lookout" class="screen-section" aria-label="Lookout Clue Step" hidden>
+        <div class="card story-stage-card lookout-card">
+          <div class="stage-card-header">
+            <span class="stage-tag">👀 Look-Out Clue</span>
+            <span id="chunk-badge" class="badge chunk-badge">Pages 1-3</span>
+          </div>
+
+          <div class="lookout-content">
+            <div class="lookout-icon-hero" aria-hidden="true">🔍</div>
+            <p id="lookout-prompt-text" class="lookout-text">
+              Watch for what happens in this part of the story!
+            </p>
+          </div>
+
+          <div class="stage-actions">
+            <button type="button" id="btn-done-reading" class="touch-btn btn-primary btn-cta" aria-label="Finished reading, ready for question">
+              📖 I Finished Reading! Next ➡️
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- =========================================================================
+           SCREEN 4: CHECKIN (Comprehension Question & Push-to-Talk)
+           ========================================================================= -->
+      <section id="screen-checkin" class="screen-section" aria-label="Check-in Question Step" hidden>
+        <div class="card story-stage-card checkin-card">
+          <div class="stage-card-header">
+            <span class="stage-tag">❓ Story Question</span>
+          </div>
+
+          <div class="checkin-content">
+            <p id="checkin-question-text" class="checkin-question">
+              What happened in the story?
+            </p>
+
+            <!-- Push-to-Talk Microphone Area -->
+            <div class="ptt-container">
+              <button type="button" id="btn-ptt" class="ptt-btn" aria-label="Push and hold to speak your answer" aria-pressed="false">
+                <span class="ptt-pulse-ring" aria-hidden="true"></span>
+                <span class="ptt-inner-circle" aria-hidden="true">🎙️</span>
+              </button>
+              <p class="ptt-instruction">
+                Press & Hold to Speak Your Answer
+              </p>
+            </div>
+
+            <!-- Live Speech Transcript Bubble -->
+            <div class="transcript-box">
+              <span class="transcript-label">🗣️ Your Answer:</span>
+              <p id="transcript-text" class="transcript-display">
+                (Tap and hold the microphone above to speak...)
+              </p>
+            </div>
+          </div>
+
+          <div class="stage-actions">
+            <button type="button" id="btn-check-answer" class="touch-btn btn-primary btn-cta" aria-label="Check my spoken answer">
+              🚀 Check Answer ➡️
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- =========================================================================
+           SCREEN 5: EVALUATING (Checking Answer)
+           ========================================================================= -->
+      <section id="screen-evaluating" class="screen-section" aria-label="Checking Your Answer" hidden>
+        <div class="card status-hero-card">
+          <div class="evaluating-pulse" aria-hidden="true">🧠</div>
+          <h2 class="card-title">Listening Closely...</h2>
+          <p class="card-desc">Checking your answer with our story guide!</p>
+        </div>
+      </section>
+
+      <!-- =========================================================================
+           SCREEN 6: FEEDBACK (Mastery Praise or Socratic Scaffold)
+           ========================================================================= -->
+      <section id="screen-feedback" class="screen-section" aria-label="Story Feedback Step" hidden>
+        <div class="card story-stage-card feedback-card">
+          <div class="feedback-hero-header">
+            <div class="feedback-icon" aria-hidden="true">🎉</div>
+            <h2 id="feedback-praise-text" class="feedback-praise">
+              Awesome job reading!
+            </h2>
+          </div>
+
+          <p id="feedback-scaffold-text" class="feedback-scaffold" hidden></p>
+
+          <div class="stage-actions feedback-actions">
+            <button type="button" id="btn-retry-speech" class="touch-btn btn-secondary btn-cta" aria-label="Try answering again" hidden>
+              🔄 Try Again
+            </button>
+            <button type="button" id="btn-next-chunk" class="touch-btn btn-primary btn-cta" aria-label="Advance to next story part">
+              🌟 Next Story Part ➡️
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- =========================================================================
+           SCREEN 7: COMPLETE (Story Finished Celebration & Restart)
+           ========================================================================= -->
+      <section id="screen-complete" class="screen-section" aria-label="Story Completed Celebration" hidden>
+        <div class="card story-stage-card complete-card">
+          <div class="complete-hero-icon" aria-hidden="true">🏆</div>
+          <h2 class="complete-title">Super Reader Achievement Unlocked!</h2>
+          <p class="complete-desc">
+            You read the whole story and solved every mystery! Give yourself a high five!
+          </p>
+
+          <div class="stage-actions">
+            <button type="button" id="btn-restart" class="touch-btn btn-primary btn-cta" aria-label="Scan and read another book">
+              📚 Read Another Book 🔄
+            </button>
+          </div>
+        </div>
+      </section>
     </main>
   </div>
+
+  <script type="module" src="js/app.js"></script>
 </body>
 </html>

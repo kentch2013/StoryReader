@@ -29,6 +29,9 @@ export function matchKeywordClusters(normalizedText, clusters = []) {
   });
 }
 
+const STOP_WORDS = new Set(['a', 'an', 'the', 'in', 'on', 'at', 'to', 'for', 'of', 'it', 'he', 'she', 'him', 'her', 'his', 'was', 'is', 'and']);
+const VAGUE_WORDS = new Set(['something', 'stuff', 'anything']);
+
 export function matchAcceptablePhrasings(normalizedText, phrasings = []) {
   if (!normalizedText || typeof normalizedText !== 'string' || !Array.isArray(phrasings) || phrasings.length === 0) {
     return false;
@@ -55,12 +58,16 @@ export function matchAcceptablePhrasings(normalizedText, phrasings = []) {
       return false;
     }
 
+    const contentWords = phraseWords.filter((w) => !STOP_WORDS.has(w));
+    if (contentWords.length > 0) {
+      const matches = contentWords.filter((w) => words.has(w)).length;
+      return matches / contentWords.length >= 0.6;
+    }
+
     const matches = phraseWords.filter((w) => words.has(w)).length;
     return matches / phraseWords.length >= 0.6;
   });
 }
-
-const STOP_WORDS = new Set(['a', 'an', 'the', 'in', 'on', 'at', 'to', 'for', 'of', 'it', 'he', 'she', 'him', 'her', 'his', 'was', 'is']);
 
 export function scoreMultiReference(normalizedText, canonicalPrototypes = [], threshold = 0.6) {
   if (!normalizedText || typeof normalizedText !== 'string' || !Array.isArray(canonicalPrototypes) || canonicalPrototypes.length === 0) {
@@ -103,6 +110,11 @@ export function scoreMultiReference(normalizedText, canonicalPrototypes = [], th
 
     if (normalizedText.includes(normProto)) {
       return { matched: true, isDistractor: false, prototypeType: prototype.type };
+    }
+
+    const hasVagueToken = Array.from(VAGUE_WORDS).some((vw) => textWords.has(vw) && !normProto.includes(vw));
+    if (hasVagueToken) {
+      continue;
     }
 
     const protoWords = normProto.split(' ').filter(Boolean);

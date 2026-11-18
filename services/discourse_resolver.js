@@ -10,9 +10,22 @@
  */
 
 const CROSS_GEN_REGEX = /\b(mothers?|fathers?|moms?|dads?)\s+(nana|grandma|grandmother|granny|grandpa|grandfather|gramps)\b/i;
+const POSSESSIVE_PRONOUNS = new Set(['his', 'her', 'their', 'its']);
 
 function escapeRegex(str = '') {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function formatReferentReplacement(pronoun, rawName, rubric) {
+  const safe = getSafeReferentReplacement(rawName, rubric);
+  const name = (safe || '').toLowerCase().trim();
+  if (POSSESSIVE_PRONOUNS.has(pronoun.toLowerCase())) {
+    if (name.endsWith("'s") || name.endsWith("'")) {
+      return name;
+    }
+    return name.endsWith('s') ? `${name}'` : `${name}'s`;
+  }
+  return name;
 }
 
 /**
@@ -112,7 +125,7 @@ export function resolveDiscourse(normalizedTranscript = '', rubric = {}, options
   const storyRecipient = (rubric.story_context?.recipient || rubric.entity_graph?.discourse_referents?.him || '').toLowerCase().trim();
   if (storyRecipient) {
     const beneficiaryMatch = transcript.match(
-      /\b(?:for\s+(?:a\s+|the\s+|his\s+|her\s+|my\s+)?(dog|cat|pet|grampa|grandpa|friend|someone\s+else|sister|brother|dad|father)|(?:a\s+|the\s+|his\s+|her\s+|my\s+)?(dog|cat|pet|grampa|grandpa|friend|someone\s+else|sister|brother|dad|father)'s\s+(?:hat|item|thing|stuff|one))\b/i
+      /\b(?:for\s+(?:a\s+|the\s+|his\s+|her\s+|my\s+)?(dog|cat|pet|grampa|grandpa|friend|someone\s+else|sister|brother|dad|father)|(?:a\s+|the\s+|his\s+|her\s+|my\s+)?(dog|cat|pet|grampa|grandpa|friend|someone\s+else|sister|brother|dad|father)(?:'s|s)?\s+(?:hat|item|thing|stuff|one))\b/i
     );
     if (beneficiaryMatch) {
       const statedBeneficiary = (beneficiaryMatch[1] || beneficiaryMatch[2]).toLowerCase();
@@ -225,14 +238,16 @@ export function resolveDiscourse(normalizedTranscript = '', rubric = {}, options
     }
   }
 
+  const pluralPronouns = ['they', 'them', 'their'];
+
   // Resolve unambiguous single-candidate gender pronouns if not explicitly provided in discourseReferents
   if (containsFemalePronoun && !discourseReferents?.she && discourseReferents?.she !== null) {
     const femaleChars = entityGraph?.characters?.filter((c) => c.gender === 'female') || [];
     if (femaleChars.length === 1) {
       const rawName = femaleChars[0].canonical_name || femaleChars[0].canonical_id;
-      const name = getSafeReferentReplacement(rawName, rubric);
       femalePronouns.forEach((p) => {
-        transcript = transcript.replace(new RegExp(`\\b${p}\\b`, 'gi'), name);
+        const rep = formatReferentReplacement(p, rawName, rubric);
+        transcript = transcript.replace(new RegExp(`\\b${p}\\b`, 'gi'), rep);
       });
     }
   }
@@ -241,9 +256,21 @@ export function resolveDiscourse(normalizedTranscript = '', rubric = {}, options
     const maleChars = entityGraph?.characters?.filter((c) => c.gender === 'male') || [];
     if (maleChars.length === 1) {
       const rawName = maleChars[0].canonical_name || maleChars[0].canonical_id;
-      const name = getSafeReferentReplacement(rawName, rubric);
       malePronouns.forEach((p) => {
-        transcript = transcript.replace(new RegExp(`\\b${p}\\b`, 'gi'), name);
+        const rep = formatReferentReplacement(p, rawName, rubric);
+        transcript = transcript.replace(new RegExp(`\\b${p}\\b`, 'gi'), rep);
+      });
+    }
+  }
+
+  const containsPluralPronoun = pluralPronouns.some((p) => new RegExp(`\\b${p}\\b`, 'i').test(transcript));
+  if (containsPluralPronoun && !discourseReferents?.they && discourseReferents?.they !== null) {
+    const pluralChars = entityGraph?.characters?.filter((c) => c.gender === 'plural' || c.is_plural) || [];
+    if (pluralChars.length === 1) {
+      const rawName = pluralChars[0].canonical_name || pluralChars[0].canonical_id;
+      pluralPronouns.forEach((p) => {
+        const rep = formatReferentReplacement(p, rawName, rubric);
+        transcript = transcript.replace(new RegExp(`\\b${p}\\b`, 'gi'), rep);
       });
     }
   }
@@ -262,11 +289,13 @@ export function resolveDiscourse(normalizedTranscript = '', rubric = {}, options
       );
       if (char?.gender === 'female' || activeGender === 'female') {
         femalePronouns.forEach((p) => {
-          transcript = transcript.replace(new RegExp(`\\b${p}\\b`, 'gi'), resolvedName);
+          const rep = formatReferentReplacement(p, resolvedName, rubric);
+          transcript = transcript.replace(new RegExp(`\\b${p}\\b`, 'gi'), rep);
         });
       } else if (char?.gender === 'male' || activeGender === 'male') {
         malePronouns.forEach((p) => {
-          transcript = transcript.replace(new RegExp(`\\b${p}\\b`, 'gi'), resolvedName);
+          const rep = formatReferentReplacement(p, resolvedName, rubric);
+          transcript = transcript.replace(new RegExp(`\\b${p}\\b`, 'gi'), rep);
         });
       }
     } else {
@@ -297,11 +326,13 @@ export function resolveDiscourse(normalizedTranscript = '', rubric = {}, options
         );
         if (char?.gender === 'female' || activeGender === 'female') {
           femalePronouns.forEach((p) => {
-            transcript = transcript.replace(new RegExp(`\\b${p}\\b`, 'gi'), resolvedActionCandidate);
+            const rep = formatReferentReplacement(p, resolvedActionCandidate, rubric);
+            transcript = transcript.replace(new RegExp(`\\b${p}\\b`, 'gi'), rep);
           });
         } else if (char?.gender === 'male' || activeGender === 'male') {
           malePronouns.forEach((p) => {
-            transcript = transcript.replace(new RegExp(`\\b${p}\\b`, 'gi'), resolvedActionCandidate);
+            const rep = formatReferentReplacement(p, resolvedActionCandidate, rubric);
+            transcript = transcript.replace(new RegExp(`\\b${p}\\b`, 'gi'), rep);
           });
         }
       } else {
@@ -332,9 +363,9 @@ export function resolveDiscourse(normalizedTranscript = '', rubric = {}, options
   if (discourseReferents) {
     for (const [pronoun, referent] of Object.entries(discourseReferents)) {
       if (typeof referent === 'string' && referent.trim()) {
-        const safeReferent = getSafeReferentReplacement(referent, rubric);
+        const rep = formatReferentReplacement(pronoun, referent, rubric);
         const regex = new RegExp(`\\b${escapeRegex(pronoun)}\\b`, 'gi');
-        transcript = transcript.replace(regex, safeReferent);
+        transcript = transcript.replace(regex, rep);
       }
     }
   }

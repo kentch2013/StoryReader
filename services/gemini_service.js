@@ -207,7 +207,7 @@ export function getMockBookAnalysis(files = []) {
 
 export function sanitizeAnalysisProbes(analysis) {
   if (!analysis || !Array.isArray(analysis.chunks)) return analysis;
-  const META_COGNITIVE_REGEX = /^(?:(?:child|student|user)\s+)?(understands|identifies|identified|knows|confuses|confused|repeats|repeated|focused\s+on|believes|thinks|recalls)\s+(?:that\s+)?/i;
+  const META_COGNITIVE_REGEX = /^(?:(?:the\s+)?(?:child|student|user|reader|speaker)\s+)?(?:understands|identifies|identified|knows|confuses|confused|repeats|repeated|focused\s+on|believes|thinks|recalls|says|said|states|stated|mentions|mentioned)\s+(?:that\s+)?/i;
   const LEADING_INTERROGATIVE_REGEX = /^(?:who|what|why|where|when|how|did|does|do|is|are|was|were|can|could|would)\s+(?:did\s+|does\s+|will\s+|was\s+|is\s+)?/i;
 
   for (const chunk of analysis.chunks) {
@@ -221,6 +221,9 @@ export function sanitizeAnalysisProbes(analysis) {
           if (LEADING_INTERROGATIVE_REGEX.test(hyp)) {
             hyp = hyp.replace(LEADING_INTERROGATIVE_REGEX, '').trim();
             hyp = hyp.replace(/\?+$/, '').trim();
+          }
+          if (/^['"]/.test(hyp)) {
+            hyp = hyp.replace(/^['"]+/, '').replace(/['"]+$/, '').trim();
           }
           if (hyp.length > 0) {
             probe.hypothesis = hyp.charAt(0).toUpperCase() + hyp.slice(1);
@@ -338,6 +341,7 @@ export async function analyzeBookPages(files) {
     for (const chunk of analysis.chunks) {
       chunk.grounding_verification = await verifyGroundingFidelity(chunk, {
         imageBuffer: files[0]?.buffer,
+        mimeType: files[0]?.mimetype,
       });
     }
   }
