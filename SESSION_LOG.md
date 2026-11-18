@@ -1,9 +1,9 @@
 # StoryScout Session Handoff Log
 
-**Session Date:** 2026-11-17 / 2026-11-18 (Wrapup: Module 6 Full SPA Orchestration, Safeguards, Native HEIC Support & Pipeline Calibration)  
+**Session Date:** 2026-11-17 / 2026-11-18 (Wrapup: Module 6 Full SPA Orchestration, Mobile Viewfinder UI Redesign & Safari Audio Synchronous Architecture)  
 **Repository:** `kentch2013/StoryReader`  
 **Current Branch:** `main`  
-**Milestone:** **Modules 1 through 6** Completed, Hardened, Calibrated & Verified across **150 automated tests (24 suites)** with 0 failures and 100% test contract immutability. Module 6 Single-Page App (`public/js/app.js`), 9-state Finite State Machine, accessible mobile layout with $\ge 56\text{px}$ touch targets, 7 critical safeguards & optimizations (`test/app_safeguards.test.js`), native iPhone HEIC/HEIF direct upload support, full autonomous UI & pipeline audit, live multimodal ingestion of copyrighted fixtures (*The Runaway Bunny* & *Rattles*) with 0 recitation blocks, and 5-point pipeline calibration eliminating false-strict/false-lenient biases (`test/pipeline_calibration.test.js`) are 100% verified. Ready for **Live Human Co-Reading Gate**.
+**Milestone:** **Modules 1 through 6** Completed, Hardened, Calibrated & Verified across **150 automated tests (24 suites)** with 0 failures and 100% test contract immutability. Module 6 Single-Page App (`public/js/app.js`), 9-state Finite State Machine, accessible mobile layout with $\ge 56\text{px}$ touch targets, 7 critical safeguards & optimizations (`test/app_safeguards.test.js`), native iPhone HEIC/HEIF direct upload support, full autonomous UI & pipeline audit, live multimodal ingestion of copyrighted fixtures (*The Runaway Bunny* & *Rattles*) with 0 recitation blocks, 5-point pipeline calibration eliminating false-strict/false-lenient biases (`test/pipeline_calibration.test.js`), modern mobile viewfinder redesign with horizontal carousel, and synchronous Safari Web Speech synthesis execution with sequential speech-to-listening handoff are 100% verified. Ready for **Live Human Co-Reading Gate**.
 
 ---
 
@@ -71,6 +71,34 @@ To eliminate context loss between sessions, every handoff must maintain:
        4. Filtered stopwords in `services/rubric_matcher.js` `matchAcceptablePhrasings()`.
        5. Added hard 2–3 page chunk ceiling in `prompts/book_analysis.js`.
        6. Verified with `test/pipeline_calibration.test.js` (5/5 pass) and `scripts/verify_calibration_robert.js` (*"his friends"* $\rightarrow$ `mastered` in 2ms; *"his mother and father"* $\rightarrow$ `needs_scaffold` in 0ms).
+    - **Viewfinder UI Redesign & Compact Mobile Layout:**
+      *User Requirement:* Remove distracting headers that pushed camera feed up; relocate action buttons directly above chapter switcher; widen Snap button; replace vertical page list with horizontal swipe carousel; reduce analysis summary card screen space.
+      *Fix:*
+        1. Cleaned `public/index.html` by removing `Scan Your Storybook` header and viewfinder alignment subtext, reclaiming vertical viewport space.
+        2. Added top utility menu: Speaker button (`#btn-start-audio`), Book button (`#btn-open-review`), and 3.5in floppy disk button (`#btn-saved-books`).
+        3. Positioned 4-button action toolbar (`[↩️ Retake] [📷 SNAP] [✨ Analyze] [🗑️ Trash]`) directly above chapter progression controls, widening `Snap` to fill center grid space.
+        4. Transformed page review into a horizontal CSS scroll-snap carousel with dot chips and 3-button per-page actions (`[↩️ Retake] [🔄 Rotate] [❓ Question]`).
+        5. Replaced large inline analysis card with a zero-screen-space `[🎉 Story Ready ℹ️]` drawer badge opening a modal dialog on demand.
+    - **Carousel Question Button Ungreying & Analysis State Synchronization:**
+      *Defect:* After analysis completed, the carousel question button remained greyed-out and disabled because `updateQuestionButtonStates()` was not invoked on analysis completion and `onAnalyzeSuccess` was not wired to `app.setBookData()`.
+      *Fix:* Added live DOM ungreying in `CameraTrayUI.updateQuestionButtonStates()`, removing `disabled` and swapping `.is-disabled` for `.is-ready`. Connected `onAnalyzeSuccess` callback in `public/js/app.js` to hydrate `bookData` immediately upon API response.
+    - **Synchronous Mobile Safari Speech Synthesis Execution & Gesture Activation:**
+      *Defect:* Clicking `[❓ Question]` resulted in no spoken sound; the app immediately opened the microphone and listened before asking the question out loud.
+      *Root Cause:* In `SafariAudioManager.speak()`, a 150ms settling timeout (`await setTimeout(150)`) preceded `speechSynthesis.speak(utterance)`. In iOS Safari / WebKit, any asynchronous delay after a user touch revokes the gesture token, causing Safari to reject speech (`onerror: 'not-allowed'`). Because `speak()` rejected immediately, `_presentAndAskPageQuestion()` fell straight into `startWaitingForAnswer()`, opening the microphone before speech occurred.
+      *Fix:*
+        1. Removed `setTimeout` delay from `SafariAudioManager.speak()`, invoking `speechSynthesis.speak(utterance)` synchronously within the touch event call stack.
+        2. Retained `this._currentUtterance` to prevent WebKit garbage collection mid-sentence.
+        3. Removed blocking `await audioManager.unlock()` from `askQuestionsAboutPage()`, backgrounding audio context unlock without yielding the event turn.
+        4. Added safe 12s watchdog timer to prevent speech coordinator deadlocks.
+    - **Sequential Speech-to-Listening Handoff & Child Thinking Pause Window:**
+      *Implementation:*
+        1. In `_presentAndAskPageQuestion()`, status shows `🔊 Speaking Question...` while question text is spoken strictly without question numbers or preambles.
+        2. Awaits speech completion (`utterance.onend`) before initiating `startWaitingForAnswer()`.
+        3. In `startWaitingForAnswer()`, opens the microphone and provides a generous 3.2s–4.0s pause tolerance so children are not cut off mid-thought.
+        4. Tapping question text at any time re-reads the question aloud.
+        5. Tapping top speaker icon speaks `"Sound is on! Tap the question button to hear questions."` as an audible verification test.
+    - **Gemini Model 503 High-Demand Fallback:**
+      *Configuration:* Set fallback model to `gemini-3.5-flash-lite` in `services/gemini_service.js` so transient 503 errors on `gemini-3.1-flash-lite` automatically fall back without user friction.
 
 4. **Environment & Secrets:** Local `.env` holding `GEMINI_API_KEY` and `GEMINI_MODEL=gemini-3.1-flash-lite`.
 5. **Exact Next Command / Red State Action:** Execute **Module 6 Human Gate**:
@@ -160,6 +188,8 @@ To eliminate context loss between sessions, every handoff must maintain:
   - [x] Real copyrighted screenshot pipeline verification on *The Runaway Bunny* & *Rattles* (`scripts/test_copyrighted_screenshots.js`)
   - [x] Live 6-page iPhone HEIC audit on *Robert the Rose Horse* (`scripts/audit_robert_all_pages.js`)
   - [x] 5-point pipeline calibration eliminating false-strict and false-lenient biases (`test/pipeline_calibration.test.js`)
+  - [x] Viewfinder UI redesign (top utility menu, 4-button action bar, horizontal swipe carousel with 3-action buttons, zero-space summary modal)
+  - [x] Synchronous mobile Safari Web Speech synthesis execution and sequential speech-to-listening handoff with child pause tolerance
   - [x] Full regression suite passing 150/150 tests across 24 suites with 100% contract immutability
   - [ ] **Live Human Co-Reading Gate** (READY FOR USER LIVE TEST)
 

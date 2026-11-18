@@ -97,14 +97,22 @@ Before writing code, the following six core failure modes have been analyzed and
      - 🔄 **"Try Again"** (re-opens the microphone if Safari misheard or cut them off).
   3. Parent fallback: Optional tap-to-edit text box in case child speech is unintelligible to Safari STT.
 
-### Risk 4: iOS Web Audio & Web Speech Session Collisions
-* **Root Cause:** On iOS WebKit, running `speechSynthesis.speak()` (TTS) and `webkitSpeechRecognition` (STT) simultaneously or without audio clearing locks the device audio session. STT fails with `audio-capture` errors, or TTS is silenced. Furthermore, iOS blocks audio until user interaction.
+### Risk 4: iOS Web Audio & Web Speech Session Collisions & User Activation Pruning
+* **Root Cause:** On iOS WebKit, running `speechSynthesis.speak()` (TTS) and `webkitSpeechRecognition` (STT) simultaneously or without audio clearing locks the device audio session. STT fails with `audio-capture` errors, or TTS is silenced. Furthermore:
+  - Mobile Safari strictly enforces a synchronous user activation requirement for `speechSynthesis.speak()`. Any asynchronous microtask jump or `setTimeout` delay between a touch event and `speak()` causes WebKit to revoke the activation token, throwing `onerror: 'not-allowed'`.
+  - Prematurely initiating STT while TTS is resolving cancels the speech output before it can be heard by the child.
 * **Architectural Solution:**
-  1. **Strict Audio State Coordinator (`audio_coordinator.js`):**
-     - Before opening STT: explicitly call `window.speechSynthesis.cancel()`.
-     - Before triggering TTS: stop any running recognition instances and release the mic stream.
-  2. **Gesture-Gated Audio Unlocking:** An initial "Let's Read!" or "Start Chunk" tap fires a zero-volume audio pulse to unlock Safari's Web Audio / Speech subsystem.
-  3. Asynchronous voice selection: Listen to `speechSynthesis.onvoiceschanged` with fallback to default system voice if English voices load lazily.
+  1. **Synchronous Speech Synthesis Execution (`public/js/audio_manager.js`):**
+     - Eliminated artificial settling delays in `SafariAudioManager.speak()`. Utterance instantiation and `speechSynthesis.speak(utterance)` execute synchronously within the user touch/click event handler.
+     - Retained an instance reference (`this._currentUtterance`) to guard against WebKit garbage collection mid-sentence.
+     - Implemented a 12-second watchdog timeout so the coordinator never hangs indefinitely if mobile audio is suspended.
+  2. **Sequential Speech-to-Listening State Machine (`public/js/app.js`):**
+     - When `[❓ Question]` is tapped, the app reads strictly the question text out loud (`🔊 Speaking Question...`).
+     - Awaits `utterance.onend` before transitioning to listening mode (`🎙️ Listening...`).
+     - Provides a generous 3.2s–4.0s pause tolerance in speech recognition so children are never cut off mid-thought.
+     - Interactive fallback: Tapping question text at any time re-reads the question aloud; if audio was blocked by device mute switch, the status pill offers `🔊 Tap here to speak question aloud`.
+  3. **Gesture-Gated Audio Unlocking:** An initial tap on the top navigation speaker icon (`#btn-start-audio`) unlocks Web Audio and speaks a quick confirmation ("Sound is on!") to verify speaker volume.
+  4. Asynchronous voice selection: Listen to `speechSynthesis.onvoiceschanged` with fallback to default system voice if English voices load lazily.
 
 ### Risk 5: Google AI Studio Quota Constraints (15 RPM, 500 RPD) & Rate Limit Bounces
 * **Root Cause:** Free tier API quota enforces 15 requests/minute, 250,000 tokens/minute, and 500 requests/day. Uncoordinated rapid calls or transient capacity spikes could bounce 429/503 errors back to the user.

@@ -247,7 +247,7 @@ export function sanitizeAnalysisProbes(analysis) {
  */
 export async function executeBookAnalysisWithFallback(apiFn, options = {}) {
   const primaryModel = options.primaryModel || process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite';
-  const fallbackModel = options.fallbackModel || process.env.GEMINI_FALLBACK_MODEL || 'gemini-2.5-flash';
+  const fallbackModel = options.fallbackModel || process.env.GEMINI_FALLBACK_MODEL || 'gemini-3.5-flash-lite';
 
   let rawResponse;
   try {
@@ -256,10 +256,12 @@ export async function executeBookAnalysisWithFallback(apiFn, options = {}) {
     const errMsg = (err && typeof err.message === 'string') ? err.message : '';
     const is503 = err?.status === 503 ||
       errMsg.includes('503') ||
-      errMsg.toLowerCase().includes('high demand');
+      errMsg.toLowerCase().includes('high demand') ||
+      err?.status === 404 ||
+      errMsg.includes('404');
 
     if (is503) {
-      console.warn(`⚠️ [GEMINI 503 FALLBACK] Primary model '${primaryModel}' unavailable (503/high demand). Falling back to '${fallbackModel}'. Reason: ${errMsg}`);
+      console.warn(`⚠️ [GEMINI FALLBACK] Primary model '${primaryModel}' unavailable (${err?.status || '503/high demand'}). Falling back to '${fallbackModel}'. Reason: ${errMsg}`);
       rawResponse = await apiFn(fallbackModel);
     } else {
       throw err;
@@ -309,16 +311,20 @@ export async function analyzeBookPages(files) {
 
   const analysis = await executeBookAnalysisWithFallback(async (modelName) => {
     return await rateLimiter.executeWithRetry(async () => {
+      const config = {
+        systemInstruction: BOOK_ANALYSIS_SYSTEM_PROMPT,
+        responseMimeType: 'application/json',
+        responseSchema: BOOK_ANALYSIS_SCHEMA,
+        maxOutputTokens: 8192,
+      };
+      if (typeof modelName === 'string' && (modelName.includes('3.1') || modelName.includes('thinking'))) {
+        config.thinkingConfig = { thinkingBudget: 0 };
+      }
+
       const res = await ai.models.generateContent({
         model: modelName,
         contents,
-        config: {
-          systemInstruction: BOOK_ANALYSIS_SYSTEM_PROMPT,
-          responseMimeType: 'application/json',
-          responseSchema: BOOK_ANALYSIS_SCHEMA,
-          maxOutputTokens: 8192,
-          thinkingConfig: { thinkingBudget: 0 },
-        },
+        config,
       });
 
       const outcome = classifyModelResponse(res);
@@ -334,7 +340,7 @@ export async function analyzeBookPages(files) {
       }
 
       return res;
-    });
+    }, 1);
   });
 
   if (analysis && Array.isArray(analysis.chunks)) {

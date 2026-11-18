@@ -21,7 +21,7 @@
 | **Bench** | Rattles Real Pipeline Validation (Completed) | `prompts/book_analysis.js`, `services/discourse_resolver.js`, `services/semantic_evaluator.js`, `services/slot_delta_engine.js` | Q3 Trial: 10/10 passing (100%), Q4 Trial: 10/10 passing (100%), 68/68 regression tests | Live Gemini API + local ONNX evaluation with zero runtime LLM calls during speech |
 | **M4** | Camera & Canvas Tray (Completed & Verified) | `public/js/camera_tray.js`, continuous in-browser scanner, canvas downscaler, stationary rotation, multi-sequence | 85/85 tests passing, 17/17 camera tests, resolution capping ($\le 1600\text{px}$), payload compression ($\le 300\text{KB}$/page) | iPhone 14 Plus Safari: continuous rapid snap, stationary 90° rotate, multi-sequence pagination |
 | **M5** | Safari Audio Coordinator (Completed & Verified) | `public/js/audio_manager.js`, gesture unlock, TTS synthesizer, STT Push-to-Talk | 99/99 tests passing, 14/14 audio tests, mutual exclusivity collision guard, silence hesitation tolerance | iPhone 14 Plus Safari: speak sentence, check for no silence cutoff and clean audio output |
-| **M6** | Full SPA Orchestration (NEXT ACTIVE GATE) | `public/index.html`, `public/style.css`, `public/js/app.js`, Cloudflare Tunnel runbook | FSM state transitions, attempt limit counter ($\le 2$), chunk progression | Full parent-child reading test with physical book over HTTPS tunnel |
+| **M6** | Full SPA Orchestration, Viewfinder Redesign & Safari Audio Sync (Completed & Calibrated) | `public/index.html`, `public/style.css`, `public/js/app.js`, `public/js/camera_tray.js`, `public/js/audio_manager.js` | 150/150 tests passing across 24 suites, 100% contract immutability, UI pipeline audit passing | Full parent-child reading test with physical book over HTTPS tunnel |
 
 ---
 
@@ -232,6 +232,18 @@
     3. Meta-cognitive leak sanitization in `services/gemini_service.js`.
     4. Content-word filtering in `services/rubric_matcher.js` to eliminate stop-word false passes.
     5. Strict chunk ceiling ($\le 3$ pages) in `prompts/book_analysis.js`.
+  - **Mobile Viewfinder & Carousel Redesign:**
+    1. Streamlined top navigation bar with speaker audio toggle (`#btn-start-audio`), book page counter (`#btn-open-review`), and 3.5in floppy disk saved books library (`#btn-saved-books`).
+    2. Consolidated 4-button action toolbar (Retake, wide SNAP, Analyze, 2-tap Trash) directly above chapter progression controls.
+    3. Horizontal scroll-snap carousel with dot chips and 3-button actions per page (`[↩️ Retake] [🔄 Rotate] [❓ Question]`).
+    4. Carousel question button begins greyed out (`is-disabled`) and ungreys automatically upon analysis completion.
+    5. Compact zero-screen-space `[🎉 Story Ready ℹ️]` drawer badge opening summary modal on demand.
+  - **Synchronous Mobile Safari Speech Synthesis Execution:**
+    1. Zero-delay synchronous `speak()` execution inside touch/click events, preserving WebKit user activation token.
+    2. Retained `_currentUtterance` to prevent garbage collection pauses during playback.
+    3. Sequential speech-to-listening handoff: reads question out loud first, awaits `utterance.onend`, then opens microphone with generous 3.2s–4.0s pause tolerance.
+    4. Tap-to-read aloud interactive support on question text.
+    5. Automatic model fallback to `gemini-3.5-flash-lite` on transient 503 high demand.
 * **2. Code Verification:**
   - End-to-end integration test (`test/e2e_flow.test.js` - 9/9 passing).
   - Module 6 safeguards test (`test/app_safeguards.test.js` - 7/7 passing).

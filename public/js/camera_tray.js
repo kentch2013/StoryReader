@@ -367,8 +367,61 @@ export class CameraTrayState {
 }
 
 /**
+ * Calculates a 3:4 portrait auto-crop rectangle for live video snapshots,
+ * aligning with the viewfinder framing guide and trimming off-screen sensor margins.
+ *
+ * @param {HTMLVideoElement|Object} source
+ * @param {Object} [options={}]
+ * @param {number} [options.targetAspect=0.75]
+ * @param {number} [options.guideInsetRatio=0.04]
+ * @returns {{ x: number, y: number, width: number, height: number, autoCropped: boolean }}
+ */
+export function calculateAutoCropRect(source, options = {}) {
+  const srcWidth = source.videoWidth || source.naturalWidth || source.width || 0;
+  const srcHeight = source.videoHeight || source.naturalHeight || source.height || 0;
+
+  if (!srcWidth || !srcHeight) {
+    return { x: 0, y: 0, width: srcWidth, height: srcHeight, autoCropped: false };
+  }
+
+  const {
+    targetAspect = 0.75, // 3:4 portrait
+    guideInsetRatio = 0.04,
+  } = options;
+
+  let visibleWidth = srcWidth;
+  let visibleHeight = srcHeight;
+  let offsetX = 0;
+  let offsetY = 0;
+
+  const currentAspect = srcWidth / srcHeight;
+
+  if (currentAspect > targetAspect) {
+    // Source is wider than 3:4 (e.g. 16:9 stream)
+    visibleWidth = Math.round(srcHeight * targetAspect);
+    offsetX = Math.round((srcWidth - visibleWidth) / 2);
+  } else if (currentAspect < targetAspect) {
+    // Source is taller than 3:4
+    visibleHeight = Math.round(srcWidth / targetAspect);
+    offsetY = Math.round((srcHeight - visibleHeight) / 2);
+  }
+
+  const insetX = Math.round(visibleWidth * guideInsetRatio);
+  const insetY = Math.round(visibleHeight * guideInsetRatio);
+
+  return {
+    x: Math.max(0, offsetX + insetX),
+    y: Math.max(0, offsetY + insetY),
+    width: Math.min(srcWidth, visibleWidth - (insetX * 2)),
+    height: Math.min(srcHeight, visibleHeight - (insetY * 2)),
+    autoCropped: true,
+  };
+}
+
+/**
  * Downsamples and compresses an image source to JPEG Blob <= 300KB using canvas.
  * Supports canvasFactory injection for Node/headless testing.
+ * Supports optional cropRect for viewfinder auto-cropping.
  *
  * @param {Blob|HTMLImageElement|ImageBitmap|Object} source - Image source or dimensions mock
  * @param {Object} [options]
@@ -376,6 +429,7 @@ export class CameraTrayState {
  * @param {number} [options.quality=0.8] - JPEG compression quality (0.0 to 1.0)
  * @param {Function} [options.canvasFactory=null] - Factory producing a canvas element
  * @param {string} [options.mimeType='image/jpeg'] - Target MIME type
+ * @param {Object} [options.cropRect=null] - Optional bounding box {x, y, width, height}
  * @returns {Promise<Blob>}
  */
 export async function compressImageToBlob(source, options = {}) {
@@ -384,6 +438,7 @@ export async function compressImageToBlob(source, options = {}) {
     quality = 0.8,
     canvasFactory = null,
     mimeType = 'image/jpeg',
+    cropRect = null,
   } = options;
 
   let imageElement = source;
@@ -410,21 +465,24 @@ export async function compressImageToBlob(source, options = {}) {
     }
   }
 
-  const srcWidth =
+  const rawWidth =
     imageElement.videoWidth ||
     imageElement.naturalWidth ||
     imageElement.width;
-  const srcHeight =
+  const rawHeight =
     imageElement.videoHeight ||
     imageElement.naturalHeight ||
     imageElement.height;
 
-  if (!srcWidth || !srcHeight) {
+  if (!rawWidth || !rawHeight) {
     if (objectUrlToRevoke && typeof URL !== 'undefined') {
       URL.revokeObjectURL(objectUrlToRevoke);
     }
     throw new Error('Cannot determine image dimensions');
   }
+
+  const srcWidth = cropRect ? cropRect.width : rawWidth;
+  const srcHeight = cropRect ? cropRect.height : rawHeight;
 
   const dims = calculateDownscaleDimensions(srcWidth, srcHeight, maxDimension);
 
@@ -454,7 +512,11 @@ export async function compressImageToBlob(source, options = {}) {
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
 
-  ctx.drawImage(imageElement, 0, 0, dims.width, dims.height);
+  if (cropRect) {
+    ctx.drawImage(imageElement, cropRect.x, cropRect.y, cropRect.width, cropRect.height, 0, 0, dims.width, dims.height);
+  } else {
+    ctx.drawImage(imageElement, 0, 0, dims.width, dims.height);
+  }
 
   if (objectUrlToRevoke && typeof URL !== 'undefined') {
     URL.revokeObjectURL(objectUrlToRevoke);
@@ -506,6 +568,7 @@ export async function rotateImageBlob(source, degrees = 90, options = {}) {
     quality = 0.8,
     canvasFactory = null,
     mimeType = 'image/jpeg',
+    cropRect = null,
   } = options;
 
   let imageElement = source;
@@ -531,21 +594,24 @@ export async function rotateImageBlob(source, degrees = 90, options = {}) {
     }
   }
 
-  const srcWidth =
+  const rawWidth =
     imageElement.videoWidth ||
     imageElement.naturalWidth ||
     imageElement.width;
-  const srcHeight =
+  const rawHeight =
     imageElement.videoHeight ||
     imageElement.naturalHeight ||
     imageElement.height;
 
-  if (!srcWidth || !srcHeight) {
+  if (!rawWidth || !rawHeight) {
     if (objectUrlToRevoke && typeof URL !== 'undefined') {
       URL.revokeObjectURL(objectUrlToRevoke);
     }
     throw new Error('Cannot determine image dimensions for rotation');
   }
+
+  const srcWidth = cropRect ? cropRect.width : rawWidth;
+  const srcHeight = cropRect ? cropRect.height : rawHeight;
 
   const dims = calculateDownscaleDimensions(srcWidth, srcHeight, maxDimension);
   const normDeg = ((degrees % 360) + 360) % 360;
@@ -591,7 +657,11 @@ export async function rotateImageBlob(source, degrees = 90, options = {}) {
     ctx.rotate(0);
   }
 
-  ctx.drawImage(imageElement, 0, 0, dims.width, dims.height);
+  if (cropRect) {
+    ctx.drawImage(imageElement, cropRect.x, cropRect.y, cropRect.width, cropRect.height, 0, 0, dims.width, dims.height);
+  } else {
+    ctx.drawImage(imageElement, 0, 0, dims.width, dims.height);
+  }
 
   if (objectUrlToRevoke && typeof URL !== 'undefined') {
     URL.revokeObjectURL(objectUrlToRevoke);
@@ -676,6 +746,11 @@ export class CameraTrayUI {
     this.resultsDisplay = this._resolveElement(options.resultsDisplay || '#results-display');
     this.activeSequenceBadge = this._resolveElement(options.activeSequenceBadge || '#active-sequence-badge');
 
+    // Chapter-based scanning controls
+    this.scanChapterBar = this._resolveElement(options.scanChapterBar || '#scan-chapter-bar');
+    this.scanChapterLabel = this._resolveElement(options.scanChapterLabel || '#scan-chapter-label');
+    this.btnAddChapter = this._resolveElement(options.btnAddChapter || '#btn-add-chapter');
+
     this.canvasFactory = options.canvasFactory || null;
     this.windowObj = options.windowObj || null;
 
@@ -683,6 +758,9 @@ export class CameraTrayUI {
     this.onAnalyzeError = options.onAnalyzeError || null;
     this.onPagesChanged = options.onPagesChanged || null;
     this.onStartReading = options.onStartReading || null;
+    this.isQuestionReadyForPage = options.isQuestionReadyForPage || null;
+    this.onAskPageQuestion = options.onAskPageQuestion || null;
+    this.onActivePageChange = options.onActivePageChange || null;
     this.lastAnalysisData = null;
 
     this.activeStream = null;
@@ -733,7 +811,10 @@ export class CameraTrayUI {
       this.analyzeButton.addEventListener('click', () => this.handleAnalyze());
     }
     if (this.clearButton) {
-      this.clearButton.addEventListener('click', () => this.clear());
+      this._bindTrashConfirmation();
+    }
+    if (this.btnAddChapter) {
+      this.btnAddChapter.addEventListener('click', () => this.addChapter());
     }
     if (this.openReviewButton) {
       this.openReviewButton.addEventListener('click', () => this.openDrawer());
@@ -1009,6 +1090,12 @@ export class CameraTrayUI {
       const origWidth = this.videoElement.videoWidth;
       const origHeight = this.videoElement.videoHeight;
 
+      // Auto-crop to framing guide area (eliminates background desks, keyboards, and black margins)
+      const cropRect = calculateAutoCropRect(this.videoElement, {
+        targetAspect: 0.75,
+        guideInsetRatio: 0.04,
+      });
+
       const windowObj = this.windowObj || (typeof window !== 'undefined' ? window : null);
       const deviceRotation = detectDeviceRotation(windowObj);
 
@@ -1019,8 +1106,9 @@ export class CameraTrayUI {
           maxDimension: this.maxDimension,
           quality: this.quality,
           canvasFactory: this.canvasFactory,
+          cropRect,
         });
-        const dims = calculateDownscaleDimensions(origWidth, origHeight, this.maxDimension);
+        const dims = calculateDownscaleDimensions(cropRect.width, cropRect.height, this.maxDimension);
         const isSwap = deviceRotation === 90 || deviceRotation === 270;
         compDims = {
           width: isSwap ? dims.height : dims.width,
@@ -1031,8 +1119,9 @@ export class CameraTrayUI {
           maxDimension: this.maxDimension,
           quality: this.quality,
           canvasFactory: this.canvasFactory,
+          cropRect,
         });
-        compDims = calculateDownscaleDimensions(origWidth, origHeight, this.maxDimension);
+        compDims = calculateDownscaleDimensions(cropRect.width, cropRect.height, this.maxDimension);
       }
 
       const captureDurationMs = Math.round(performance.now() - startTime);
@@ -1562,6 +1651,8 @@ export class CameraTrayUI {
       if (this.resultsDisplay) {
         this.resultsDisplay.style.display = 'none';
       }
+      this.renderCarousel();
+      this.updateQuestionButtonStates();
       if (this.onAnalyzeSuccess) {
         this.onAnalyzeSuccess(data);
       }
@@ -1608,87 +1699,147 @@ export class CameraTrayUI {
   /**
    * Renders celebratory "Start Reading" hero card inside the review drawer upon analysis completion.
    */
+  /**
+   * Configures analysis summary modal dialog and reveals compact header badge.
+   * Does NOT take up screen space in the drawer body unless explicitly opened by user.
+   */
   _renderAnalysisSuccessCard(data) {
     if (typeof document === 'undefined') return;
-    let container = document.getElementById('analysis-success-container');
-    if (!container && this.drawerElement) {
-      const drawerBody = this.drawerElement.querySelector('.drawer-body');
-      if (drawerBody) {
-        container = document.createElement('div');
-        container.id = 'analysis-success-container';
-        drawerBody.prepend(container);
-      }
-    }
-    if (!container) return;
 
     const chunkCount = data.chunks?.length || 0;
-    container.innerHTML = `
-      <div class="analysis-success-card">
-        <div class="analysis-success-title">
-          <span>🎉</span>
-          <span>Storybook Ready to Read!</span>
-        </div>
-        <p class="analysis-success-desc">
-          ${data.summary ? `<strong>${data.summary}</strong><br>` : ''}
-          Gemini organized your pages into <strong>${chunkCount} reading chunk${chunkCount === 1 ? '' : 's'}</strong>.
-        </p>
-        <button type="button" id="btn-start-reading-hero" class="touch-btn btn-start-reading-hero" aria-label="Start Reading Storybook">
+    const descText = `${data.summary ? `<strong>${data.summary}</strong><br><br>` : ''}Gemini organized your pages into <strong>${chunkCount} reading chunk${chunkCount === 1 ? '' : 's'}</strong>.`;
+
+    // 1. Ensure existing inline container takes up NO screen space
+    const existingInline = document.getElementById('analysis-success-container');
+    if (existingInline) {
+      existingInline.innerHTML = '';
+      existingInline.style.display = 'none';
+    }
+
+    // 2. Reveal header summary button if present
+    const summaryBtn = document.getElementById('btn-show-analysis-summary');
+    if (summaryBtn) {
+      summaryBtn.style.display = 'inline-flex';
+    }
+
+    // 3. Locate or dynamically create modal elements
+    let modal = document.getElementById('analysis-summary-modal');
+    let backdrop = document.getElementById('analysis-summary-backdrop');
+
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'analysis-summary-modal';
+      modal.className = 'analysis-summary-modal-window';
+      modal.setAttribute('role', 'dialog');
+      modal.setAttribute('aria-modal', 'true');
+      modal.style.display = 'none';
+
+      backdrop = document.createElement('div');
+      backdrop.id = 'analysis-summary-backdrop';
+      backdrop.className = 'drawer-backdrop modal-backdrop';
+      backdrop.style.display = 'none';
+
+      document.body.appendChild(backdrop);
+      document.body.appendChild(modal);
+    }
+
+    modal.innerHTML = `
+      <div class="analysis-modal-header">
+        <h3 id="analysis-modal-title" class="analysis-modal-title">🎉 Storybook Ready to Read!</h3>
+        <button type="button" id="btn-close-analysis-modal" class="touch-btn btn-text-close" aria-label="Close story summary">✕</button>
+      </div>
+      <div class="analysis-modal-body">
+        <p id="analysis-modal-desc" class="analysis-modal-desc">${descText}</p>
+        <button type="button" id="btn-start-reading-hero" class="touch-btn btn-primary btn-cta btn-start-reading-hero" aria-label="Start Reading Storybook">
           🚀 Start Reading (Chunk 1) ➡️
         </button>
       </div>
     `;
 
-    const startBtn = container.querySelector('#btn-start-reading-hero');
+    const openModal = () => {
+      if (modal) modal.style.display = 'flex';
+      if (backdrop) backdrop.style.display = 'block';
+    };
+
+    const closeModal = () => {
+      if (modal) modal.style.display = 'none';
+      if (backdrop) backdrop.style.display = 'none';
+    };
+
+    if (summaryBtn) {
+      summaryBtn.onclick = (e) => {
+        if (e) e.preventDefault();
+        openModal();
+      };
+    }
+
+    const closeBtn = modal.querySelector('#btn-close-analysis-modal');
+    if (closeBtn) {
+      closeBtn.onclick = (e) => {
+        if (e) e.preventDefault();
+        closeModal();
+      };
+    }
+
+    if (backdrop) {
+      backdrop.onclick = () => closeModal();
+    }
+
+    const startBtn = modal.querySelector('#btn-start-reading-hero');
     if (startBtn) {
       const handleStart = (e) => {
         if (e) e.preventDefault();
+        closeModal();
         this.closeDrawer();
         if (this.onStartReading) {
           this.onStartReading(data);
         }
       };
-      startBtn.addEventListener('click', handleStart);
-      startBtn.addEventListener('touchend', handleStart);
+      startBtn.onclick = handleStart;
     }
   }
 
   /**
-   * Renders sequence switcher when multiple sequences exist.
-   * Format: [Sequence 1 (20 Pages)] [Sequence 2 (5 Pages)]
+   * Adds a new chapter sequence to the book.
+   */
+  addChapter() {
+    this.state.startNewSequence();
+    const chIdx = this.state.currentSequenceIndex + 1;
+    this.setStatus(`Started Chapter ${chIdx}. Aim camera at Chapter ${chIdx}, Page 1!`, 'info');
+    this.render();
+    if (this.onPagesChanged) {
+      this.onPagesChanged(this.state.pages);
+    }
+  }
+
+  /**
+   * Renders chapter sequence switcher.
+   * Format: [📖 Chapter 1 (3 pgs)] [📖 Chapter 2 (2 pgs)] [➕ New Chapter]
    */
   renderSequenceSwitcher() {
     if (!this.sequenceSwitcherElement) return;
 
     const seqCount = this.state.getSequenceCount();
-    if (seqCount <= 1) {
-      this.sequenceSwitcherElement.innerHTML = '';
-      this.sequenceSwitcherElement.style.display = 'none';
-      if (this.activeSequenceBadge) {
-        this.activeSequenceBadge.style.display = 'none';
-      }
-      return;
-    }
-
     this.sequenceSwitcherElement.style.display = 'flex';
     this.sequenceSwitcherElement.innerHTML = '';
 
     if (this.activeSequenceBadge) {
       this.activeSequenceBadge.style.display = 'inline-block';
-      this.activeSequenceBadge.textContent = `Sequence ${this.state.currentSequenceIndex + 1} of ${seqCount}`;
+      this.activeSequenceBadge.textContent = `📖 Chapter ${this.state.currentSequenceIndex + 1} of ${seqCount}`;
     }
 
     this.state.sequences.forEach((seq, index) => {
       const btn = document.createElement('button');
       btn.type = 'button';
       const isActive = index === this.state.currentSequenceIndex;
-      btn.className = `sequence-tab-btn touch-btn${isActive ? ' active' : ''}`;
+      btn.className = `sequence-tab-btn chapter-tab-btn touch-btn${isActive ? ' active' : ''}`;
       btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
-      btn.setAttribute('aria-label', `Switch to Sequence ${index + 1} (${seq.length} Pages)`);
-      btn.textContent = `Sequence ${index + 1} (${seq.length} Page${seq.length === 1 ? '' : 's'})`;
+      btn.setAttribute('aria-label', `Switch to Chapter ${index + 1} (${seq.length} Pages)`);
+      btn.textContent = `📖 Chapter ${index + 1} (${seq.length} pgs)`;
 
       btn.addEventListener('click', () => {
         this.state.switchSequence(index);
-        this.setStatus(`Switched to Sequence ${index + 1} (${seq.length} page${seq.length === 1 ? '' : 's'}).`, 'info');
+        this.setStatus(`Switched to Chapter ${index + 1} (${seq.length} page${seq.length === 1 ? '' : 's'}).`, 'info');
         this.render();
         if (this.onPagesChanged) {
           this.onPagesChanged(this.state.pages);
@@ -1697,18 +1848,71 @@ export class CameraTrayUI {
 
       this.sequenceSwitcherElement.appendChild(btn);
     });
+
+    // Button to start a new chapter
+    const addChapterBtn = document.createElement('button');
+    addChapterBtn.type = 'button';
+    addChapterBtn.className = 'sequence-tab-btn btn-add-chapter-tab touch-btn';
+    addChapterBtn.setAttribute('aria-label', 'Add next chapter to storybook');
+    addChapterBtn.innerHTML = '➕ New Chapter';
+    addChapterBtn.addEventListener('click', () => this.addChapter());
+    this.sequenceSwitcherElement.appendChild(addChapterBtn);
   }
 
   clear() {
+    this._resetTrashButtonUI();
     this.state.clear();
     this.render();
-    this.setStatus('Tray cleared.', 'info');
+    this.setStatus('Entire current book deleted.', 'info');
     if (this.metricsElement) {
       this.metricsElement.innerHTML = '';
     }
     if (this.onPagesChanged) {
       this.onPagesChanged(this.state.pages);
     }
+  }
+
+  _bindTrashConfirmation() {
+    if (!this.clearButton) return;
+    let confirmTimer = null;
+
+    this.clearButton.addEventListener('click', () => {
+      if (this.state.isEmpty()) {
+        this.setStatus('No pages in current book to delete.', 'info');
+        return;
+      }
+
+      if (this.clearButton.classList.contains('confirming-delete')) {
+        // Second confirmation tap: delete entire working book!
+        if (confirmTimer) clearTimeout(confirmTimer);
+        this.clearButton.classList.remove('confirming-delete');
+        this._resetTrashButtonUI();
+        this.clear();
+        this.setStatus('🗑️ Entire current book deleted.', 'info');
+      } else {
+        // First tap: request confirmation
+        this.clearButton.classList.add('confirming-delete');
+        const label = this.clearButton.querySelector('.btn-4-label');
+        const icon = this.clearButton.querySelector('.btn-4-icon');
+        if (label) label.textContent = 'Sure?';
+        if (icon) icon.textContent = '⚠️';
+        this.setStatus('Tap Trash again to confirm deleting the entire book.', 'warning');
+
+        confirmTimer = setTimeout(() => {
+          this.clearButton.classList.remove('confirming-delete');
+          this._resetTrashButtonUI();
+        }, 3500);
+      }
+    });
+  }
+
+  _resetTrashButtonUI() {
+    if (!this.clearButton) return;
+    this.clearButton.classList.remove('confirming-delete');
+    const label = this.clearButton.querySelector('.btn-4-label');
+    const icon = this.clearButton.querySelector('.btn-4-icon');
+    if (label) label.textContent = 'Trash';
+    if (icon) icon.textContent = '🗑️';
   }
 
   getPages() {
@@ -1728,7 +1932,12 @@ export class CameraTrayUI {
       this.analyzeButton.disabled = isAnalyzing || this.state.isEmpty();
       this.analyzeButton.setAttribute('aria-busy', isAnalyzing ? 'true' : 'false');
       const count = this.state.pages.length;
-      this.analyzeButton.textContent = isAnalyzing ? '⏳ Analyzing Book...' : (count > 0 ? `🚀 Analyze Pages (${count})` : '🚀 Analyze Pages with Gemini');
+      const label = this.analyzeButton.querySelector('.btn-4-label');
+      if (label) {
+        label.textContent = isAnalyzing ? 'Reading...' : (count > 0 ? `Analyze (${count})` : 'Analyze');
+      } else {
+        this.analyzeButton.textContent = isAnalyzing ? '⏳ Analyzing Book...' : (count > 0 ? `🚀 Analyze Pages (${count})` : '🚀 Analyze Pages with Gemini');
+      }
     }
     if (this.fileInput) this.fileInput.disabled = isAnalyzing;
     if (this.cameraInput) this.cameraInput.disabled = isAnalyzing;
@@ -1829,6 +2038,71 @@ export class CameraTrayUI {
     }
   }
 
+  /**
+   * Evaluates if a question is ready for the given page index and page object.
+   * Checks delegate first, then falls back to internal lastAnalysisData.
+   *
+   * @param {number} index
+   * @param {Object} page
+   * @returns {boolean}
+   */
+  isQuestionReady(index, page) {
+    if (typeof this.isQuestionReadyForPage === 'function') {
+      try {
+        const ready = this.isQuestionReadyForPage(index, page);
+        if (ready) return true;
+      } catch (_) {}
+    }
+    const data = this.lastAnalysisData;
+    if (data && Array.isArray(data.chunks) && data.chunks.length > 0) {
+      const pageNum = page?.pageNumber || (index + 1);
+      const match = data.chunks.find((c) => {
+        if (!c.page_range) return false;
+        const digits = c.page_range.match(/(\d+)(?:\s*-\s*(\d+))?/);
+        if (digits) {
+          const s = parseInt(digits[1], 10);
+          const e = digits[2] ? parseInt(digits[2], 10) : s;
+          return pageNum >= s && pageNum <= e;
+        }
+        return false;
+      }) || data.chunks.find((c) => c.chunk_id === pageNum) || data.chunks[Math.min(index, data.chunks.length - 1)];
+      return Boolean(match && match.checkin_question && match.checkin_question.trim().length > 0);
+    }
+    return false;
+  }
+
+  /**
+   * Updates question buttons in place (ungreys or greys them) across all rendered carousel slides.
+   */
+  updateQuestionButtonStates() {
+    if (!this.carouselElement) return;
+    const slides = this.carouselElement.querySelectorAll('.carousel-slide');
+    slides.forEach((slide) => {
+      const indexStr = slide.getAttribute('data-page-index');
+      const pageId = slide.getAttribute('data-page-id');
+      const index = parseInt(indexStr || '0', 10);
+      const page = this.state.pages.find((p) => p.id === pageId) || this.state.pages[index];
+
+      const isReady = this.isQuestionReady(index, page);
+      const qBtn = slide.querySelector('.btn-question-slide');
+      if (qBtn) {
+        if (isReady) {
+          qBtn.disabled = false;
+          qBtn.removeAttribute('aria-disabled');
+          qBtn.classList.remove('is-disabled');
+          qBtn.classList.add('is-ready');
+          qBtn.title = `Ask questions about Page ${page?.pageNumber || (index + 1)}`;
+        } else {
+          qBtn.disabled = true;
+          qBtn.setAttribute('aria-disabled', 'true');
+          qBtn.classList.add('is-disabled');
+          qBtn.classList.remove('is-ready');
+          qBtn.title = 'Analyze story to unlock questions';
+        }
+      }
+    });
+  }
+
   renderCarousel() {
     if (!this.carouselElement) return;
 
@@ -1850,6 +2124,8 @@ export class CameraTrayUI {
     this.carouselElement.innerHTML = '';
 
     this.state.pages.forEach((page, index) => {
+      const hasQuestion = this.isQuestionReady(index, page);
+
       const slide = document.createElement('div');
       slide.className = 'carousel-slide';
       slide.id = `carousel-slide-${page.id}`;
@@ -1865,31 +2141,44 @@ export class CameraTrayUI {
         <div class="carousel-img-wrap">
           <img src="${page.previewUrl || ''}" alt="Book Page ${page.pageNumber} of ${total}" class="carousel-img" />
         </div>
-        <div class="carousel-slide-actions">
-          <button type="button" class="touch-btn btn-auto-straighten-slide" data-action="auto-straighten" data-id="${page.id}" aria-label="Auto-straighten Page ${page.pageNumber}">
-            ✨ Auto-Straighten
-          </button>
-          <button type="button" class="touch-btn btn-rotate-slide" data-action="rotate" data-id="${page.id}" aria-label="Rotate Page ${page.pageNumber} 90 degrees">
-            🔄 Rotate 90°
-          </button>
-          <button type="button" class="touch-btn btn-retake-slide" data-action="retake" data-id="${page.id}" aria-label="Retake Page ${page.pageNumber}">
+        <div class="carousel-slide-actions carousel-3actions">
+          <button type="button" class="touch-btn action-icon-btn btn-retake-slide" data-action="retake" data-id="${page.id}" aria-label="Retake Page ${page.pageNumber}" title="Retake Page">
             ↩️ Retake
           </button>
-          <button type="button" class="touch-btn btn-delete-slide" data-action="delete" data-id="${page.id}" aria-label="Delete Page ${page.pageNumber}">
-            🗑️ Delete
+          <button type="button" class="touch-btn action-icon-btn btn-rotate-slide" data-action="rotate" data-id="${page.id}" aria-label="Rotate Page ${page.pageNumber} 90 degrees" title="Rotate 90°">
+            🔄 Rotate
           </button>
+          <button type="button" class="touch-btn action-icon-btn btn-question-slide ${hasQuestion ? 'is-ready' : 'is-disabled'}" data-action="question" data-id="${page.id}" data-page-index="${index}" aria-label="Ask questions about Page ${page.pageNumber}" title="${hasQuestion ? 'Ask questions about this page' : 'Analyze story to unlock questions'}" ${hasQuestion ? '' : 'disabled aria-disabled="true"'}>
+            ❓ Question
+          </button>
+        </div>
+        <div class="slide-question-card" id="slide-question-card-${page.id}" style="display: none;">
+          <div class="slide-q-header">
+            <span class="slide-q-status" id="slide-q-status-${page.id}">🔊 Speaking...</span>
+          </div>
+          <p class="slide-q-text" id="slide-q-text-${page.id}"></p>
+          <div class="slide-q-listen-area">
+            <button type="button" class="touch-btn btn-slide-ptt" id="btn-slide-ptt-${page.id}" aria-label="Microphone answer button">
+              <span class="slide-ptt-pulse-ring" aria-hidden="true"></span>
+              <span class="slide-ptt-icon" aria-hidden="true">🎙️</span>
+              <span class="slide-ptt-label">Listening...</span>
+            </button>
+          </div>
+          <div class="slide-q-transcript" id="slide-q-transcript-${page.id}" style="display: none;">
+            <span class="transcript-prefix">🗣️ </span>
+            <span class="transcript-content" id="slide-transcript-text-${page.id}">Listening... Speak your answer!</span>
+          </div>
+          <div class="slide-q-feedback" id="slide-q-feedback-${page.id}" style="display: none;"></div>
         </div>
       `;
 
-      const autoStraightenBtn = slide.querySelector('.btn-auto-straighten-slide');
-      if (autoStraightenBtn) {
-        autoStraightenBtn.addEventListener('click', async () => {
-          autoStraightenBtn.disabled = true;
-          try {
-            await this.autoStraightenPage(page.id);
-          } finally {
-            autoStraightenBtn.disabled = false;
-          }
+      const retakeBtn = slide.querySelector('.btn-retake-slide');
+      if (retakeBtn) {
+        retakeBtn.addEventListener('click', () => {
+          this.state.removePage(page.id);
+          this.render();
+          if (this.onPagesChanged) this.onPagesChanged(this.state.pages);
+          this.setStatus(`Retook Page ${page.pageNumber}. Ready for new capture.`, 'info');
         });
       }
 
@@ -1905,24 +2194,43 @@ export class CameraTrayUI {
         });
       }
 
-      const retakeBtn = slide.querySelector('.btn-retake-slide');
-      if (retakeBtn) {
-        retakeBtn.addEventListener('click', () => {
-          this.state.removePage(page.id);
-          this.render();
-          if (this.onPagesChanged) this.onPagesChanged(this.state.pages);
-          this.setStatus(`Retook Page ${page.pageNumber}. Ready for new capture.`, 'info');
-        });
-      }
+      const questionBtn = slide.querySelector('.btn-question-slide');
+      if (questionBtn) {
+        let lastTriggerTime = 0;
+        const triggerQuestion = (e) => {
+          const isReadyNow = this.isQuestionReady(index, page);
+          if (!isReadyNow) {
+            this.setStatus('Tap Analyze first to unlock questions for this page!', 'info');
+            return;
+          }
+          const now = Date.now();
+          if (now - lastTriggerTime < 500) return;
+          lastTriggerTime = now;
 
-      const deleteBtn = slide.querySelector('.btn-delete-slide');
-      if (deleteBtn) {
-        deleteBtn.addEventListener('click', () => {
-          this.state.removePage(page.id);
-          this.render();
-          if (this.onPagesChanged) this.onPagesChanged(this.state.pages);
-          this.setStatus(`Page ${page.pageNumber} deleted.`, 'info');
-        });
+          this.activePageIndex = index;
+
+          // Unlock audio context immediately on touch/click gesture
+          if (typeof window !== 'undefined') {
+            if (window.__audioManager && !window.__audioManager.isUnlocked) {
+              window.__audioManager.unlock().catch(() => {});
+            }
+            if (window.__storyReaderApp) {
+              if (!window.__storyReaderApp.bookData && this.lastAnalysisData) {
+                window.__storyReaderApp.setBookData(this.lastAnalysisData);
+              }
+              if (typeof window.__storyReaderApp.askQuestionsAboutPage === 'function') {
+                window.__storyReaderApp.askQuestionsAboutPage(index, page);
+                return;
+              }
+            }
+          }
+
+          if (typeof this.onAskPageQuestion === 'function') {
+            this.onAskPageQuestion(page, index);
+          }
+        };
+
+        questionBtn.addEventListener('click', triggerQuestion);
       }
 
       this.carouselElement.appendChild(slide);
@@ -1937,17 +2245,81 @@ export class CameraTrayUI {
         chip.setAttribute('aria-label', `Jump to Page ${page.pageNumber}`);
         chip.textContent = `Page ${page.pageNumber}`;
         chip.addEventListener('click', () => {
-          const targetSlide = this.carouselElement.querySelector(`[data-page-index="${index}"]`);
-          if (targetSlide) {
-            targetSlide.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-          }
-          this.carouselDotsElement.querySelectorAll('.carousel-dot-chip').forEach((c, i) => {
-            c.classList.toggle('active', i === index);
-          });
+          this.scrollToPageIndex(index);
         });
         this.carouselDotsElement.appendChild(chip);
       });
     }
+    this._bindCarouselScroll();
+  }
+
+  /**
+   * Smoothly scrolls the horizontal carousel to target page index.
+   * @param {number} index
+   */
+  scrollToPageIndex(index) {
+    if (!this.carouselElement) return;
+    const total = this.state.pages.length;
+    if (index < 0 || index >= total) return;
+    this.activePageIndex = index;
+    const targetSlide = this.carouselElement.querySelector(`[data-page-index="${index}"]`);
+    if (targetSlide) {
+      targetSlide.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }
+    if (this.carouselDotsElement) {
+      this.carouselDotsElement.querySelectorAll('.carousel-dot-chip').forEach((c, i) => {
+        c.classList.toggle('active', i === index);
+      });
+    }
+    if (typeof this.onActivePageChange === 'function') {
+      this.onActivePageChange(index, this.state.pages[index]);
+    }
+  }
+
+  /**
+   * Binds scroll-snap tracking so swiping carousel manually updates active page.
+   * @private
+   */
+  _bindCarouselScroll() {
+    if (!this.carouselElement || this._carouselScrollBound) return;
+    this._carouselScrollBound = true;
+    let scrollTimer = null;
+    this.carouselElement.addEventListener('scroll', () => {
+      clearTimeout(scrollTimer);
+      scrollTimer = setTimeout(() => {
+        const scrollLeft = this.carouselElement.scrollLeft;
+        const slideWidth = this.carouselElement.clientWidth || 320;
+        const total = this.state.pages.length;
+        if (total === 0) return;
+        const newIndex = Math.min(Math.max(0, Math.round(scrollLeft / slideWidth)), total - 1);
+        if (newIndex !== this.activePageIndex) {
+          this.activePageIndex = newIndex;
+          if (this.carouselDotsElement) {
+            this.carouselDotsElement.querySelectorAll('.carousel-dot-chip').forEach((c, i) => {
+              c.classList.toggle('active', i === newIndex);
+            });
+          }
+          if (typeof this.onActivePageChange === 'function') {
+            this.onActivePageChange(newIndex, this.state.pages[newIndex]);
+          }
+        }
+      }, 150);
+    }, { passive: true });
+  }
+
+  /**
+   * Auto-swipes to the next page on the right.
+   * @param {number} [currentIndex]
+   * @returns {number|null} Next page index or null if at end of sequence
+   */
+  swipeToNextPage(currentIndex) {
+    const fromIdx = (currentIndex !== undefined && currentIndex !== null) ? currentIndex : (this.activePageIndex || 0);
+    const nextIdx = fromIdx + 1;
+    if (nextIdx < this.state.pages.length) {
+      this.scrollToPageIndex(nextIdx);
+      return nextIdx;
+    }
+    return null;
   }
 
   /**
@@ -1959,14 +2331,28 @@ export class CameraTrayUI {
     const seqCount = this.state.getSequenceCount();
 
     if (this.openReviewButton) {
-      this.openReviewButton.textContent = `📖 Review Book (${totalAll})`;
-      this.openReviewButton.setAttribute('aria-label', `Review book pages (${totalAll} captured)`);
+      this.openReviewButton.setAttribute('aria-label', `Review current snapped book and questions (${totalAll} captured)`);
+      if (!this.openReviewButton.classList.contains('nav-icon-btn')) {
+        this.openReviewButton.textContent = `📖 Review Book (${totalAll})`;
+      }
     }
 
     if (this.drawerCountBadge) {
-      this.drawerCountBadge.textContent = seqCount > 1
-        ? `${totalAll} Pages (${seqCount} Sequences)`
-        : `${totalAll} Page${totalAll === 1 ? '' : 's'}`;
+      const chCount = this.state.getSequenceCount();
+      if (totalAll === 0) {
+        this.drawerCountBadge.textContent = '0';
+      } else if (chCount > 1) {
+        this.drawerCountBadge.textContent = `${chCount} Ch`;
+      } else {
+        this.drawerCountBadge.textContent = `Ch 1`;
+      }
+      this.drawerCountBadge.setAttribute('aria-label', `${chCount} chapter${chCount === 1 ? '' : 's'}, ${totalAll} total pages`);
+    }
+
+    if (this.scanChapterLabel) {
+      const chIdx = this.state.currentSequenceIndex + 1;
+      const chPages = this.state.pages.length;
+      this.scanChapterLabel.textContent = `📖 Chapter ${chIdx} (${chPages} Page${chPages === 1 ? '' : 's'})`;
     }
 
     if (this.latestPreviewPill) {
@@ -1999,7 +2385,12 @@ export class CameraTrayUI {
       this.analyzeButton.disabled = this.state.isEmpty();
       const isBusy = this.analyzeButton.getAttribute('aria-busy') === 'true';
       if (!isBusy) {
-        this.analyzeButton.textContent = totalAll > 0 ? `🚀 Analyze Pages (${totalAll})` : '🚀 Analyze Pages with Gemini';
+        const label = this.analyzeButton.querySelector('.btn-4-label');
+        if (label) {
+          label.textContent = totalAll > 0 ? `Analyze (${totalAll})` : 'Analyze';
+        } else {
+          this.analyzeButton.textContent = totalAll > 0 ? `🚀 Analyze Pages (${totalAll})` : '🚀 Analyze Pages with Gemini';
+        }
       }
     }
 

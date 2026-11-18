@@ -12,26 +12,35 @@
   <!-- Fullscreen Confetti Particle Container -->
   <div id="confetti-container" class="confetti-container" aria-hidden="true"></div>
 
-  <!-- Persistent Safari Audio Unlock Banner -->
-  <aside class="audio-unlock-banner">
-    <button type="button" id="btn-start-audio" class="touch-btn btn-unlock-audio" aria-label="Tap to enable audio and speech">
-      <span class="icon" aria-hidden="true">🔊</span>
-      <span class="text">Tap to Enable Sound & Speech</span>
-    </button>
-  </aside>
-
   <!-- Global Error Banner -->
   <div id="error-banner" class="error-banner" role="alert" aria-live="assertive" hidden></div>
 
   <div class="app-container">
-    <!-- Header with Active Model & Stage Status -->
-    <header class="app-header">
-      <div class="header-badge-row">
-        <span class="badge model-badge">⚡ Gemini 3.1 Flash Lite</span>
+    <!-- Top Navigation Bar Menu: Brand, Speaker, Current Book, Saved Books -->
+    <header class="app-header app-top-nav">
+      <div class="nav-brand">
+        <h1 class="app-title"><span class="app-logo" aria-hidden="true">📖</span> StoryScout</h1>
         <span id="status-badge" class="badge status-badge" role="status" aria-live="polite">📖 Ready to Read</span>
       </div>
-      <h1 class="app-title">📖 StoryScout</h1>
-      <p class="app-subtitle">Grade 2 Interactive Reading Companion</p>
+
+      <!-- Top Menu Icons: Speaker (Audio), Book (Current Snapped & Questions), Floppy Disk (Saved Questions) -->
+      <nav class="nav-menu-actions" aria-label="Main Utility Navigation">
+        <!-- 1. Speaker Icon Button (Replaces audio unlock banner) -->
+        <button type="button" id="btn-start-audio" class="touch-btn nav-icon-btn" aria-label="Enable Sound and Speech" title="Sound & Speech">
+          <span class="nav-btn-icon" aria-hidden="true">🔊</span>
+        </button>
+
+        <!-- 2. Book Icon Button (Access current snapped book and questions) -->
+        <button type="button" id="btn-open-review" class="touch-btn nav-icon-btn nav-book-btn" aria-label="Review current snapped book and questions" title="Current Book">
+          <span class="nav-btn-icon" aria-hidden="true">📖</span>
+          <span id="drawer-count-badge" class="nav-badge">0</span>
+        </button>
+
+        <!-- 3. 3.5in Floppy Disk Button (Access saved questions for a saved book) -->
+        <button type="button" id="btn-saved-books" class="touch-btn nav-icon-btn" aria-label="Access saved books and questions library" title="Saved Books Library">
+          <span class="nav-btn-icon" aria-hidden="true">💾</span>
+        </button>
+      </nav>
     </header>
 
     <!-- Hidden file/camera inputs for camera capture & fallback library -->
@@ -44,11 +53,6 @@
            ========================================================================= -->
       <section id="screen-scan" class="screen-section screen-active" aria-label="Scan Book Pages Section">
         <div class="card scan-card">
-          <div class="scan-card-header">
-            <h2 class="card-title">📸 Scan Your Storybook</h2>
-            <p class="card-desc">Aim the camera at page 1 and snap each page of the story!</p>
-          </div>
-
           <!-- Camera Viewfinder -->
           <div id="camera-viewfinder" class="camera-viewfinder">
             <video id="camera-feed" autoplay playsinline muted></video>
@@ -65,11 +69,6 @@
               </div>
             </div>
 
-            <!-- Dynamic next step prompt -->
-            <div id="next-step-prompt" class="next-step-prompt floating-prompt" role="status" aria-live="polite">
-              Align Page 1 inside viewfinder & tap Snap 📷
-            </div>
-
             <!-- Viewfinder auxiliary controls -->
             <div class="viewfinder-top-bar">
               <button type="button" id="btn-toggle-fallback" class="touch-btn btn-viewfinder-aux" aria-label="Upload from Library" title="Upload from Library">
@@ -81,16 +80,40 @@
             </div>
           </div>
 
-          <!-- Viewfinder Bottom Action Controls -->
-          <div class="viewfinder-actions">
-            <button type="button" id="btn-retake-viewfinder" class="touch-btn btn-secondary action-btn-md" aria-label="Retake last captured page" disabled>
-              ↩️ Retake
+          <!-- Viewfinder Bottom 4-Button Action Controls Bar: Retake, Snap, Analyze, Trash -->
+          <div class="viewfinder-actions-4col">
+            <!-- 1. Retake -->
+            <button type="button" id="btn-retake-viewfinder" class="touch-btn btn-secondary action-btn-4" aria-label="Retake last captured page" disabled>
+              <span class="btn-4-icon" aria-hidden="true">↩️</span>
+              <span class="btn-4-label">Retake</span>
             </button>
-            <button type="button" id="btn-shutter" class="touch-btn shutter-button" aria-label="Take snapshot of current page">
-              <div class="shutter-inner"></div>
+
+            <!-- 2. Snap (Wider Prominent Action) -->
+            <button type="button" id="btn-shutter" class="touch-btn shutter-button shutter-btn btn-snap action-btn-4 action-btn-snap" aria-label="Snap photo of book page">
+              <span class="shutter-inner">
+                <span class="shutter-icon" aria-hidden="true">📷</span>
+                <span class="shutter-text">SNAP</span>
+              </span>
             </button>
-            <button type="button" id="btn-open-review" class="touch-btn btn-secondary action-btn-md" aria-label="Review captured pages">
-              📖 Review (<span id="drawer-count-badge">0</span>)
+
+            <!-- 3. Analyze -->
+            <button type="button" id="btn-analyze" class="touch-btn btn-primary btn-cta action-btn-4 action-btn-analyze" aria-label="Analyze captured story pages with AI" disabled>
+              <span class="btn-4-icon" aria-hidden="true">🚀</span>
+              <span class="btn-4-label">Analyze</span>
+            </button>
+
+            <!-- 4. Trash (Requires 2-step confirmation) -->
+            <button type="button" id="btn-clear" class="touch-btn btn-danger action-btn-4 action-btn-trash" aria-label="Delete entire current book" title="Delete entire book">
+              <span class="btn-4-icon" aria-hidden="true">🗑️</span>
+              <span class="btn-4-label">Trash</span>
+            </button>
+          </div>
+
+          <!-- Active Chapter Bar: Scan in Chapters & Move to Next Chapter -->
+          <div class="scan-chapter-bar" id="scan-chapter-bar">
+            <span class="scan-chapter-label" id="scan-chapter-label">📖 Chapter 1 (0 Pages)</span>
+            <button type="button" id="btn-add-chapter" class="touch-btn btn-add-chapter" aria-label="Start scanning next chapter" title="Add Next Chapter">
+              ➕ Next Chapter
             </button>
           </div>
 
@@ -100,47 +123,45 @@
             <span id="pill-text">1 Page Ready</span>
           </div>
 
-          <!-- Analysis Action Bar -->
-          <div class="scan-submit-bar">
-            <button type="button" id="btn-analyze" class="touch-btn btn-primary btn-cta" aria-label="Analyze captured story pages with AI">
-              🚀 Analyze & Begin Story ➡️
-            </button>
-            <button type="button" id="btn-clear" class="touch-btn btn-danger btn-clear-compact" aria-label="Clear all captured pages" title="Clear All Pages">
-              🗑️
-            </button>
-          </div>
-
           <!-- Live Metrics & Status -->
           <div id="metrics-container" class="metrics-container" aria-live="polite"></div>
           <div id="status-panel" class="status-panel" role="status" aria-live="polite"></div>
         </div>
 
-        <!-- Collapsible Review Drawer -->
+        <!-- Collapsible Review Drawer: Current Book Pages & Questions -->
         <div id="drawer-backdrop" class="drawer-backdrop" style="display: none;"></div>
-        <aside id="review-drawer" class="review-drawer collapsed" aria-label="Page Review Drawer" role="region">
+        <aside id="review-drawer" class="review-drawer collapsed" aria-label="Current Book Review Drawer" role="region">
           <div class="drawer-handle-bar">
             <div class="drawer-handle"></div>
           </div>
           <div class="drawer-header">
-            <h3>📖 Book Pages Carousel</h3>
+            <div class="drawer-header-left">
+              <h3>📖 Book Chapters & Questions</h3>
+              <button type="button" id="btn-show-analysis-summary" class="touch-btn btn-summary-badge" style="display: none;" aria-label="View Story Summary" title="View Story Summary">
+                🎉 Story Ready ℹ️
+              </button>
+            </div>
             <button type="button" id="btn-close-drawer" class="touch-btn btn-text-close" aria-label="Close page review drawer">✕</button>
           </div>
           <div class="drawer-body">
-            <!-- Multi-sequence tab container -->
-            <div id="sequence-switcher-container" class="sequence-switcher" style="display: none;"></div>
-            <span id="active-sequence-badge" class="badge" style="display: none;"></span>
+            <!-- Multi-sequence / Chapter tab container -->
+            <div id="sequence-switcher-container" class="sequence-switcher chapter-switcher" style="display: none;"></div>
+            <span id="active-sequence-badge" class="badge chapter-badge" style="display: none;"></span>
 
-            <!-- Carousel -->
+            <!-- Horizontal Swipeable Book Carousel (Swipes Left/Right) -->
             <div id="book-carousel" class="book-carousel"></div>
             <div id="book-carousel-dots" class="book-carousel-dots"></div>
 
-            <!-- Auto-straighten helper button -->
-            <button type="button" id="btn-auto-straighten" class="touch-btn btn-secondary auto-straighten-btn" style="width: 100%; margin-top: 10px;" aria-label="Auto-straighten all sideways pages">
-              ✨ Auto-Straighten Sideways Pages
-            </button>
-
-            <!-- Filmstrip tray -->
-            <div id="filmstrip-tray" class="filmstrip-tray"></div>
+            <!-- Drawer Questions Section (Shown if book has questions) -->
+            <div id="drawer-questions-section" class="drawer-questions-section" style="display: none;">
+              <div class="drawer-questions-header">
+                <h4 class="drawer-section-heading">❓ Chapter Questions</h4>
+                <button type="button" id="btn-start-questions-outloud" class="touch-btn btn-primary btn-cta btn-ask-outloud" aria-label="Ask child story questions out loud">
+                  🗣️ Ask Questions Out Loud!
+                </button>
+              </div>
+              <div id="drawer-questions-list" class="drawer-questions-list"></div>
+            </div>
 
             <!-- Analysis results toggle -->
             <button type="button" id="btn-toggle-results" class="touch-btn btn-secondary" style="display: none; width: 100%; margin-top: 10px;" aria-expanded="false">
@@ -148,6 +169,46 @@
             </button>
             <div id="results-display" class="results-box" style="display: none;">
               <pre id="results-json"></pre>
+            </div>
+          </div>
+        </aside>
+
+        <!-- Analysis Summary Pop-up Window Modal -->
+        <div id="analysis-summary-backdrop" class="drawer-backdrop modal-backdrop" style="display: none;"></div>
+        <div id="analysis-summary-modal" class="analysis-summary-modal-window" role="dialog" aria-modal="true" aria-labelledby="analysis-modal-title" style="display: none;">
+          <div class="analysis-modal-header">
+            <h3 id="analysis-modal-title" class="analysis-modal-title">🎉 Storybook Ready to Read!</h3>
+            <button type="button" id="btn-close-analysis-modal" class="touch-btn btn-text-close" aria-label="Close story summary">✕</button>
+          </div>
+          <div class="analysis-modal-body">
+            <p id="analysis-modal-desc" class="analysis-modal-desc"></p>
+            <button type="button" id="btn-start-reading-hero" class="touch-btn btn-primary btn-cta btn-start-reading-hero" aria-label="Start Reading Storybook">
+              🚀 Start Reading (Chunk 1) ➡️
+            </button>
+          </div>
+        </div>
+
+        <!-- Saved Books & Questions Modal (Floppy Disk 💾) -->
+        <div id="saved-books-backdrop" class="drawer-backdrop" style="display: none;"></div>
+        <aside id="saved-books-modal" class="review-drawer saved-books-drawer collapsed" aria-label="Saved Books Library" role="dialog" style="display: none;">
+          <div class="drawer-handle-bar">
+            <div class="drawer-handle"></div>
+          </div>
+          <div class="drawer-header">
+            <h3>💾 Saved Books & Questions</h3>
+            <button type="button" id="btn-close-saved-modal" class="touch-btn btn-text-close" aria-label="Close saved books modal">✕</button>
+          </div>
+          <div class="drawer-body">
+            <div id="saved-books-actions-bar" class="saved-books-actions-bar">
+              <button type="button" id="btn-save-current-book" class="touch-btn btn-primary" style="display: none; width: 100%; margin-bottom: 12px;">
+                💾 Save Current Book & Questions
+              </button>
+            </div>
+            <div id="saved-books-list" class="saved-books-list">
+              <div class="saved-empty-placeholder">
+                <span class="empty-icon">💾</span>
+                <p class="empty-text">No saved books yet.<br>When you analyze a storybook, save it here to re-open its questions anytime!</p>
+              </div>
             </div>
           </div>
         </aside>
@@ -174,7 +235,14 @@
         <div class="card story-stage-card lookout-card">
           <div class="stage-card-header">
             <span class="stage-tag">👀 Look-Out Clue</span>
-            <span id="chunk-badge" class="badge chunk-badge">Pages 1-3</span>
+            <span id="chunk-badge" class="badge chunk-badge">Chapter 1: Pages 1-3</span>
+          </div>
+
+          <!-- Chapter Navigation Bar -->
+          <div class="chapter-nav-bar" id="chapter-nav-bar-lookout">
+            <button type="button" id="btn-prev-chapter-lookout" class="touch-btn chapter-nav-btn" aria-label="Previous Chapter" title="Previous Chapter">⏮️ Prev</button>
+            <span class="chapter-nav-indicator" id="chapter-indicator-lookout">Chapter 1 of 1</span>
+            <button type="button" id="btn-next-chapter-lookout" class="touch-btn chapter-nav-btn" aria-label="Next Chapter" title="Next Chapter">Next ⏭️</button>
           </div>
 
           <div class="lookout-content">
@@ -182,9 +250,15 @@
             <p id="lookout-prompt-text" class="lookout-text">
               Watch for what happens in this part of the story!
             </p>
+            <button type="button" id="btn-speak-lookout" class="touch-btn btn-speak-text" aria-label="Listen to clue out loud" title="Read Clue Aloud">
+              🔊 Read Clue Out Loud
+            </button>
           </div>
 
-          <div class="stage-actions">
+          <div class="stage-actions stage-actions-double">
+            <button type="button" id="btn-ask-question-direct" class="touch-btn btn-secondary action-ask-direct" aria-label="Ask story question out loud now">
+              🗣️ Ask Question Out Loud ➡️
+            </button>
             <button type="button" id="btn-done-reading" class="touch-btn btn-primary btn-cta" aria-label="Finished reading, ready for question">
               📖 I Finished Reading! Next ➡️
             </button>
@@ -199,12 +273,25 @@
         <div class="card story-stage-card checkin-card">
           <div class="stage-card-header">
             <span class="stage-tag">❓ Story Question</span>
+            <span id="checkin-chapter-badge" class="badge chunk-badge">Chapter 1</span>
+          </div>
+
+          <!-- Chapter Navigation Bar -->
+          <div class="chapter-nav-bar" id="chapter-nav-bar-checkin">
+            <button type="button" id="btn-prev-chapter-checkin" class="touch-btn chapter-nav-btn" aria-label="Previous Chapter" title="Previous Chapter">⏮️ Prev</button>
+            <span class="chapter-nav-indicator" id="chapter-indicator-checkin">Chapter 1 of 1</span>
+            <button type="button" id="btn-next-chapter-checkin" class="touch-btn chapter-nav-btn" aria-label="Next Chapter" title="Next Chapter">Next ⏭️</button>
           </div>
 
           <div class="checkin-content">
-            <p id="checkin-question-text" class="checkin-question">
-              What happened in the story?
-            </p>
+            <div class="question-container-card">
+              <p id="checkin-question-text" class="checkin-question">
+                What happened in the story?
+              </p>
+              <button type="button" id="btn-speak-question" class="touch-btn btn-speak-text" aria-label="Read question out loud" title="Read Question Out Loud">
+                🔊 Read Question Out Loud
+              </button>
+            </div>
 
             <!-- Push-to-Talk Microphone Area -->
             <div class="ptt-container">

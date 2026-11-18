@@ -150,11 +150,26 @@ StoryScout is a local, lightweight web application designed for a parent and chi
 
 ## 4. Step-by-Step User Flow & Screen States
 
-### Screen 1: Scan Mode (Parent)
-- A clean camera capture interface: `<input type="file" accept="image/*" capture="environment" multiple>`.
-- Displays a thumbnail grid of captured pages with page numbers so the parent can verify they are in order.
-- A prominent button: **"Ready to Read!"**
-- Uploads images to `/api/analyze-book` and displays a child-friendly loading spinner ("Reading the book...").
+### Screen 1: Scan Mode (Parent & Child Viewfinder)
+- **Top Utility Navigation:**
+  - 🔊 **Speaker Icon (`#btn-start-audio`):** Unlocks Web Audio and speaks a quick confirmation ("Sound is on!") to verify speaker volume.
+  - 📖 **Book Icon (`#btn-open-review`):** Displays current snapped page count; opens the review drawer and questions list.
+  - 💾 **3.5in Floppy Disk (`#btn-saved-books`):** Opens saved books and questions library.
+- **Continuous Camera Viewfinder:**
+  - Full-width camera feed with no vertical clutter or intrusive instruction headers.
+  - **4-Button Action Toolbar:** Directly positioned above chapter controls:
+    - ↩️ **Retake:** Discards active snapshot frame.
+    - 📷 **SNAP (`#btn-shutter`):** Wide central capture button.
+    - ✨ **Analyze (`#btn-analyze`):** Triggers Gemini multimodal analysis.
+    - 🗑️ **Trash (`#btn-clear`):** Requires two-step confirmation to clear all active sequence pages.
+- **Horizontal Page Carousel:**
+  - Swipes left and right (CSS scroll-snap) with dot navigation chips.
+  - **3 Actions Per Slide:**
+    - ↩️ **Retake:** Removes the specific slide page.
+    - 🔄 **Rotate:** Rotates the image 90° stationary in place.
+    - ❓ **Question:** Greyed out by default (`is-disabled`); automatically ungreys (`is-ready`) once analysis completes.
+- **Zero-Screen-Space Summary Modal:**
+  - Replaces large analysis summary cards with a compact `[🎉 Story Ready ℹ️]` drawer badge opening an overlay modal dialog on tap.
 
 ### Screen 2: Pre-Reading "Lookout" (Child)
 - Displays current chunk header (e.g., "📖 Read Pages 1 to 3").
@@ -162,17 +177,20 @@ StoryScout is a local, lightweight web application designed for a parent and chi
 - Automatically speaks the prompt aloud using `window.speechSynthesis` (triggered on a "Start Chunk" tap to satisfy iOS Safari audio policy).
 - Prominent button: **"I'm Done Reading!"** which advances to Screen 3.
 
-### Screen 3: Verbal Check-in (Child)
-- Displays the **Check-in Question** and reads it aloud.
-- Large, colorful **Push-to-Talk / Tap-to-Talk Microphone Button**:
-  - Tapping starts `webkitSpeechRecognition`.
-  - Visual pulse animation while listening.
-  - Child speaks their answer.
-  - Tapping again (or pausing) stops recognition and displays what the app heard in friendly text.
-- App sends transcript to `/api/evaluate-answer`.
-- The app speaks the `spoken_feedback` aloud.
-  - If `status == "mastered"`: Plays a cheerful sound effect, shows confetti/stars, and displays **"Next Pages"** button.
-  - If `status == "needs_scaffold"`: Speaks the gentle hint and prompts the child to try once more.
+### Screen 3: Verbal Check-in & Audio Interaction (Child)
+- **Synchronous Speech -> Listening Flow:**
+  - Tapping the ungreyed `[❓ Question]` button executes `window.speechSynthesis.speak()` synchronously within the touch event stack.
+  - Badge displays `🔊 Speaking Question...` while reading strictly the question text (no preambles or question numbers).
+  - Only after speech ends (`utterance.onend`) does the app transition to listening mode.
+  - If speech is muted or blocked, the status pill offers `🔊 Tap here to speak question aloud`.
+  - Tapping question text at any time re-reads the question aloud.
+- **Generous Speech Recognition:**
+  - Microphone listens with a 3.2s–4.0s pause tolerance so children are not cut off mid-thought.
+  - Child can pause between thoughts or tap the microphone button to submit early.
+- **Evaluation & Mastery Feedback:**
+  - Submits transcript to `/api/evaluate-answer`.
+  - If `status == "mastered"`: Triggers celebratory confetti and speaks enthusiastic praise.
+  - If `status == "needs_scaffold"`: Speaks the gentle Socratic clue and allows the child to answer again.
 
 ---
 

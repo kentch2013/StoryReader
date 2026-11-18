@@ -152,17 +152,13 @@ export class SafariAudioManager {
     if (this._isListening || this._state === AUDIO_STATE.LISTENING) {
       this.cancelListening();
     }
-    if (this._activeSpeech) {
+    if (this._activeSpeech || (this._speechSynthesis && this._speechSynthesis.speaking)) {
       this.cancelSpeech();
     }
 
     this._setState(AUDIO_STATE.SPEAKING);
 
-    return new Promise(async (resolve) => {
-      if (this._settlingDelayMs > 0) {
-        await new Promise((r) => setTimeout(r, this._settlingDelayMs));
-      }
-
+    return new Promise((resolve) => {
       if (!this._speechSynthesis || !this._SpeechSynthesisUtterance) {
         this._setState(AUDIO_STATE.IDLE);
         return resolve({ completed: false, text, error: 'SpeechSynthesis not supported' });
@@ -181,17 +177,25 @@ export class SafariAudioManager {
       }
 
       let settled = false;
+      let speechTimer = null;
+
       const record = {
         utterance,
         resolve: (val) => {
           if (!settled) {
             settled = true;
+            if (speechTimer) {
+              clearTimeout(speechTimer);
+              speechTimer = null;
+            }
             this._activeSpeech = null;
+            this._currentUtterance = null;
             resolve(val);
           }
         },
       };
       this._activeSpeech = record;
+      this._currentUtterance = utterance;
 
       utterance.onend = () => {
         if (!settled) {
@@ -207,7 +211,20 @@ export class SafariAudioManager {
         }
       };
 
+      // Safety timeout: resolve cleanly if onend hangs on mobile Safari
+      const wordCount = (text || '').split(/\s+/).filter(Boolean).length;
+      const timeoutMs = Math.max(12000, wordCount * 1200);
+      speechTimer = setTimeout(() => {
+        if (!settled) {
+          this._setState(AUDIO_STATE.IDLE);
+          record.resolve({ completed: true, text, timedOut: true });
+        }
+      }, timeoutMs);
+
       try {
+        if (typeof this._speechSynthesis.resume === 'function') {
+          this._speechSynthesis.resume();
+        }
         this._speechSynthesis.speak(utterance);
       } catch (err) {
         this._setState(AUDIO_STATE.IDLE);
@@ -217,6 +234,7 @@ export class SafariAudioManager {
   }
 
   cancelSpeech() {
+    this._currentUtterance = null;
     if (this._activeSpeech) {
       const record = this._activeSpeech;
       this._activeSpeech = null;
