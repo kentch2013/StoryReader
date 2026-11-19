@@ -1559,7 +1559,8 @@ body {
 }
 
 .btn-question-slide:disabled,
-.btn-question-slide.is-disabled {
+.btn-question-slide.is-disabled,
+.btn-question-slide.is-completed {
   background: #f1f5f9 !important;
   color: #94a3b8 !important;
   border: 1.5px solid #cbd5e1 !important;
@@ -1567,6 +1568,18 @@ body {
   cursor: not-allowed !important;
   opacity: 0.65 !important;
   filter: grayscale(1) !important;
+}
+
+.drawer-question-card.is-completed {
+  opacity: 0.75;
+  border-left-color: #10b981;
+}
+
+.btn-ask-this-chapter.is-completed {
+  background: #f1f5f9 !important;
+  color: #64748b !important;
+  border: 1px solid #cbd5e1 !important;
+  cursor: not-allowed !important;
 }
 
 /* Slide Question Card (Direct Question & Auto-Listen on Carousel Slide) */
@@ -3141,6 +3154,31 @@ body {
   justify-content: space-between;
   border-bottom: 1px solid #e2e8f0;
   padding-bottom: 4px;
+  gap: 8px;
+}
+
+.drawer-q-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-toggle-q-card {
+  min-height: 40px;
+  height: 40px;
+  padding: 0 10px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-toggle-q-card:hover {
+  background: #e2e8f0;
 }
 
 .drawer-q-chunk-title {

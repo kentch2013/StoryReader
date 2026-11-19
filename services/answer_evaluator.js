@@ -285,7 +285,12 @@ export async function evaluateChildAnswer(data = {}) {
   }
 
   // Parallel Diagnostic Probing Architecture (System 1 Single-Pass Diagnostic Evaluator)
-  if (data.diagnostic_probes) {
+  const hasDiagnosticProbes = Boolean(
+    data.diagnostic_probes &&
+    typeof data.diagnostic_probes === 'object' &&
+    Object.keys(data.diagnostic_probes).length > 0
+  );
+  if (hasDiagnosticProbes) {
     let result = null;
     try {
       result = await evaluateDiagnosticProbes(grounded, data);

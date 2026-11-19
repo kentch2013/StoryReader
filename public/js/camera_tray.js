@@ -759,6 +759,7 @@ export class CameraTrayUI {
     this.onPagesChanged = options.onPagesChanged || null;
     this.onStartReading = options.onStartReading || null;
     this.isQuestionReadyForPage = options.isQuestionReadyForPage || null;
+    this.isQuestionCompleted = options.isQuestionCompleted || null;
     this.onAskPageQuestion = options.onAskPageQuestion || null;
     this.onActivePageChange = options.onActivePageChange || null;
     this.lastAnalysisData = null;
@@ -767,6 +768,7 @@ export class CameraTrayUI {
     this.cameraActive = false;
     this.isCapturing = false;
     this.useFallback = false;
+    this._startupMicPermissionRequested = false;
 
     this._bindEvents();
 
@@ -934,18 +936,46 @@ export class CameraTrayUI {
         this.stopCamera();
       }
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: { ideal: 'environment' },
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
-        },
-        audio: false,
-      });
+      let stream = null;
+
+      // Request microphone permission at startup simultaneously with camera,
+      // but immediately release audio tracks so listening is not turned on until needed.
+      if (!this._startupMicPermissionRequested && navigator.mediaDevices?.getUserMedia) {
+        this._startupMicPermissionRequested = true;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: { ideal: 'environment' },
+              width: { ideal: 1920 },
+              height: { ideal: 1080 },
+            },
+            audio: true,
+          });
+          // Immediately stop/release audio tracks so microphone does not listen until needed
+          if (stream) {
+            stream.getAudioTracks().forEach((track) => track.stop());
+          }
+        } catch (simultaneousErr) {
+          console.warn('Simultaneous camera+mic permission request fallback:', simultaneousErr);
+        }
+      }
+
+      if (!stream) {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: 'environment' },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+          },
+          audio: false,
+        });
+      }
 
       this.activeStream = stream;
       this.videoElement.srcObject = stream;
-      await this.videoElement.play().catch(() => {});
+      if (typeof this.videoElement.play === 'function') {
+        await this.videoElement.play().catch(() => {});
+      }
       this.cameraActive = true;
       this.useFallback = false;
       this._updateCameraUI();
@@ -1000,8 +1030,11 @@ export class CameraTrayUI {
 
   /**
    * Opens the collapsible bottom sheet review drawer.
+   * Turns off the camera as it is not needed in the chapters and questions panel.
    */
   openDrawer() {
+    this.stopCamera();
+
     if (this.drawerElement) {
       this.drawerElement.classList.add('drawer-open');
       this.drawerElement.setAttribute('aria-hidden', 'false');
@@ -1017,6 +1050,7 @@ export class CameraTrayUI {
 
   /**
    * Closes the collapsible bottom sheet review drawer.
+   * Re-enables camera only if returned to the main scanning panel.
    */
   closeDrawer() {
     if (this.drawerElement) {
@@ -1030,6 +1064,20 @@ export class CameraTrayUI {
       this.backdropElement.classList.remove('backdrop-active');
       this.backdropElement.setAttribute('aria-hidden', 'true');
     }
+
+    if (this._isMainScanActive()) {
+      this.startCamera(this.videoElement);
+    }
+  }
+
+  _isMainScanActive() {
+    if (typeof document === 'undefined') return false;
+    const scanScreen = document.getElementById('screen-scan');
+    return Boolean(
+      scanScreen &&
+      !scanScreen.hidden &&
+      (scanScreen.classList.contains('screen-active') || scanScreen.style.display !== 'none')
+    );
   }
 
   /**
@@ -1184,6 +1232,12 @@ export class CameraTrayUI {
     if (retaken) {
       this.setStatus(`Retook Page ${retaken.pageNumber}. Ready for new capture.`, 'info');
       this.render();
+      if (this.isDrawerOpen()) {
+        this.closeDrawer();
+      }
+      if (!this.cameraActive && this.videoElement) {
+        this.startCamera(this.videoElement);
+      }
       if (this.onPagesChanged) {
         this.onPagesChanged(this.state.pages);
       }
@@ -1558,6 +1612,19 @@ export class CameraTrayUI {
   }
 
   async handleAnalyze() {
+    // Automatically enable audio and microphone on Analyze click (user gesture)
+    if (typeof window !== 'undefined') {
+      if (window.__audioManager && !window.__audioManager.isUnlocked) {
+        window.__audioManager.unlock().catch(() => {});
+      }
+      const btnAudio = typeof document !== 'undefined' ? document.getElementById('btn-start-audio') : null;
+      if (btnAudio) {
+        btnAudio.classList.add('audio-active');
+        btnAudio.setAttribute('aria-pressed', 'true');
+        btnAudio.title = 'Sound & Speech Active';
+      }
+    }
+
     // Auto-open drawer when user clicks Analyze
     this.openDrawer();
 
@@ -2047,6 +2114,11 @@ export class CameraTrayUI {
    * @returns {boolean}
    */
   isQuestionReady(index, page) {
+    if (typeof this.isQuestionCompleted === 'function') {
+      try {
+        if (this.isQuestionCompleted(index, page)) return false;
+      } catch (_) {}
+    }
     if (typeof this.isQuestionReadyForPage === 'function') {
       try {
         const ready = this.isQuestionReadyForPage(index, page);
@@ -2083,20 +2155,27 @@ export class CameraTrayUI {
       const index = parseInt(indexStr || '0', 10);
       const page = this.state.pages.find((p) => p.id === pageId) || this.state.pages[index];
 
-      const isReady = this.isQuestionReady(index, page);
+      const isCompleted = typeof this.isQuestionCompleted === 'function' ? this.isQuestionCompleted(index, page) : false;
+      const isReady = !isCompleted && this.isQuestionReady(index, page);
       const qBtn = slide.querySelector('.btn-question-slide');
       if (qBtn) {
-        if (isReady) {
+        if (isCompleted) {
+          qBtn.disabled = true;
+          qBtn.setAttribute('aria-disabled', 'true');
+          qBtn.classList.remove('is-ready');
+          qBtn.classList.add('is-completed', 'is-disabled');
+          qBtn.title = `Question already answered for Page ${page?.pageNumber || (index + 1)}`;
+        } else if (isReady) {
           qBtn.disabled = false;
           qBtn.removeAttribute('aria-disabled');
-          qBtn.classList.remove('is-disabled');
+          qBtn.classList.remove('is-disabled', 'is-completed');
           qBtn.classList.add('is-ready');
           qBtn.title = `Ask questions about Page ${page?.pageNumber || (index + 1)}`;
         } else {
           qBtn.disabled = true;
           qBtn.setAttribute('aria-disabled', 'true');
           qBtn.classList.add('is-disabled');
-          qBtn.classList.remove('is-ready');
+          qBtn.classList.remove('is-ready', 'is-completed');
           qBtn.title = 'Analyze story to unlock questions';
         }
       }
@@ -2124,7 +2203,8 @@ export class CameraTrayUI {
     this.carouselElement.innerHTML = '';
 
     this.state.pages.forEach((page, index) => {
-      const hasQuestion = this.isQuestionReady(index, page);
+      const isCompleted = typeof this.isQuestionCompleted === 'function' ? this.isQuestionCompleted(index, page) : false;
+      const hasQuestion = !isCompleted && this.isQuestionReady(index, page);
 
       const slide = document.createElement('div');
       slide.className = 'carousel-slide';
@@ -2148,7 +2228,7 @@ export class CameraTrayUI {
           <button type="button" class="touch-btn action-icon-btn btn-rotate-slide" data-action="rotate" data-id="${page.id}" aria-label="Rotate Page ${page.pageNumber} 90 degrees" title="Rotate 90°">
             🔄 Rotate
           </button>
-          <button type="button" class="touch-btn action-icon-btn btn-question-slide ${hasQuestion ? 'is-ready' : 'is-disabled'}" data-action="question" data-id="${page.id}" data-page-index="${index}" aria-label="Ask questions about Page ${page.pageNumber}" title="${hasQuestion ? 'Ask questions about this page' : 'Analyze story to unlock questions'}" ${hasQuestion ? '' : 'disabled aria-disabled="true"'}>
+          <button type="button" class="touch-btn action-icon-btn btn-question-slide ${isCompleted ? 'is-completed is-disabled' : (hasQuestion ? 'is-ready' : 'is-disabled')}" data-action="question" data-id="${page.id}" data-page-index="${index}" aria-label="Ask questions about Page ${page.pageNumber}" title="${isCompleted ? 'Question already answered' : (hasQuestion ? 'Ask questions about this page' : 'Analyze story to unlock questions')}" ${isCompleted || !hasQuestion ? 'disabled aria-disabled="true"' : ''}>
             ❓ Question
           </button>
         </div>
@@ -2198,6 +2278,10 @@ export class CameraTrayUI {
       if (questionBtn) {
         let lastTriggerTime = 0;
         const triggerQuestion = (e) => {
+          if (typeof this.isQuestionCompleted === 'function' && this.isQuestionCompleted(index, page)) {
+            this.setStatus('This question has already been answered!', 'info');
+            return;
+          }
           const isReadyNow = this.isQuestionReady(index, page);
           if (!isReadyNow) {
             this.setStatus('Tap Analyze first to unlock questions for this page!', 'info');

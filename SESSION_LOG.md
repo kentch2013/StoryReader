@@ -1,9 +1,9 @@
 # StoryScout Session Handoff Log
 
-**Session Date:** 2026-11-17 / 2026-11-18 (Wrapup: Module 6 Full SPA Orchestration, Mobile Viewfinder UI Redesign & Safari Audio Synchronous Architecture)  
+**Session Date:** 2026-11-19 (Module 6.1: Voice Fidelity, Continuous Listening, Startup Permissions, Adaptive Recitation & Session Question Tracking)  
 **Repository:** `kentch2013/StoryReader`  
-**Current Branch:** `main`  
-**Milestone:** **Modules 1 through 6** Completed, Hardened, Calibrated & Verified across **150 automated tests (24 suites)** with 0 failures and 100% test contract immutability. Module 6 Single-Page App (`public/js/app.js`), 9-state Finite State Machine, accessible mobile layout with $\ge 56\text{px}$ touch targets, 7 critical safeguards & optimizations (`test/app_safeguards.test.js`), native iPhone HEIC/HEIF direct upload support, full autonomous UI & pipeline audit, live multimodal ingestion of copyrighted fixtures (*The Runaway Bunny* & *Rattles*) with 0 recitation blocks, 5-point pipeline calibration eliminating false-strict/false-lenient biases (`test/pipeline_calibration.test.js`), modern mobile viewfinder redesign with horizontal carousel, and synchronous Safari Web Speech synthesis execution with sequential speech-to-listening handoff are 100% verified. Ready for **Live Human Co-Reading Gate**.
+**Current Branch:** `main` (merging from `task/camera-mic-eval-speed`)  
+**Milestone:** **Modules 1 through 6.1** Completed, Hardened, Calibrated & Verified across **163 automated tests (25 suites)** with 0 failures and 100% test contract immutability. Module 6.1 adds high-fidelity neural voice synthesis (`Microsoft Ana Online (Natural)` / `Ana Online`), unified startup permissions for camera and microphone, automatic camera shutdown when outside scanning view, adaptive 2-pass anti-recitation book analysis, low-latency 500ms continuous pause evaluation without blocking UI banners, automated question reading on analysis completion, and `SessionQuestionTracker` with canonical normalization, `sessionStorage` persistence, multi-page identical question greying out, and smart auto-progression skipping already answered questions. Ready for **Live Human Co-Reading Gate**.
 
 ---
 
@@ -11,18 +11,42 @@
 
 To eliminate context loss between sessions, every handoff must maintain:
 1. **Target Architecture & Hardware Reality:**
-   - Client device: iPhone 14 Plus (iOS Safari 17/18).
+   - Client device: iPhone 14 Plus (iOS Safari 17/18) and modern desktop Chromium/Edge.
    - Host OS: Windows 11 host running Express HTTPS gateway (:3000).
    - Stage 1 Multimodal Book Ingestion: Google Gen AI SDK (`@google/genai`) targeting `gemini-3.1-flash-lite` with fallback to `gemini-2.5-flash` for chunking, lookout prompts, check-in questions, keyword clusters, canonical prototypes, diagnostic probes, and atomic `story_facts`. Supports JPEG, PNG, WebP, and native Apple HEIC/HEIF.
    - Stage 2 Socratic Answer Evaluation: System 1 local ONNX `Xenova/nli-deberta-v3-xsmall` + Frame Semantics Slot Delta Engine + Discourse Resolver + Dynamic Head-Noun Probing + Tier 1 Fast-Path Priority (<10ms on exact prototype matches, zero runtime cloud network calls).
-   - Mobile Camera Engine: WebRTC `navigator.mediaDevices.getUserMedia` continuous in-browser viewfinder + HTML5 `<canvas>` downsampling ($\le 1600\text{px}$, $\le 300\text{KB}$/page) + stationary 90° rotation + multi-sequence auto-rollover (>20 pages) + Safari WebKit HTML/empty error resilience.
-   - Audio Coordinator Engine: Web Audio zero-buffer gesture unlock, natural 0.9x TTS cadence, `webkitSpeechRecognition` continuous transcript accumulation, mutual exclusivity collision barriers, hands-free auto-listening, and DeBERTa NLI voice retry detection.
+   - Mobile Camera Engine: WebRTC `navigator.mediaDevices.getUserMedia` continuous in-browser viewfinder + HTML5 `<canvas>` downsampling ($\le 1600\text{px}$, $\le 300\text{KB}$/page) + stationary 90° rotation + multi-sequence auto-rollover (>20 pages) + Safari WebKit HTML/empty error resilience + automatic stream shutdown outside scanning views.
+   - Audio Coordinator Engine: Web Audio zero-buffer gesture unlock, natural neural voice synthesis with default `Microsoft Ana Online (Natural)` / `Ana Online` child storyteller voice, `webkitSpeechRecognition` continuous transcript accumulation, 500ms snappy pause evaluation, mutual exclusivity collision barriers, hands-free auto-listening, and DeBERTa NLI voice retry detection.
+   - Session Question Tracking (`SessionQuestionTracker`): Canonical question normalization, multi-page identical question greying out, `sessionStorage` persistence, and smart auto-progression skipping already answered questions.
    - Full Single-Page Application (`public/js/app.js`): 9-state FSM (`STATE_SCAN`, `STATE_ANALYZING`, `STATE_LOOKOUT`, `STATE_CHECKIN`, `STATE_RECORDING`, `STATE_TRANSCRIPT_REVIEW`, `STATE_EVALUATING`, `STATE_FEEDBACK`, `STATE_COMPLETE`), attempt capping ($\le 2$), microturn support, confetti animations, re-entrancy locks, AbortController timeouts, and transparent `sessionStorage` persistence.
    - Network Transport: Cloudflare Tunnel (`npm run tunnel` / `https://*.trycloudflare.com`) / Local HTTPS with desktop QR code portal (`public/connect.html`).
 
 2. **Current State & Progress Gate:**
-   - Modules 1, 2, 3, 3.5, 3.6, 3.7, 4, 5, 5.5, and 6 are 100% complete, hardened, calibrated, and verified across **150 automated tests (24 suites)** with 0 failures and 100% contract immutability.
-   - Full regression suite passing 150/150 tests (`npm run verify`).
+   - Modules 1, 2, 3, 3.5, 3.6, 3.7, 4, 5, 5.5, 6, and 6.1 are 100% complete, hardened, calibrated, and verified across **163 automated tests (25 suites)** with 0 failures and 100% contract immutability.
+   - Full regression suite passing 163/163 tests (`npm run verify`).
+
+3. **Key Features & Solutions Delivered in Module 6.1:**
+   - **Neural Voice Prioritization & Default Ana Online TTS:**
+     *Defect:* Audio previously fell back to legacy Windows SAPI desktop synthesizers (`Microsoft David Desktop`), sounding mechanical and robotic.
+     *Solution:* Upgraded `SafariAudioManager._selectVoice` to prioritize natural/neural voices (`/ana.*online/i`, `/ana.*natural/i`, `/jenny.*natural/i`, `/aria.*natural/i`, `/google\s+us\s+english/i`). Configured default preferred voice to `Microsoft Ana Online (Natural)` (or matching `/ana/i`), added `getAvailableVoices()` and `setPreferredVoice(voiceName)` with `localStorage` persistence, and pinned utterance to `window.__storyReaderUtterance` to prevent Chromium V8 garbage collection interruption mid-speech.
+   - **Unified Startup Permissions for Camera and Microphone:**
+     *Defect:* App previously prompted for microphone permission separately upon first speech task, creating unexpected permission popups.
+     *Solution:* `CameraTrayUI.startCamera()` at app boot requests `{ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: true }` in a single combined call. Audio tracks are immediately stopped via `track.stop()`, leaving the microphone completely dormant until a question check-in starts.
+   - **Dynamic Camera Stream Lifecycle Management:**
+     *Defect:* Video stream stayed active during chapter questions, book reviews, and evaluation, creating unnecessary battery and thermal load.
+     *Solution:* `CameraTrayUI` automatically invokes `stopCamera()` when navigating into review drawers, questions, evaluation, feedback, or complete screens. Camera restarts only when returning to the main scanning panel.
+   - **Adaptive 2-Pass Anti-Recitation Book Analysis:**
+     *Defect:* Forcing paraphrasing upfront prevented copyright recitation blocks on commercial books, but degraded fidelity on original/uncopyrighted books.
+     *Solution:* Added `BOOK_ANALYSIS_DIRECT_SYSTEM_PROMPT` in `prompts/book_analysis.js`. Implemented 2-pass pipeline in `services/gemini_service.js`: Pass 1 runs direct verbatim extraction; if and only if rejected with `RECITATION_BLOCKED`, it catches the error and automatically executes Pass 2 with 1:1 anti-recitation paraphrasing (`BOOK_ANALYSIS_SYSTEM_PROMPT`).
+   - **Snappy Continuous Listening & Evaluation Without Blocking Banners:**
+     *Defect:* "Checking your answer..." evaluation banner remained on screen for far too long during speech pauses, interrupting natural speech flow.
+     *Solution:* Reduced pause detection to 500ms; submits candidate answer immediately in background with subtle status pill (`🧠 Checking...`); keeps speech recognition open for continuation; aborts in-flight evaluations via `AbortController` if child continues speaking.
+   - **Automatic Question Progression on Analysis Completion:**
+     *Defect:* User had to manually find and tap the Question button after analysis finished, and occasionally the speech was skipped.
+     *Solution:* Connected `CameraTrayUI.onAnalyzeSuccess` to `StoryReaderApp.onAnalyzeComplete()`. Automatically reads the first question aloud using Ana Online TTS, awaits `utterance.onend`, and only then transitions into listening mode.
+   - **Session Question Tracking & Multi-Page Identical Question Greying Out:**
+     *Requirement:* If Page 1 and Page 2 share the exact same question (e.g. *"Who went to robert's party?"*), answering Page 1 correctly must grey out both Page 1 and Page 2's question buttons, and auto-progression should skip Page 2.
+     *Solution:* Built `public/js/session_question_tracker.js` (`SessionQuestionTracker`) with canonical normalization and `sessionStorage` persistence (`storyreader_completed_questions_v1`). Connected to `CameraTrayUI.isQuestionCompleted()`, greying out matching buttons with `disabled aria-disabled="true"` and `filter: grayscale(1)`. Updated `onPageQuestionDone()` to query `getNextUnansweredPageIndex()`, skipping completed questions and advancing directly to the next page with an active question.
 
 3. **Key Defect Fixes & Solutions Applied in this Session:**
    - **Deterministic Non-AI Rotation & Orientation Detection:**

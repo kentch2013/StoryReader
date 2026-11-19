@@ -451,6 +451,28 @@ To satisfy iOS Safari's Web Speech API security requirement without certificate 
 
 ---
 
+## 8.5. Continuous Voice, Adaptive Ingestion & Session Tracking
+
+### 1. Neural Voice Prioritization & Default Ana Online TTS
+* **Root Cause & Solution:** Legacy desktop SAPI synthesizer fallbacks (`Microsoft David Desktop`) produce robotic mechanical voices. `SafariAudioManager` prioritizes modern neural/natural voices via regex patterns (`/ana.*online/i`, `/ana.*natural/i`, `/jenny.*natural/i`, `/google\s+us\s+english/i`).
+* **Default Voice:** Initialized to `'Microsoft Ana Online (Natural)'` (expressive child storyteller). Supports runtime `getAvailableVoices()` and `setPreferredVoice()` with `localStorage` persistence under key `storyreader_preferred_voice`.
+* **V8 Garbage Collection Anchor:** Utterance instances are pinned to `window.__storyReaderUtterance` to prevent Chromium's garbage collector from truncating active speech mid-sentence.
+
+### 2. Unified Startup Permissions & Camera Lifecycle
+* **Startup Permission Prompt:** On DOM load, `CameraTrayUI` immediately invokes `navigator.mediaDevices.getUserMedia({ video: true, audio: true })` to present a single combined permission prompt. Audio tracks are immediately stopped via `track.stop()`, keeping the microphone dormant until a question check-in begins.
+* **Camera Stream Lifecycle:** Video tracks are automatically stopped when navigating away from the main scan screen (e.g. inside review drawers, question screens, evaluation, or feedback). Camera restarts only when returning to the main scanning panel, preventing battery drain and thermal throttling.
+
+### 3. Adaptive 2-Pass Anti-Recitation Pipeline
+* **Pass 1 (Direct Verbatim Extraction):** Analyzes book pages with `BOOK_ANALYSIS_DIRECT_SYSTEM_PROMPT` to transcribe the author's original sentences verbatim without rewriting for uncopyrighted, original, or open-domain books.
+* **Pass 2 (Adaptive Fallback on Recitation):** If and only if the Gemini API returns `RECITATION_BLOCKED` (`finishReason === 'RECITATION'`), the service catches the rejection and automatically re-executes using `BOOK_ANALYSIS_SYSTEM_PROMPT` for 1:1 detail-preserving factual paraphrasing.
+
+### 4. Session Question Tracking & Multi-Page Question Greying Out
+* **Session Tracker (`SessionQuestionTracker`):** Canonical question normalization removes punctuation, surrounding whitespace, and casing differences. Tracks completed questions per session with `sessionStorage` persistence (`storyreader_completed_questions_v1`).
+* **Multi-Page Question Greying:** When a user correctly answers a question for Page 1, any other page sharing the exact same question (e.g. Page 2) is automatically marked completed and its carousel button disabled (`disabled aria-disabled="true" class="btn-question-slide is-completed is-disabled"` with `filter: grayscale(1)`).
+* **Smart Auto-Progression:** `onPageQuestionDone()` queries `getNextUnansweredPageIndex()` to skip all subsequent pages whose questions were already answered, advancing directly to the next page with an active, unanswered question.
+
+---
+
 ## 9. Grade 2 Pedagogical Rules & Safeguards
 
 1. **Common Core Focus:** Questions are constrained to Grade 2 Reading standards:

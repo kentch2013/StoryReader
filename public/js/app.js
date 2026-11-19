@@ -6,6 +6,7 @@
 
 import { SafariAudioManager } from './audio_manager.js';
 import { CameraTrayUI } from './camera_tray.js';
+import { SessionQuestionTracker } from './session_question_tracker.js';
 
 export const APP_STATE = Object.freeze({
   SCAN: 'STATE_SCAN',
@@ -28,12 +29,13 @@ export class StoryReaderApp {
    * @param {Object} [options.apiClient]
    * @param {Object} [options.storage]
    */
-  constructor({ getElementById, audioManager, cameraTray, apiClient, storage } = {}) {
+  constructor({ getElementById, audioManager, cameraTray, apiClient, storage, sessionQuestionTracker } = {}) {
     this.getElementById = getElementById || (typeof document !== 'undefined' ? (id) => document.getElementById(id) : () => null);
     this.audioManager = audioManager || null;
     this.cameraTray = cameraTray || null;
     this.apiClient = apiClient || null;
     this.storage = storage || (typeof sessionStorage !== 'undefined' ? sessionStorage : null);
+    this.sessionQuestionTracker = sessionQuestionTracker || new SessionQuestionTracker({ storage: this.storage });
     this._actionLock = false;
 
     // Session state
@@ -110,6 +112,9 @@ export class StoryReaderApp {
       this.cameraTray.isQuestionReadyForPage = (index, page) => {
         return this.hasQuestionForPage(index, page);
       };
+      this.cameraTray.isQuestionCompleted = (index, page) => {
+        return this.isPageQuestionCompleted(index, page);
+      };
       this.cameraTray.onAskPageQuestion = (page, index) => {
         this.askQuestionsAboutPage(index, page);
       };
@@ -126,8 +131,8 @@ export class StoryReaderApp {
           }
         }
       };
-      this.cameraTray.onAnalyzeSuccess = (data) => {
-        this.setBookData(data);
+      this.cameraTray.onAnalyzeSuccess = async (data) => {
+        await this.onAnalyzeComplete(data);
       };
       this.cameraTray.onStartReading = (data) => {
         this.setBookData(data);
@@ -153,6 +158,7 @@ export class StoryReaderApp {
         currentChunkIndex: this.currentChunkIndex,
         attemptCount: this.attemptCount,
         microturnUsed: this.microturnUsed,
+        completedQuestions: this.sessionQuestionTracker ? this.sessionQuestionTracker.serialize() : null,
       };
       this.storage.setItem('storyreader_session_v1', JSON.stringify(sessionData));
     } catch (_) {}
@@ -169,6 +175,9 @@ export class StoryReaderApp {
         this.currentChunkIndex = session.currentChunkIndex || 0;
         this.attemptCount = session.attemptCount || 1;
         this.microturnUsed = Boolean(session.microturnUsed);
+        if (session.completedQuestions && this.sessionQuestionTracker) {
+          this.sessionQuestionTracker.restore(session.completedQuestions);
+        }
         this._updateDrawerQuestions();
         this.transitionTo(session.state);
         return true;
@@ -178,6 +187,22 @@ export class StoryReaderApp {
   }
 
   _bindEvents() {
+    // Automatically enable sound and microphone on any user interaction without requiring an enable button
+    if (typeof document !== 'undefined') {
+      const autoUnlockAudio = () => {
+        if (this.audioManager && !this.audioManager.isUnlocked) {
+          this.audioManager.unlock().catch(() => {});
+        }
+        if (this.elements.btnStartAudio) {
+          this.elements.btnStartAudio.classList?.add('audio-active');
+          this.elements.btnStartAudio.setAttribute?.('aria-pressed', 'true');
+          this.elements.btnStartAudio.title = 'Sound & Speech Active';
+        }
+      };
+      document.addEventListener('pointerdown', autoUnlockAudio, { once: true });
+      document.addEventListener('click', autoUnlockAudio, { once: true });
+    }
+
     this.elements.btnStartAudio?.addEventListener('click', () => this.handleStartAudio());
     this.elements.btnAnalyze?.addEventListener('click', () => {
       if (this.cameraTray?.handleAnalyze && !this.cameraTray.isAnalyzing) {
@@ -386,6 +411,21 @@ export class StoryReaderApp {
       activeScreen.classList?.add('screen-active');
     }
 
+    // Turn off camera when in chapters, questions, evaluation, feedback or complete panels.
+    // Keep camera active only when on the main scan panel.
+    if (nextState !== APP_STATE.SCAN) {
+      if (this.cameraTray && typeof this.cameraTray.stopCamera === 'function') {
+        this.cameraTray.stopCamera();
+      }
+    } else {
+      if (this.cameraTray && typeof this.cameraTray.startCamera === 'function') {
+        const isDrawerOpen = typeof this.cameraTray.isDrawerOpen === 'function' ? this.cameraTray.isDrawerOpen() : false;
+        if (!isDrawerOpen) {
+          this.cameraTray.startCamera(this.cameraTray.videoElement);
+        }
+      }
+    }
+
     this._persistSession();
   }
 
@@ -538,6 +578,15 @@ export class StoryReaderApp {
   async handleAnalyzeBook() {
     if (this._actionLock) return;
 
+    if (this.audioManager && !this.audioManager.isUnlocked) {
+      this.audioManager.unlock().catch(() => {});
+    }
+    if (this.elements.btnStartAudio) {
+      this.elements.btnStartAudio.classList?.add('audio-active');
+      this.elements.btnStartAudio.setAttribute?.('aria-pressed', 'true');
+      this.elements.btnStartAudio.title = 'Sound & Speech Active';
+    }
+
     const pages = this.cameraTray?.getPages ? this.cameraTray.getPages() : (this.cameraTray?.pages || []);
     if (!pages || pages.length === 0) {
       this.showError('Please capture at least one book page before analyzing.');
@@ -601,13 +650,36 @@ export class StoryReaderApp {
       this.elements.btnPtt.setAttribute?.('aria-pressed', 'true');
     }
 
+    let pauseTimer = null;
+
     try {
       await this.audioManager.startListening({
-        onTranscript: (t) => this.setTranscript(t),
-        onInterim: (t) => {
-          if (this.elements.transcriptText) this.elements.transcriptText.textContent = t;
+        onTranscript: (t) => {
+          const text = typeof t === 'string' ? t : (t?.full || t?.final || t?.interim || '');
+          if (text) {
+            this.setTranscript(text);
+            clearTimeout(pauseTimer);
+            pauseTimer = setTimeout(() => {
+              if (this.state === APP_STATE.RECORDING || this.state === APP_STATE.CHECKIN) {
+                this.handleCheckAnswer();
+              }
+            }, 500);
+          }
         },
-        onFinal: (t) => this.setTranscript(t),
+        onInterim: (t) => {
+          if (this.elements.transcriptText && t) this.elements.transcriptText.textContent = t;
+        },
+        onFinal: (t) => {
+          if (t) {
+            this.setTranscript(t);
+            clearTimeout(pauseTimer);
+            pauseTimer = setTimeout(() => {
+              if (this.state === APP_STATE.RECORDING || this.state === APP_STATE.CHECKIN) {
+                this.handleCheckAnswer();
+              }
+            }, 500);
+          }
+        },
         onError: (err) => {
           console.warn('Speech recognition warning:', err);
           this.handleStopRecording();
@@ -694,6 +766,12 @@ export class StoryReaderApp {
       }
 
       if (result.status === 'mastered' || result.resolved) {
+        if (chunk?.checkin_question) {
+          this.markQuestionCompleted(chunk.checkin_question, {
+            chunkId: chunk.chunk_id,
+            pageIndex: this.activePageIndex,
+          });
+        }
         if (this.activePageIndex !== null && this.activePageIndex !== undefined) {
           this.onPageQuestionDone(this.activePageIndex);
         }
@@ -748,6 +826,9 @@ export class StoryReaderApp {
   handleRestart() {
     if (this.storage) {
       try { this.storage.removeItem('storyreader_session_v1'); } catch (_) {}
+    }
+    if (this.sessionQuestionTracker) {
+      this.sessionQuestionTracker.clear();
     }
     this.bookData = null;
     this.currentChunkIndex = 0;
@@ -830,6 +911,59 @@ export class StoryReaderApp {
     if (this.currentChunkIndex + 1 < total) {
       this.goToChapter(this.currentChunkIndex + 1);
     }
+  }
+
+  async onAnalyzeComplete(data) {
+    if (!data) return;
+    this.setBookData(data);
+    if (this.cameraTray) {
+      this.cameraTray.lastAnalysisData = data;
+      if (typeof this.cameraTray.updateQuestionButtonStates === 'function') {
+        this.cameraTray.updateQuestionButtonStates();
+      }
+    }
+    // When the question button is available and active (because the analysis was properly processed and is ready),
+    // read the question, wait for the answer for the first uncompleted page:
+    const pages = this.cameraTray?.pages || this.cameraTray?.state?.pages || [];
+    let targetIdx = -1;
+    for (let i = 0; i < pages.length; i++) {
+      if (this.hasQuestionForPage(i, pages[i]) && !this.isPageQuestionCompleted(i, pages[i])) {
+        targetIdx = i;
+        break;
+      }
+    }
+    if (targetIdx !== -1) {
+      await this.askQuestionsAboutPage(targetIdx, pages[targetIdx]);
+    }
+  }
+
+  isPageQuestionCompleted(pageIndex, page) {
+    if (!this.sessionQuestionTracker) return false;
+    const pageNum = page?.pageNumber || (pageIndex + 1);
+    const chunk = this.getChunkForPageNumber(pageNum);
+    if (!chunk || !chunk.checkin_question) return false;
+    return this.sessionQuestionTracker.isCompleted(chunk.checkin_question);
+  }
+
+  markQuestionCompleted(questionText, metadata = {}) {
+    if (!this.sessionQuestionTracker) return;
+    this.sessionQuestionTracker.markCompleted(questionText, metadata);
+    this._persistSession();
+    if (this.cameraTray?.updateQuestionButtonStates) {
+      this.cameraTray.updateQuestionButtonStates();
+    }
+    this._updateDrawerQuestions();
+  }
+
+  getNextUnansweredPageIndex(fromIndex = 0) {
+    const pages = this.cameraTray?.state?.pages || this.cameraTray?.pages || [];
+    for (let i = fromIndex + 1; i < pages.length; i++) {
+      const p = pages[i];
+      if (this.hasQuestionForPage(i, p) && !this.isPageQuestionCompleted(i, p)) {
+        return i;
+      }
+    }
+    return -1;
   }
 
   async askQuestionsAboutPage(pageIndex, page) {
@@ -922,10 +1056,9 @@ export class StoryReaderApp {
           this._presentAndAskPageQuestion(pageIndex, pageNum, page, questionText, chunk);
         };
       }
-      return;
     }
 
-    // Only after speech finishes aloud, transition to waiting for the child's answer
+    // Automatically transition to waiting for the child's answer and enable microphone
     await this.startWaitingForAnswer(pageIndex, pageNum, page, questionText, chunk);
   }
 
@@ -948,11 +1081,12 @@ export class StoryReaderApp {
     const drawerTranscriptBox = typeof document !== 'undefined' ? document.getElementById('drawer-q-transcript') : null;
     const drawerTranscriptText = typeof document !== 'undefined' ? document.getElementById('drawer-transcript-content') : null;
     const drawerPttBtn = typeof document !== 'undefined' ? document.getElementById('btn-drawer-ptt') : null;
+    const drawerFeedback = typeof document !== 'undefined' ? document.getElementById('drawer-q-feedback') : null;
 
     if (slideCard) slideCard.style.display = 'flex';
 
     if (slideStatus) {
-      slideStatus.textContent = '🎙️ Listening... (Take your time!)';
+      slideStatus.textContent = '🎙️ Listening... (Speak your answer)';
       slideStatus.className = 'slide-q-status listening';
     }
     if (slidePttBtn) {
@@ -974,47 +1108,190 @@ export class StoryReaderApp {
     this.setTranscript('');
     this._accumulatedChildAnswer = '';
     let speechSilenceTimer = null;
-    let isEvaluating = false;
+    let scaffoldDelayTimer = null;
+    let isQuestionDone = false;
+    let lastEvaluatedAnswer = '';
+    let inFlightAbortController = null;
 
-    const executeEvaluation = async () => {
-      if (isEvaluating) return;
-      const finalTranscript = (this.transcript || this._accumulatedChildAnswer || '').trim();
-      if (!finalTranscript) return;
+    const submitCandidateAnswer = async (textToSubmit) => {
+      if (isQuestionDone) return;
+      const cleanCandidate = (textToSubmit || '').trim();
+      if (!cleanCandidate || cleanCandidate === lastEvaluatedAnswer) return;
 
-      isEvaluating = true;
-      clearTimeout(speechSilenceTimer);
+      lastEvaluatedAnswer = cleanCandidate;
 
-      if (slidePttBtn) {
-        slidePttBtn.classList.remove('listening');
-        slidePttBtn.setAttribute('aria-pressed', 'false');
-        const label = slidePttBtn.querySelector('.slide-ptt-label');
-        if (label) label.textContent = 'Hold or Tap to Answer';
+      // Abort prior candidate request if still in flight to prevent pipeline queueing
+      if (inFlightAbortController) {
+        try { inFlightAbortController.abort(); } catch (_) {}
       }
-      if (drawerPttBtn) {
-        drawerPttBtn.classList.remove('listening');
-        drawerPttBtn.setAttribute('aria-pressed', 'false');
+      inFlightAbortController = new AbortController();
+      const currentSignal = inFlightAbortController.signal;
+
+      // Update subtle status pill only - do NOT plaster a blocking feedback box on mid-sentence pauses
+      if (slideStatus) {
+        slideStatus.textContent = '🧠 Checking...';
+        slideStatus.className = 'slide-q-status checking';
       }
 
-      if (this.audioManager) {
-        try {
-          const res = await this.audioManager.stopListening();
-          if (res?.transcript) {
-            this.setTranscript(res.transcript);
+      const diagnosticProbes = (chunk?.diagnostic_probes && Object.keys(chunk.diagnostic_probes).length > 0)
+        ? chunk.diagnostic_probes
+        : undefined;
+
+      const payload = {
+        child_transcript: cleanCandidate,
+        checkin_question: chunk?.checkin_question || questionText,
+        target_answer_concept: chunk?.target_answer_concept || '',
+        scaffold_hint: chunk?.scaffold_hint || '',
+        canonical_prototypes: chunk?.canonical_prototypes || [],
+        keyword_clusters: chunk?.keyword_clusters || [],
+        acceptable_phrasings: chunk?.acceptable_phrasings || [],
+        entity_graph: chunk?.entity_graph || {},
+        diagnostic_probes: diagnosticProbes,
+        semantic_slots: chunk?.semantic_slots || undefined,
+        hint_level_1: chunk?.hint_level_1 || '',
+        hint_level_2: chunk?.hint_level_2 || '',
+        story_facts: chunk?.story_facts || [],
+        verbatim_page_text: chunk?.verbatim_page_text || '',
+        attempt_count: this.attemptCount,
+        microturn_used: this.microturnUsed,
+      };
+
+      try {
+        let result = null;
+        if (chunk && chunk.target_answer_concept && this.apiClient?.evaluateAnswer) {
+          result = await this.apiClient.evaluateAnswer(payload, currentSignal);
+          this.activeEvaluation = result;
+        } else {
+          const isMastered = cleanCandidate.split(/\s+/).length >= 2;
+          result = {
+            status: isMastered ? 'mastered' : 'needs_scaffold',
+            spoken_feedback: isMastered ? 'Awesome answer! That is right!' : 'Tell me what you see!',
+            resolved: isMastered,
+          };
+        }
+
+        if (isQuestionDone || currentSignal.aborted) return;
+
+        const isMastered = Boolean(result.status === 'mastered' || result.resolved);
+        const spokenFeedback = result.spoken_feedback || (isMastered ? 'Awesome job! That is right!' : '');
+
+        if (isMastered) {
+          isQuestionDone = true;
+          this.markQuestionCompleted(chunk?.checkin_question || questionText, {
+            chunkId: chunk?.chunk_id,
+            pageIndex,
+            pageNum,
+          });
+          clearTimeout(speechSilenceTimer);
+          clearTimeout(scaffoldDelayTimer);
+
+          if (slideStatus) {
+            slideStatus.textContent = '🎉 That is right!';
+            slideStatus.className = 'slide-q-status success';
           }
-        } catch (_) {}
-      }
+          if (slideFeedbackBox) {
+            slideFeedbackBox.style.display = 'block';
+            slideFeedbackBox.className = 'slide-q-feedback success';
+            slideFeedbackBox.innerHTML = `🎉 <strong>Super Reader!</strong> ${spokenFeedback}`;
+          }
+          if (drawerFeedback) {
+            drawerFeedback.style.display = 'block';
+            drawerFeedback.className = 'active-q-feedback success';
+            drawerFeedback.innerHTML = `🎉 <strong>Super Reader!</strong> ${spokenFeedback}`;
+          }
+          this.triggerConfetti();
 
-      await this.evaluatePageAnswer(pageIndex, pageNum, page, questionText, chunk, {
-        slideStatus,
-        slideFeedbackBox,
-        slideTranscriptText,
-      });
+          if (this.audioManager) {
+            try {
+              await this.audioManager.stopListening();
+            } catch (_) {}
+            if (spokenFeedback) {
+              this.audioManager.speak(spokenFeedback);
+            }
+          }
+
+          this.onPageQuestionDone(pageIndex);
+          return;
+        }
+
+        // If not mastered:
+        // Clear any evaluating box immediately so "checking your answer..." never lingers on screen!
+        if (slideFeedbackBox && slideFeedbackBox.classList.contains('evaluating')) {
+          slideFeedbackBox.style.display = 'none';
+          slideFeedbackBox.textContent = '';
+        }
+        if (drawerFeedback && drawerFeedback.classList.contains('evaluating')) {
+          drawerFeedback.style.display = 'none';
+          drawerFeedback.textContent = '';
+        }
+
+        // Check if the user continued speaking since cleanCandidate was submitted
+        const currentHeard = (this.transcript || this._accumulatedChildAnswer || '').trim();
+        if (currentHeard !== cleanCandidate) {
+          if (slideStatus) {
+            slideStatus.textContent = '👂 Hearing you...';
+            slideStatus.className = 'slide-q-status listening';
+          }
+          return;
+        }
+
+        // User paused on an incomplete answer, but we keep listening for more!
+        if (slideStatus) {
+          slideStatus.textContent = '🎙️ Listening... keep going!';
+          slideStatus.className = 'slide-q-status listening';
+        }
+
+        // Only after an extended silence (3.5s) without any further speech, provide the clue
+        clearTimeout(scaffoldDelayTimer);
+        scaffoldDelayTimer = setTimeout(() => {
+          if (isQuestionDone) return;
+          const checkHeard = (this.transcript || this._accumulatedChildAnswer || '').trim();
+          if (checkHeard !== cleanCandidate) return;
+
+          const clue = result.follow_up_prompt || chunk?.scaffold_hint || 'Look closely at the story and tell me what you see!';
+          if (slideStatus) {
+            slideStatus.textContent = '💡 Try again!';
+            slideStatus.className = 'slide-q-status scaffold';
+          }
+          if (slideFeedbackBox) {
+            slideFeedbackBox.style.display = 'block';
+            slideFeedbackBox.className = 'slide-q-feedback scaffold';
+            slideFeedbackBox.innerHTML = `💡 <strong>Clue:</strong> ${clue}<br><small>Listening again for your answer...</small>`;
+          }
+          if (drawerFeedback) {
+            drawerFeedback.style.display = 'block';
+            drawerFeedback.className = 'active-q-feedback scaffold';
+            drawerFeedback.innerHTML = `💡 <strong>Clue:</strong> ${clue}<br><small>Listening again for your answer...</small>`;
+          }
+          if (this.audioManager) {
+            this.audioManager.speak(`Good try! Here is a clue: ${clue}`);
+          }
+          this.attemptCount++;
+        }, 3500);
+
+      } catch (err) {
+        if (err.name === 'AbortError' || currentSignal.aborted) {
+          return;
+        }
+        console.warn('Evaluation attempt notice:', err);
+        if (slideStatus) {
+          slideStatus.textContent = '🎙️ Listening...';
+          slideStatus.className = 'slide-q-status listening';
+        }
+        if (slideFeedbackBox && slideFeedbackBox.classList.contains('evaluating')) {
+          slideFeedbackBox.style.display = 'none';
+        }
+        if (drawerFeedback && drawerFeedback.classList.contains('evaluating')) {
+          drawerFeedback.style.display = 'none';
+        }
+      }
     };
 
     if (this.audioManager) {
       try {
         await this.audioManager.startListening({
           onTranscript: ({ interim, final, full }) => {
+            if (isQuestionDone) return;
             const heard = (full || final || interim || '').trim();
             if (heard) {
               this._accumulatedChildAnswer = heard;
@@ -1022,21 +1299,25 @@ export class StoryReaderApp {
               if (slideTranscriptText) slideTranscriptText.textContent = heard;
               if (drawerTranscriptText) drawerTranscriptText.textContent = heard;
 
+              // Hide previous feedback/scaffold card immediately when user speaks new words
+              if (slideFeedbackBox) slideFeedbackBox.style.display = 'none';
+              if (drawerFeedback) drawerFeedback.style.display = 'none';
+
               if (slideStatus) {
                 slideStatus.textContent = '👂 Hearing you...';
                 slideStatus.className = 'slide-q-status listening';
               }
 
-              // Children pause between thoughts:
-              // Keep recording and waiting generously (3.2s) after speech
-              // so children are never cut off mid-thought!
+              // Reset pause and scaffold timers on every new word
               clearTimeout(speechSilenceTimer);
-              const wordCount = heard.split(/\s+/).filter(Boolean).length;
-              const pauseWaitMs = wordCount >= 3 ? 3200 : 4000;
+              clearTimeout(scaffoldDelayTimer);
 
+              // Snappy pause detection (500ms):
+              // As soon as user pauses, immediately submit that answer to see if it is correct.
+              // Don't hesitate. But keep listening for a more complete answer!
               speechSilenceTimer = setTimeout(() => {
-                executeEvaluation();
-              }, pauseWaitMs);
+                submitCandidateAnswer(heard);
+              }, 500);
             }
           },
           onError: (err) => {
@@ -1051,13 +1332,17 @@ export class StoryReaderApp {
     if (slidePttBtn) {
       slidePttBtn.onclick = (e) => {
         e.preventDefault();
-        executeEvaluation();
+        clearTimeout(speechSilenceTimer);
+        const text = (this.transcript || this._accumulatedChildAnswer || '').trim();
+        if (text) submitCandidateAnswer(text);
       };
     }
     if (drawerPttBtn) {
       drawerPttBtn.onclick = (e) => {
         e.preventDefault();
-        executeEvaluation();
+        clearTimeout(speechSilenceTimer);
+        const text = (this.transcript || this._accumulatedChildAnswer || '').trim();
+        if (text) submitCandidateAnswer(text);
       };
     }
   }
@@ -1137,6 +1422,10 @@ export class StoryReaderApp {
     }
 
     if (isMastered) {
+      this.markQuestionCompleted(chunk?.checkin_question || questionText, {
+        chunkId: chunk?.chunk_id,
+        pageIndex,
+      });
       if (slideStatus) {
         slideStatus.textContent = '';
         slideStatus.style.display = 'none';
@@ -1218,7 +1507,11 @@ export class StoryReaderApp {
       this._updateDrawerQuestions();
       const existing = list.querySelector('#drawer-active-page-question');
       if (existing) existing.remove();
-      list.insertAdjacentHTML('afterbegin', activeCardHtml);
+      if (typeof list.insertAdjacentHTML === 'function') {
+        list.insertAdjacentHTML('afterbegin', activeCardHtml);
+      } else {
+        list.innerHTML = activeCardHtml + (list.innerHTML || '');
+      }
 
       const speakBtn = list.querySelector('#btn-speak-drawer-q');
       speakBtn?.addEventListener('click', () => {
@@ -1290,40 +1583,56 @@ export class StoryReaderApp {
   }
 
   onPageQuestionDone(pageIndex) {
-    const nextIdx = pageIndex + 1;
-    const totalPages = this.cameraTray?.state?.pages?.length || 0;
-
-    if (this.cameraTray?.swipeToNextPage) {
-      setTimeout(() => {
-        // Hide all slide cards before swiping so ONLY active page can listen
-        if (typeof document !== 'undefined') {
-          document.querySelectorAll('.slide-question-card').forEach((el) => {
-            el.style.display = 'none';
-          });
-        }
-
-        this.cameraTray.swipeToNextPage(pageIndex);
-
-        if (nextIdx < totalPages) {
-          if (this.elements.statusBadge) {
-            this.elements.statusBadge.textContent = `📖 Swiped to Page ${nextIdx + 1}!`;
-          }
-          const nextSlide = this.cameraTray.state.pages[nextIdx];
-          if (nextSlide && this.hasQuestionForPage(nextIdx, nextSlide)) {
-            setTimeout(() => {
-              this.askQuestionsAboutPage(nextIdx, nextSlide);
-            }, 900);
-          }
-        } else {
-          if (this.elements.statusBadge) {
-            this.elements.statusBadge.textContent = `🏆 Finished all pages in chapter!`;
-          }
-          if (this.audioManager) {
-            this.audioManager.speak("You finished all the pages! Great job reading this story!");
-          }
-        }
-      }, 1400);
+    const pageNum = this.cameraTray?.state?.pages?.[pageIndex]?.pageNumber || (pageIndex + 1);
+    const currentChunk = this.getChunkForPageNumber(pageNum);
+    if (currentChunk?.checkin_question) {
+      this.markQuestionCompleted(currentChunk.checkin_question, {
+        chunkId: currentChunk.chunk_id,
+        pageIndex,
+        pageNumber: pageNum,
+      });
     }
+
+    const nextIdx = this.getNextUnansweredPageIndex(pageIndex);
+
+    const proceedToNext = () => {
+      // Hide all slide cards before swiping so ONLY active page can listen
+      if (typeof document !== 'undefined') {
+        document.querySelectorAll('.slide-question-card').forEach((el) => {
+          el.style.display = 'none';
+        });
+      }
+
+      if (nextIdx !== -1) {
+        if (this.cameraTray?.scrollToPageIndex) {
+          this.cameraTray.scrollToPageIndex(nextIdx);
+        } else if (this.cameraTray?.swipeToNextPage) {
+          this.cameraTray.swipeToNextPage(nextIdx);
+        }
+
+        this.activePageIndex = nextIdx;
+        this.currentChunkIndex = Math.min(nextIdx, (this.bookData?.chunks?.length || 1) - 1);
+
+        if (this.elements.statusBadge) {
+          this.elements.statusBadge.textContent = `📖 Swiped to Page ${nextIdx + 1}!`;
+        }
+        const nextSlide = this.cameraTray?.state?.pages?.[nextIdx];
+        if (nextSlide) {
+          setTimeout(() => {
+            this.askQuestionsAboutPage(nextIdx, nextSlide);
+          }, 350);
+        }
+      } else {
+        if (this.elements.statusBadge) {
+          this.elements.statusBadge.textContent = `🏆 Finished all questions in story!`;
+        }
+        if (this.audioManager) {
+          this.audioManager.speak("You finished all the questions! Great job reading this story!");
+        }
+      }
+    };
+
+    setTimeout(proceedToNext, 650);
   }
 
   _updateDrawerQuestions() {
@@ -1358,19 +1667,28 @@ export class StoryReaderApp {
 
     if (section.style) section.style.display = 'block';
     list.innerHTML = chunks.map((chunk, idx) => {
+      const isCompleted = this.sessionQuestionTracker?.isCompleted(chunk.checkin_question);
       const pageInfo = chunk.page_range ? ` (${chunk.page_range})` : '';
       const prompt = chunk.lookout_prompt ? `<div class="drawer-q-item-lookout"><span class="q-label">👀 Lookout:</span> ${chunk.lookout_prompt}</div>` : '';
       const question = chunk.checkin_question ? `<div class="drawer-q-item-question"><span class="q-label">❓ Question:</span> ${chunk.checkin_question}</div>` : '';
       const hint = chunk.scaffold_hint ? `<div class="drawer-q-item-hint"><span class="q-label">💡 Clue:</span> ${chunk.scaffold_hint}</div>` : '';
+      const askBtnLabel = isCompleted ? '✅ Answered' : '🗣️ Ask Out Loud';
+      const askBtnDisabled = isCompleted ? 'disabled aria-disabled="true"' : '';
+      const askBtnClass = isCompleted ? 'touch-btn btn-ask-this-chapter is-completed is-disabled' : 'touch-btn btn-ask-this-chapter';
       return `
-        <div class="drawer-question-card" data-chunk-index="${idx}">
+        <div class="drawer-question-card ${isCompleted ? 'is-completed' : ''}" data-chunk-index="${idx}">
           <div class="drawer-q-card-header">
-            <span class="drawer-q-chunk-title">📖 Chapter ${idx + 1}${pageInfo}</span>
-            <button type="button" class="touch-btn btn-ask-this-chapter" data-chapter-index="${idx}" aria-label="Ask Chapter ${idx + 1} Question Out Loud">
-              🗣️ Ask Out Loud
-            </button>
+            <span class="drawer-q-chunk-title">📖 Chapter ${idx + 1}${pageInfo}${isCompleted ? ' ✅' : ''}</span>
+            <div class="drawer-q-card-actions">
+              <button type="button" class="touch-btn btn-toggle-q-card" data-chunk-index="${idx}" aria-expanded="false" title="Click to view question">
+                👁️ View Questions ▾
+              </button>
+              <button type="button" class="${askBtnClass}" data-chapter-index="${idx}" aria-label="Ask Chapter ${idx + 1} Question Out Loud" ${askBtnDisabled}>
+                ${askBtnLabel}
+              </button>
+            </div>
           </div>
-          <div class="drawer-q-card-body">
+          <div class="drawer-q-card-body" id="drawer-q-card-body-${idx}" style="display: none;">
             ${prompt}
             ${question}
             ${hint}
@@ -1378,6 +1696,29 @@ export class StoryReaderApp {
         </div>
       `;
     }).join('');
+
+    list.querySelectorAll?.('.btn-toggle-q-card')?.forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const idx = btn.getAttribute('data-chunk-index');
+        const body = list.querySelector(`#drawer-q-card-body-${idx}`);
+        if (!body) return;
+        const isHidden = body.style.display === 'none';
+        body.style.display = isHidden ? 'flex' : 'none';
+        btn.innerHTML = isHidden ? '🙈 Hide Questions ▴' : '👁️ View Questions ▾';
+        btn.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
+      });
+    });
+
+    list.querySelectorAll?.('.drawer-q-card-header')?.forEach((header) => {
+      header.style.cursor = 'pointer';
+      header.addEventListener('click', (e) => {
+        if (e.target.closest('button')) return;
+        const card = header.closest('.drawer-question-card');
+        const toggleBtn = card?.querySelector('.btn-toggle-q-card');
+        toggleBtn?.click();
+      });
+    });
 
     list.querySelectorAll?.('.btn-ask-this-chapter')?.forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -1623,6 +1964,16 @@ export function createDefaultApiClient(options = {}) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
 
+    if (opts?.signal) {
+      if (opts.signal.aborted) {
+        clearTimeout(timer);
+        const abortErr = new Error('The user aborted a request.');
+        abortErr.name = 'AbortError';
+        throw abortErr;
+      }
+      opts.signal.addEventListener('abort', () => controller.abort(), { once: true });
+    }
+
     try {
       const res = await fetchFn(url, { ...opts, signal: controller.signal });
       clearTimeout(timer);
@@ -1630,6 +1981,11 @@ export function createDefaultApiClient(options = {}) {
     } catch (err) {
       clearTimeout(timer);
       if (err.name === 'AbortError' || err.message?.includes('aborted')) {
+        if (opts?.signal?.aborted) {
+          const callerAbort = new Error('The user aborted a request.');
+          callerAbort.name = 'AbortError';
+          throw callerAbort;
+        }
         const timeoutErr = new Error(`Request timed out after ${timeoutMs}ms. Please check your connection and try again.`);
         timeoutErr.name = 'TimeoutError';
         timeoutErr.isTimeout = true;
@@ -1656,11 +2012,12 @@ export function createDefaultApiClient(options = {}) {
       return response.json();
     },
 
-    async evaluateAnswer(payload) {
+    async evaluateAnswer(payload, signal = null) {
       const response = await fetchWithTimeout('/api/evaluate-answer', {
         method: 'POST',
         headers: getHeaders(true),
         body: JSON.stringify(payload),
+        signal,
       }, evalTimeoutMs);
       if (!response.ok) {
         let errData;

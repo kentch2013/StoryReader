@@ -22,6 +22,7 @@
 | **M4** | Camera & Canvas Tray (Completed & Verified) | `public/js/camera_tray.js`, continuous in-browser scanner, canvas downscaler, stationary rotation, multi-sequence | 85/85 tests passing, 17/17 camera tests, resolution capping ($\le 1600\text{px}$), payload compression ($\le 300\text{KB}$/page) | iPhone 14 Plus Safari: continuous rapid snap, stationary 90° rotate, multi-sequence pagination |
 | **M5** | Safari Audio Coordinator (Completed & Verified) | `public/js/audio_manager.js`, gesture unlock, TTS synthesizer, STT Push-to-Talk | 99/99 tests passing, 14/14 audio tests, mutual exclusivity collision guard, silence hesitation tolerance | iPhone 14 Plus Safari: speak sentence, check for no silence cutoff and clean audio output |
 | **M6** | Full SPA Orchestration, Viewfinder Redesign & Safari Audio Sync (Completed & Calibrated) | `public/index.html`, `public/style.css`, `public/js/app.js`, `public/js/camera_tray.js`, `public/js/audio_manager.js` | 150/150 tests passing across 24 suites, 100% contract immutability, UI pipeline audit passing | Full parent-child reading test with physical book over HTTPS tunnel |
+| **M6.1** | Continuous Listening, Ana Online Voice & Session Question Tracking (Completed & Verified) | `public/js/session_question_tracker.js`, `public/js/audio_manager.js`, `public/js/app.js`, `public/js/camera_tray.js` | 163/163 tests passing across 25 suites, 100% test contract immutability | Live co-reading with automatic page progression & multi-page question greying |
 
 ---
 
@@ -261,3 +262,23 @@
   - Open tunnel URL on iPhone 14 Plus in Safari.
   - Conduct live co-reading session with a physical Grade 2 book (4–6 pages):
     - Parent snaps pages $\rightarrow$ child listens to lookout prompt $\rightarrow$ child reads book $\rightarrow$ child speaks answer $\rightarrow$ child hears feedback $\rightarrow$ next chunk.
+
+---
+
+### Module 6.1: Continuous Listening, Ana Online Voice & Session Question Tracking (Completed & Verified)
+* **1. Pipeline Extension:**
+  - **Natural Voice Prioritization & Default Ana Online TTS:** Upgraded `SafariAudioManager` to prioritize high-fidelity neural voices (`/ana.*online/i`, `/ana.*natural/i`, `/jenny.*natural/i`, `/google\s+us\s+english/i`). Configured default preferred voice to `Microsoft Ana Online (Natural)` with `localStorage` user persistence and pinned utterance instance to prevent Chromium V8 garbage collection interruption.
+  - **Unified Startup Permissions & Camera Management:** Request combined `{ video: true, audio: true }` on app boot via `getUserMedia`, stopping audio tracks immediately so microphone remains idle until questions begin. Automatically stop camera video tracks when exiting main scan panel and restore upon return.
+  - **Adaptive 2-Pass Anti-Recitation Pipeline:** Implemented `BOOK_ANALYSIS_DIRECT_SYSTEM_PROMPT` in `prompts/book_analysis.js` for verbatim text extraction. On copyrighted books triggering `RECITATION_BLOCKED`, `gemini_service.js` automatically falls back to Pass 2 with `BOOK_ANALYSIS_SYSTEM_PROMPT` 1:1 factual paraphrasing.
+  - **Snappy Continuous Listening & Answer Evaluation:** Implemented 500ms pause trigger in `startWaitingForAnswer()` to evaluate candidate answers instantly without displaying blocking "checking your answer..." banners. Continuous listening remains active for sentence continuations with in-flight `AbortController` cancellation.
+  - **Automated Question Start on Analysis Completion:** When Gemini analysis finishes and the carousel question button becomes active (`is-ready`), the app automatically reads the first question aloud via Ana Online TTS, awaits completion, then opens the microphone.
+  - **Session Question Tracking & Multi-Page Question Greying Out:** Implemented `public/js/session_question_tracker.js` (`SessionQuestionTracker`) with canonical normalization and `sessionStorage` persistence. Correctly answering a question for Page 1 automatically greys out and disables matching question buttons on all other pages (e.g. Page 2). `onPageQuestionDone()` skips completed pages and advances to the next page with an unanswered question.
+* **2. Code Verification:**
+  - `test/continuous_listening_and_progression.test.js`: 11/11 tests passing.
+  - `test/session_question_tracker.test.js`: 2/2 tests passing.
+  - Full project regression suite passing **163/163 tests across 25 test suites** (`npm run verify`).
+  - Contract audit: 100% immutable (`✅ Contract Audit: Test files remained 100% immutable.`).
+* **3. Digital Samples:**
+  - Automated session question tracking benchmark and multi-page question de-duplication suite (`test/session_question_tracker.test.js`).
+* **4. Human Verification:**
+  - Scan multi-page book with identical chunk questions (e.g. Pages 1 & 2); answer Page 1; confirm both Page 1 and Page 2 question buttons grey out; confirm automatic advance to Page 3.

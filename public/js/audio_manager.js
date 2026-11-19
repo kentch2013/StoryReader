@@ -37,6 +37,7 @@ export class SafariAudioManager {
     this._defaultRate = options.defaultRate !== undefined ? options.defaultRate : 0.9;
     this._defaultPitch = options.defaultPitch !== undefined ? options.defaultPitch : 1.0;
     this._defaultLang = options.defaultLang || 'en-US';
+    this._preferredVoice = options.preferredVoice !== undefined ? options.preferredVoice : 'Microsoft Ana Online (Natural)';
 
     this._state = AUDIO_STATE.LOCKED;
     this._isUnlocked = false;
@@ -110,6 +111,67 @@ export class SafariAudioManager {
     return { unlocked: true };
   }
 
+  /**
+   * Retrieves all available voices, annotating modern natural/neural voices.
+   *
+   * @returns {Array<{ name: string, lang: string, default: boolean, isNatural: boolean }>}
+   */
+  getAvailableVoices() {
+    if (!this._speechSynthesis || typeof this._speechSynthesis.getVoices !== 'function') {
+      return [];
+    }
+    const voices = this._speechSynthesis.getVoices() || [];
+    return voices
+      .filter((v) => v.lang && (v.lang.startsWith('en') || v.lang === ''))
+      .map((v) => ({
+        name: v.name,
+        lang: v.lang,
+        default: Boolean(v.default),
+        isNatural: /natural|neural|google|premium|enhanced/i.test(v.name || ''),
+      }))
+      .sort((a, b) => {
+        if (a.isNatural && !b.isNatural) return -1;
+        if (!a.isNatural && b.isNatural) return 1;
+        return a.name.localeCompare(b.name);
+      });
+  }
+
+  /**
+   * Sets preferred voice by name and persists to localStorage.
+   *
+   * @param {string|null} voiceName
+   */
+  setPreferredVoice(voiceName) {
+    this._preferredVoice = voiceName || null;
+    try {
+      if (typeof localStorage !== 'undefined') {
+        if (voiceName) {
+          localStorage.setItem('storyreader_preferred_voice', voiceName);
+        } else {
+          localStorage.removeItem('storyreader_preferred_voice');
+        }
+      }
+    } catch (_) {}
+  }
+
+  /**
+   * Returns currently preferred voice name (persisted or in-memory).
+   *
+   * @returns {string|null}
+   */
+  getPreferredVoice() {
+    if (this._preferredVoice !== undefined && this._preferredVoice !== null) {
+      return this._preferredVoice;
+    }
+    try {
+      if (typeof localStorage !== 'undefined') {
+        const stored = localStorage.getItem('storyreader_preferred_voice');
+        if (stored) return stored;
+      }
+    } catch (_) {}
+    return 'Microsoft Ana Online (Natural)';
+  }
+
   _selectVoice(preferredName) {
     if (!this._speechSynthesis || typeof this._speechSynthesis.getVoices !== 'function') {
       return null;
@@ -117,18 +179,54 @@ export class SafariAudioManager {
     const voices = this._speechSynthesis.getVoices() || [];
     if (voices.length === 0) return null;
 
-    if (preferredName) {
+    const targetName = preferredName || this.getPreferredVoice();
+
+    if (targetName) {
       const direct = voices.find(
-        (v) => v.name && v.name.toLowerCase() === preferredName.toLowerCase()
+        (v) => v.name && v.name.toLowerCase() === targetName.toLowerCase()
       );
       if (direct) return direct;
       const partial = voices.find(
-        (v) => v.name && v.name.toLowerCase().includes(preferredName.toLowerCase())
+        (v) => v.name && v.name.toLowerCase().includes(targetName.toLowerCase())
       );
       if (partial) return partial;
+
+      // Special handling for Ana online variants
+      if (/ana/i.test(targetName)) {
+        const ana = voices.find((v) => v.name && /ana/i.test(v.name));
+        if (ana) return ana;
+      }
     }
 
-    const priorityNames = ['samantha', 'daniel', 'karen', 'moira', 'tessa'];
+    // 1. High-fidelity Neural / Natural voices (prioritizing Ana online):
+    // Edge/Windows: "Microsoft Ana Online (Natural)" (child-friendly story voice), "Microsoft Jenny Online (Natural)"
+    // Chrome: "Google US English", "Google UK English Female"
+    // Safari/macOS/iOS: "Ava (Premium)", "Samantha (Enhanced)", "Zoe (Premium)"
+    const naturalVoicePatterns = [
+      /ana.*online/i,           // Microsoft Ana Online
+      /ana.*natural/i,          // Microsoft Ana Online (Natural) - child story voice
+      /ana/i,                   // Any Ana voice
+      /jenny.*natural/i,        // Microsoft Jenny Online (Natural) - warm conversational tone
+      /aria.*natural/i,         // Microsoft Aria Online (Natural)
+      /guy.*natural/i,          // Microsoft Guy Online (Natural)
+      /natural/i,               // Any Microsoft Natural voice
+      /neural/i,                // Neural TTS engines
+      /google\s+us\s+english/i, // Google US English (Chrome)
+      /google\s+uk\s+english/i, // Google UK English (Chrome)
+      /google/i,                // Any Google voice
+      /premium/i,               // Apple Premium
+      /enhanced/i,              // Apple Enhanced
+    ];
+
+    for (const pattern of naturalVoicePatterns) {
+      const match = voices.find(
+        (v) => v.lang && v.lang.startsWith('en') && pattern.test(v.name || '')
+      );
+      if (match) return match;
+    }
+
+    // 2. Fallback to priority names
+    const priorityNames = ['ana', 'jenny', 'aria', 'guy', 'ava', 'samantha', 'daniel', 'karen', 'moira', 'tessa'];
     for (const name of priorityNames) {
       const match = voices.find(
         (v) => v.name && v.name.toLowerCase().includes(name)
@@ -196,6 +294,9 @@ export class SafariAudioManager {
       };
       this._activeSpeech = record;
       this._currentUtterance = utterance;
+      if (typeof window !== 'undefined') {
+        window.__storyReaderUtterance = utterance;
+      }
 
       utterance.onend = () => {
         if (!settled) {

@@ -294,7 +294,12 @@ export async function evaluateDiagnosticProbes(normalizedTranscript, rubric = {}
     };
   }
 
-  const probes = rubric.diagnostic_probes || synthesizeProbesFromRubric(rubric);
+  const hasExplicitProbes = Boolean(
+    rubric.diagnostic_probes &&
+    typeof rubric.diagnostic_probes === 'object' &&
+    Object.keys(rubric.diagnostic_probes).length > 0
+  );
+  const probes = hasExplicitProbes ? rubric.diagnostic_probes : synthesizeProbesFromRubric(rubric);
 
   // =========================================================================
   // LAYER 1: Grounding & Intelligibility Filter (Inquiry & Stutter Screener)

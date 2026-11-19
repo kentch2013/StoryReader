@@ -87,8 +87,16 @@ Each module must pass all 4 verification gates before the next module begins:
   - [x] Safeguards & Optimizations: Rubric payload forwarding, empty transcript guard, re-entrancy locks, clue re-prompting, confetti container cleanup, `sessionStorage` persistence, and client-side AbortController fetch timeouts (`test/app_safeguards.test.js` - 7/7 passing)
   - [x] Native iPhone HEIC/HEIF Ingestion: Direct support for `image/heic` and `image/heif` in Express routes and Gemini multimodal service
   - [x] Pipeline Calibration & Threshold Tuning: Genitive possessive pronoun resolution in `discourse_resolver.js`, Tier 1 prototype fast-path precedence in `answer_evaluator.js`, meta-cognitive leak sanitization in `gemini_service.js`, stop-word filtering in `rubric_matcher.js`, and strict chunk ceiling ($\le 3$ pages) in `prompts/book_analysis.js` (`test/pipeline_calibration.test.js` - 5/5 passing)
-  - [x] Code Tests: 150/150 tests across 24 test suites with 100% test contract immutability (`npm run verify`)
-  - [x] Digital Samples: Autonomous UI & pipeline audit (`scripts/autonomous_pipeline_ui_audit.js`), copyrighted book audit on *The Runaway Bunny* and *Rattles* (`scripts/test_copyrighted_screenshots.js`), and full 6-page iPhone HEIC audit on *Robert the Rose Horse* (`scripts/audit_robert_all_pages.js`)
+
+- [x] **Module 6.1: Voice Fidelity, Continuous Listening & Session Question Tracking (Completed & Verified)**
+  - [x] Natural Voice Engine & Default Ana Online: Prioritizes neural/natural speech synthesis voices (`Microsoft Ana Online (Natural)` / `Ana Online`, `Microsoft Jenny Online`, `Google US English`), eliminating robotic desktop SAPI tones. Default voice set to Ana Online with `localStorage` preference persistence and V8 garbage-collection protection.
+  - [x] Unified Startup Permissions: Instant combined camera & microphone permission request (`getUserMedia({ video: true, audio: true })`) on app boot; audio tracks immediately stopped to keep listening idle until questions are asked.
+  - [x] Camera Stream Lifecycle: Camera automatically turns off in review drawer, chapter/question panels, and evaluating/feedback screens to conserve device battery and thermal load; restarts only when returning to the main scanning panel.
+  - [x] Adaptive 2-Pass Book Analysis: Pass 1 executes direct verbatim extraction (`BOOK_ANALYSIS_DIRECT_SYSTEM_PROMPT`) preserving exact author text for original/open books; Pass 2 seamlessly catches `RECITATION_BLOCKED` and re-runs with 1:1 anti-recitation paraphrasing (`BOOK_ANALYSIS_SYSTEM_PROMPT`).
+  - [x] Snappy Continuous Listening & Low-Latency Evaluation: 500ms speech pause triggers immediate candidate answer evaluation without blocking UI banners; continuous listening remains active for sentence continuations; in-flight AbortController prevents pipeline queueing.
+  - [x] Automated Question Start on Analysis Completion: App automatically reads the first question aloud using Ana Online TTS upon analysis completion, waits for speech output to finish, and transitions to microphone listening.
+  - [x] Session Question Tracker & Multi-Page Identical Question Greying: Canonical question normalization via `SessionQuestionTracker` with `sessionStorage` persistence; correctly answering a question on Page 1 automatically greys out and disables identical question buttons across all other pages (e.g. Page 2); auto-progression skips already answered pages and targets the next page with an unanswered question.
+  - [x] Code Tests: 163/163 tests passing across 25 test suites with 100% test contract immutability (`npm run verify`)
   - [ ] Human Gate: Live co-reading session with a physical Grade 2 book over Cloudflare Tunnel on iPhone 14 Plus Safari
 
 ---

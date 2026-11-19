@@ -1,5 +1,9 @@
 import { GoogleGenAI, Type } from '@google/genai';
-import { BOOK_ANALYSIS_SYSTEM_PROMPT, BOOK_ANALYSIS_SCHEMA } from '../prompts/book_analysis.js';
+import {
+  BOOK_ANALYSIS_SYSTEM_PROMPT,
+  BOOK_ANALYSIS_DIRECT_SYSTEM_PROMPT,
+  BOOK_ANALYSIS_SCHEMA,
+} from '../prompts/book_analysis.js';
 import { ANSWER_EVALUATION_SYSTEM_PROMPT, ANSWER_EVALUATION_SCHEMA } from '../prompts/answer_evaluation.js';
 import { rateLimiter } from './rate_limiter.js';
 import { verifyGroundingFidelity } from './grounding_verifier.js';
@@ -310,37 +314,52 @@ export async function analyzeBookPages(files) {
   contents.push('Analyze these book pages in sequence according to Grade 2 reading standards.');
 
   const analysis = await executeBookAnalysisWithFallback(async (modelName) => {
-    return await rateLimiter.executeWithRetry(async () => {
-      const config = {
-        systemInstruction: BOOK_ANALYSIS_SYSTEM_PROMPT,
-        responseMimeType: 'application/json',
-        responseSchema: BOOK_ANALYSIS_SCHEMA,
-        maxOutputTokens: 8192,
-      };
-      if (typeof modelName === 'string' && (modelName.includes('3.1') || modelName.includes('thinking'))) {
-        config.thinkingConfig = { thinkingBudget: 0 };
-      }
+    // Adaptive Anti-Recitation Pipeline:
+    // Pass 1: Try Direct Extraction to preserve the author's exact sentences and story text without forced paraphrasing.
+    // Pass 2: If and ONLY if model blocks on copyright RECITATION, catch it and fall back to anti-recitation paraphrasing.
+    const invokeModel = async (systemInstruction, isFallback = false) => {
+      return await rateLimiter.executeWithRetry(async () => {
+        const config = {
+          systemInstruction,
+          responseMimeType: 'application/json',
+          responseSchema: BOOK_ANALYSIS_SCHEMA,
+          maxOutputTokens: 8192,
+        };
+        if (typeof modelName === 'string' && (modelName.includes('3.1') || modelName.includes('thinking'))) {
+          config.thinkingConfig = { thinkingBudget: 0 };
+        }
 
-      const res = await ai.models.generateContent({
-        model: modelName,
-        contents,
-        config,
-      });
+        const res = await ai.models.generateContent({
+          model: modelName,
+          contents,
+          config,
+        });
 
-      const outcome = classifyModelResponse(res);
-      if (outcome.status === 'retryable') {
-        const err = new Error(outcome.message);
-        err.status = outcome.retryableStatus || 503;
-        throw err;
-      }
-      if (outcome.status === 'error') {
-        const err = new Error(outcome.message);
-        err.code = outcome.code;
-        throw err;
-      }
+        const outcome = classifyModelResponse(res);
+        if (outcome.status === 'retryable') {
+          const err = new Error(outcome.message);
+          err.status = outcome.retryableStatus || 503;
+          throw err;
+        }
+        if (outcome.status === 'error') {
+          const err = new Error(outcome.message);
+          err.code = outcome.code;
+          throw err;
+        }
 
-      return res;
-    }, 1);
+        return res;
+      }, 1);
+    };
+
+    try {
+      return await invokeModel(BOOK_ANALYSIS_DIRECT_SYSTEM_PROMPT, false);
+    } catch (err) {
+      if (err.code === 'RECITATION_BLOCKED' || (typeof err.message === 'string' && err.message.toLowerCase().includes('recitation'))) {
+        console.warn('⚡ [RECITATION DETECTED] Copyright recitation filter triggered on verbatim text. Falling back to anti-recitation paraphrasing prompt...');
+        return await invokeModel(BOOK_ANALYSIS_SYSTEM_PROMPT, true);
+      }
+      throw err;
+    }
   });
 
   if (analysis && Array.isArray(analysis.chunks)) {
