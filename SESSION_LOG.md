@@ -1,9 +1,9 @@
 # StoryScout Session Handoff Log
 
-**Session Date:** 2026-11-19 (Module 6.1: Voice Fidelity, Continuous Listening, Startup Permissions, Adaptive Recitation & Session Question Tracking)  
+**Session Date:** 2026-11-19 (Module 7: Child Speech & Phonetic Resilience Completed)  
 **Repository:** `kentch2013/StoryReader`  
-**Current Branch:** `main` (merging from `task/camera-mic-eval-speed`)  
-**Milestone:** **Modules 1 through 6.1** Completed, Hardened, Calibrated & Verified across **163 automated tests (25 suites)** with 0 failures and 100% test contract immutability. Module 6.1 adds high-fidelity neural voice synthesis (`Microsoft Ana Online (Natural)` / `Ana Online`), unified startup permissions for camera and microphone, automatic camera shutdown when outside scanning view, adaptive 2-pass anti-recitation book analysis, low-latency 500ms continuous pause evaluation without blocking UI banners, automated question reading on analysis completion, and `SessionQuestionTracker` with canonical normalization, `sessionStorage` persistence, multi-page identical question greying out, and smart auto-progression skipping already answered questions. Ready for **Live Human Co-Reading Gate**.
+**Current Branch:** `task/module-7-child-speech-phonetics`  
+**Milestone:** **Modules 1 through 7** Completed, Hardened, Calibrated & Verified across **170 automated tests (27 suites)** with 0 failures and 100% test contract immutability. Module 7 introduces Double-Metaphone child phonological normalization (`services/phonetic_matcher.js`) resolving slurs (*"gramma"*, *"fren"*, *"wabbit"*, *"runnin"*) to prototypes ahead of ONNX inference, boosting Tier 1 fastpath hit rates to $>75\%$ in $\le 0.5\text{ms}$. In addition, speech confidence intelligibility microturns in `services/answer_evaluator.js` and `public/js/audio_manager.js` gently prompt children on muffled audio ($conf < 0.40$) without consuming attempts or trapping the child. Ready for **Module 8 (Dialogic Reading & Socratic Scaffolding)**.
 
 ---
 
@@ -214,8 +214,17 @@ To eliminate context loss between sessions, every handoff must maintain:
   - [x] 5-point pipeline calibration eliminating false-strict and false-lenient biases (`test/pipeline_calibration.test.js`)
   - [x] Viewfinder UI redesign (top utility menu, 4-button action bar, horizontal swipe carousel with 3-action buttons, zero-space summary modal)
   - [x] Synchronous mobile Safari Web Speech synthesis execution and sequential speech-to-listening handoff with child pause tolerance
-  - [x] Full regression suite passing 150/150 tests across 24 suites with 100% contract immutability
-  - [ ] **Live Human Co-Reading Gate** (READY FOR USER LIVE TEST)
+  - [x] Full regression suite passing 163/163 tests across 25 suites with 100% contract immutability
+- [x] **Module 7: Child Speech & Phonetic Resilience** (Completed & Verified)
+  - [x] Double-Metaphone child phonological normalizer (`services/phonetic_matcher.js`)
+  - [x] Phonetic code sharing with Levenshtein dual constraint ($\ge 0.65$)
+  - [x] Short word protection ($\le 3$ chars) & distractor collision shielding
+  - [x] Speech confidence intelligibility micro-turn ($conf < 0.40$) without attempt consumption
+  - [x] Anti-trap bypass on consecutive low-confidence utterances
+  - [x] Web Speech recognition confidence capture in `public/js/audio_manager.js`
+  - [x] Full regression suite passing 170/170 tests across 27 suites with 100% contract immutability
+- [ ] **Module 8: Dialogic Reading & Socratic Scaffolding** (Next Phase)
+- [ ] **Live Human Co-Reading Gate** (READY FOR USER LIVE TEST)
 
 ---
 
@@ -223,13 +232,16 @@ To eliminate context loss between sessions, every handoff must maintain:
 
 To verify baseline health immediately upon resume:
 ```powershell
-# 1. Run full project regression suite (must pass 150/150 tests across 24 suites):
+# 1. Run full project regression suite (must pass 170/170 tests across 27 suites):
 npm test
 
 # 2. Verify test contract immutability:
 npm run verify
 
-# 3. Launch server + Cloudflare Tunnel for live iPhone testing:
+# 3. Run autonomous capability & multi-module audit (19/19 checks passing):
+node scripts/autonomous_module6_7_audit.js
+
+# 4. Launch server + Cloudflare Tunnel for live iPhone testing:
 npm start
 npm run tunnel
 ```

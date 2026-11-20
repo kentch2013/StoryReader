@@ -54,6 +54,7 @@ export class SafariAudioManager {
     this._finalizedTranscripts = [];
     this._sessionFinals = new Map();
     this._sessionInterim = '';
+    this._lastConfidence = null;
   }
 
   get state() {
@@ -378,6 +379,7 @@ export class SafariAudioManager {
     this._finalizedTranscripts = [];
     this._sessionFinals.clear();
     this._sessionInterim = '';
+    this._lastConfidence = null;
 
     this._setState(AUDIO_STATE.LISTENING);
     this._startRecognitionSession();
@@ -421,6 +423,9 @@ export class SafariAudioManager {
         const idx = (event.results.length === 1 && event.resultIndex > 0) ? event.resultIndex : i;
         const alt = result && result[0];
         const transcript = alt && alt.transcript ? alt.transcript : '';
+        if (alt && typeof alt.confidence === 'number') {
+          this._lastConfidence = alt.confidence;
+        }
 
         if (result && result.isFinal) {
           this._sessionFinals.set(idx, transcript);
@@ -440,6 +445,7 @@ export class SafariAudioManager {
           interim: this._sessionInterim,
           final: finalStr,
           full: fullStr,
+          confidence: this._lastConfidence,
         });
       }
     };
@@ -509,7 +515,7 @@ export class SafariAudioManager {
 
     const transcript = this.getFullTranscript();
     this._setState(AUDIO_STATE.IDLE);
-    return { transcript };
+    return { transcript, confidence: this._lastConfidence };
   }
 
   cancelListening() {
@@ -540,6 +546,7 @@ export class SafariAudioManager {
   reset() {
     this.cancelSpeech();
     this.cancelListening();
+    this._lastConfidence = null;
     this._setState(this._isUnlocked ? AUDIO_STATE.IDLE : AUDIO_STATE.LOCKED);
   }
 }

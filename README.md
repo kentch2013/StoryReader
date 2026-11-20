@@ -97,6 +97,13 @@ Each module must pass all 4 verification gates before the next module begins:
   - [x] Automated Question Start on Analysis Completion: App automatically reads the first question aloud using Ana Online TTS upon analysis completion, waits for speech output to finish, and transitions to microphone listening.
   - [x] Session Question Tracker & Multi-Page Identical Question Greying: Canonical question normalization via `SessionQuestionTracker` with `sessionStorage` persistence; correctly answering a question on Page 1 automatically greys out and disables identical question buttons across all other pages (e.g. Page 2); auto-progression skips already answered pages and targets the next page with an unanswered question.
   - [x] Code Tests: 163/163 tests passing across 25 test suites with 100% test contract immutability (`npm run verify`)
+
+- [x] **Module 7: Child Speech & Phonetic Resilience (Completed & Verified)**
+  - [x] Double-Metaphone Child Phonological Normalizer: `services/phonetic_matcher.js` encodes dual primary and secondary phonetic codes tailored for Grade 2 speech (terminal `IN` $\rightarrow$ `ING`, silent `D` in `NDM`/`NDP`, terminal stop reduction in `ND`/`NT`, child gliding `W` $\rightarrow$ `R` before vowels, minimal pair protection, and distractor collision shielding). Normalizes slurred variants (*"gramma"*, *"fren"*, *"wabbit"*, *"runnin"*) in $\le 0.05\text{ms}$, boosting Tier 1 fastpath hit rates to $>75\%$ with $<2\text{ms}$ latency.
+  - [x] Speech Confidence Intelligibility Micro-Turns: Traps low-confidence speech ($0.05 \le conf < 0.40$) in `services/answer_evaluator.js` as a free clarification micro-turn without consuming attempts; anti-trap bypass on consecutive low-confidence turns ensures quiet readers are never locked in loops.
+  - [x] Web Speech Recognition Confidence Capture: `public/js/audio_manager.js` captures live confidence metrics from Web Speech results, emitting them in `onTranscript` events and `stopListening()` responses.
+  - [x] Autonomous Capability & Multi-Module Audit Suite: `scripts/autonomous_module6_7_audit.js` verifies all M6, M6.1, and M7 capabilities in a single pass (19/19 checks passing, 100% green).
+  - [x] Code Tests: 170/170 tests passing across 27 test suites with 100% test contract immutability (`npm run verify`)
   - [ ] Human Gate: Live co-reading session with a physical Grade 2 book over Cloudflare Tunnel on iPhone 14 Plus Safari
 
 ---

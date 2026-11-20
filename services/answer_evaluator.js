@@ -1,4 +1,5 @@
 import { normalizeTranscript, isShrugOrEmpty } from './transcript_sanitizer.js';
+import { normalizeChildPhonetics } from './phonetic_matcher.js';
 import {
   matchKeywordClusters,
   matchAcceptablePhrasings,
@@ -53,7 +54,10 @@ export async function evaluateChildAnswer(data = {}) {
 
   const attempt = Number(data.attempt_count) || 1;
   const feedback = getPrebakedFeedback(data);
-  const normalized = normalizeTranscript(data.child_transcript);
+  let normalized = normalizeTranscript(data.child_transcript);
+  normalized = normalizeChildPhonetics(normalized, data.keyword_clusters, {
+    canonicalPrototypes: data.canonical_prototypes,
+  });
 
   // 1. Discourse & Relational Resolution
   const discourseResult = resolveDiscourse(normalized, data, {
@@ -86,6 +90,29 @@ export async function evaluateChildAnswer(data = {}) {
     },
     discourse: discourseResult,
   };
+
+  // Speech Confidence Gate: Intercept low-confidence muffled audio as a free microturn
+  const hasLowConfidence = typeof data.speech_confidence === 'number' &&
+    data.speech_confidence > 0 &&
+    data.speech_confidence < 0.40;
+  const microturnUsed = data.microturn_used === true || (data.consecutive_microturns && data.consecutive_microturns >= 1);
+
+  if (hasLowConfidence && !microturnUsed) {
+    return makeEvalResult({
+      status: 'needs_scaffold',
+      spoken_feedback: "I didn't quite catch that. Could you say that again a little louder?",
+      follow_up_prompt: data.checkin_question || "Could you say that again a little louder?",
+      attempt_count: attempt,
+      resolved: false,
+      is_microturn: true,
+      microturn_used: true,
+      diagnostics: {
+        ...diagnostics,
+        cognitive_diagnosis: 'LOW_SPEECH_CONFIDENCE',
+        tier_resolved: 'SPEECH_CONFIDENCE_MICROTURN',
+      },
+    });
+  }
 
   // If Microturn Clarification was triggered
   if (discourseResult.is_microturn) {
