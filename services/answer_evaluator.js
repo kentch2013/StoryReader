@@ -25,6 +25,9 @@ function makeEvalResult({
   microturn_used = false,
   diagnostics = {},
 }) {
+  if (attempt_count >= 2 && resolved && status === 'off_track') {
+    diagnostics.is_auto_reveal = true;
+  }
   return {
     status,
     spoken_feedback,

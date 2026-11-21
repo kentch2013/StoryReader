@@ -233,6 +233,13 @@ export function sanitizeAnalysisProbes(analysis) {
             probe.hypothesis = hyp.charAt(0).toUpperCase() + hyp.slice(1);
           }
         }
+
+        if ((key === 'target_mastery' || key === 'minimal_core') && typeof probe.feedback === 'string') {
+          const trimmed = probe.feedback.trim();
+          if (trimmed.endsWith('?') || LEADING_INTERROGATIVE_REGEX.test(trimmed)) {
+            probe.feedback = 'Spot on! That is exactly right!';
+          }
+        }
       }
     }
   }

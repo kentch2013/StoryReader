@@ -74,7 +74,8 @@ export function scoreMultiReference(normalizedText, canonicalPrototypes = [], th
     return { matched: false, isDistractor: false, prototypeType: null };
   }
 
-  const textWords = new Set(normalizedText.split(' ').filter(Boolean));
+  const cleanNormText = normalizedText.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').trim();
+  const textWords = new Set(cleanNormText.split(/\s+/).filter(Boolean));
   if (textWords.size === 0) {
     return { matched: false, isDistractor: false, prototypeType: null };
   }
@@ -82,16 +83,23 @@ export function scoreMultiReference(normalizedText, canonicalPrototypes = [], th
   // 1. Check common distractor first to prevent false mastery
   const distractor = canonicalPrototypes.find((p) => p && p.type === 'common_distractor');
   if (distractor && typeof distractor.text === 'string') {
-    const normDist = distractor.text.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
+    const normDist = distractor.text.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').trim();
     if (normDist) {
-      if (normalizedText.includes(normDist)) {
+      if (cleanNormText.includes(normDist)) {
         return { matched: false, isDistractor: true, prototypeType: 'common_distractor' };
       }
-      const distWords = normDist.split(' ').filter(Boolean);
+      const distWords = normDist.split(/\s+/).filter(Boolean);
       if (distWords.length > 0) {
         const distMatches = distWords.filter((w) => textWords.has(w)).length;
         if (distMatches / distWords.length >= 0.7) {
           return { matched: false, isDistractor: true, prototypeType: 'common_distractor' };
+        }
+        const distContent = distWords.filter((w) => !STOP_WORDS.has(w));
+        if (distContent.length > 0) {
+          const contentMatches = distContent.filter((w) => textWords.has(w)).length;
+          if (contentMatches / distContent.length >= 0.75) {
+            return { matched: false, isDistractor: true, prototypeType: 'common_distractor' };
+          }
         }
       }
     }
@@ -103,12 +111,12 @@ export function scoreMultiReference(normalizedText, canonicalPrototypes = [], th
       continue;
     }
 
-    const normProto = prototype.text.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
+    const normProto = prototype.text.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').trim();
     if (!normProto) {
       continue;
     }
 
-    if (normalizedText.includes(normProto)) {
+    if (cleanNormText.includes(normProto)) {
       return { matched: true, isDistractor: false, prototypeType: prototype.type };
     }
 

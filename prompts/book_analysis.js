@@ -60,6 +60,7 @@ Strict Generation Rules:
      - For distractor_misconception: Redirect the child back to the story clue without giving away the answer (e.g. "She didn't live in the city! Take another look at the picture—where did she make her home?").
      - target_mastery: Full concept statement & praise feedback.
      - minimal_core: Minimal key detail/action statement & praise feedback.
+     - PRAISE FEEDBACK RULE: For target_mastery and minimal_core, the "feedback" string MUST be celebratory praise concluding the turn (e.g. "Spot on!", "Exactly right!"). It MUST NEVER contain question marks, interrogatives ("how did he...", "who..."), or ask the child follow-up questions.
      - superficial_attribute: Description of an irrelevant visual/perceptual attribute & Socratic redirect scaffold.
      - premise_echo: Exact repetition of the question premise & Socratic redirect scaffold.
      - character_confusion: Statement where wrong character/agent performs the action & Socratic who-redirect scaffold.

@@ -26,15 +26,25 @@ const upload = multer({
 });
 
 router.post('/analyze-book', upload.array('images'), async (req, res, next) => {
+  const startTime = Date.now();
   try {
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ error: 'No book images provided' });
+    }
+
+    const totalBytes = req.files.reduce((sum, f) => sum + (f.size || f.buffer?.length || 0), 0);
+    const totalMb = (totalBytes / (1024 * 1024)).toFixed(1);
+    if (totalBytes > 3 * 1024 * 1024) {
+      console.warn(`⚠️ [INGESTION NOTICE] Incoming book payload is ${totalMb} MB across ${req.files.length} images. Client-side compression recommended for optimal latency (<300KB/page).`);
     }
 
     const analysis = await analyzeBookPages(req.files);
     if (req.socket?.destroyed) {
       return;
     }
+
+    const durationMs = Date.now() - startTime;
+    res.setHeader('X-Analysis-Duration-Ms', String(durationMs));
 
     if (!analysis || !analysis.is_legible) {
       return res.status(422).json({
