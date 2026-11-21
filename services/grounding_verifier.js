@@ -1,5 +1,4 @@
-import { getNLIModel } from './semantic_evaluator.js';
-import { verifyVisualGroundingWithDecision } from './gemini_decision_service.js';
+import { callGeminiDecision, verifyVisualGroundingWithDecision } from './gemini_decision_service.js';
 import defaultDecisionBreaker from './connectivity_circuit_breaker.js';
 
 const STOPWORDS = new Set([
@@ -124,21 +123,37 @@ export function checkLexicalEntityOverlap(chunk = {}) {
 }
 
 export async function checkNliEntailment(premise, hypothesis) {
-  const { tokenizer, model } = await getNLIModel();
-  const inputs = await tokenizer([premise || ''], {
-    text_pair: [hypothesis || ''],
-    padding: true,
-    truncation: true,
-    max_length: 256,
-  });
-  const output = await model(inputs);
-  const logitsData = output.logits.data;
-  const [c, e, n] = softmax([logitsData[0], logitsData[1], logitsData[2]]);
-  return {
-    entailment: e,
-    contradiction: c,
-    neutral: n,
-  };
+  try {
+    const result = await defaultDecisionBreaker.execute(async (signal) => {
+      return await callGeminiDecision({
+        input: `Premise: ${premise}\nHypothesis: ${hypothesis}`,
+        questions: {
+          entailment: {
+            type: 'choice',
+            instructions: 'Does the premise factually support or entail the hypothesis?',
+            criteria: {
+              ENTAILED: 'The hypothesis is factually supported or implied by the premise.',
+              NOT_ENTAILED: 'The hypothesis contradicts or is not supported by the premise.',
+            },
+          },
+        },
+        signal,
+      });
+    });
+
+    const ans = result?.answers?.entailment;
+    const isEntailed = ans?.choice === 'ENTAILED';
+    const entailment = Number((ans?.probabilities?.ENTAILED ?? (isEntailed ? (ans?.confidence ?? 0.95) : 0)).toFixed(3));
+    const contradiction = Number((ans?.probabilities?.NOT_ENTAILED ?? (!isEntailed ? (ans?.confidence ?? 0.95) : 0)).toFixed(3));
+    return {
+      entailment,
+      contradiction,
+      neutral: 0,
+    };
+  } catch (err) {
+    console.warn('⚠️ checkNliEntailment Decision 1 call failed:', err?.message);
+    return { entailment: 0.5, contradiction: 0.1, neutral: 0.4 };
+  }
 }
 
 export async function verifyGroundingFidelity(chunk = {}, options = {}) {

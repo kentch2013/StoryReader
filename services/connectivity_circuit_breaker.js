@@ -36,9 +36,9 @@ export class CloudCircuitBreaker {
     return false;
   }
 
-  async execute(cloudFn, fallbackFn) {
+  async execute(cloudFn, fallbackFn = () => null) {
     if (this.isOpen()) {
-      return fallbackFn('OFFLINE_OR_CIRCUIT_OPEN');
+      return typeof fallbackFn === 'function' ? fallbackFn('OFFLINE_OR_CIRCUIT_OPEN') : null;
     }
 
     const controller = new AbortController();
@@ -53,7 +53,7 @@ export class CloudCircuitBreaker {
       clearTimeout(timer);
       const isAbort = err.name === 'AbortError' || err.message?.includes('aborted');
       this.recordFailure(isAbort ? 'TIMEOUT_EXCEEDED' : err.message);
-      return fallbackFn(isAbort ? 'TIMEOUT_EXCEEDED' : err.message);
+      return typeof fallbackFn === 'function' ? fallbackFn(isAbort ? 'TIMEOUT_EXCEEDED' : err.message) : null;
     }
   }
 

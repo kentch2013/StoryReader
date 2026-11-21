@@ -1,11 +1,5 @@
-import { getNLIModel, tokenizeDynamicBatch } from './semantic_evaluator.js';
-
-function softmax(logits) {
-  const max = Math.max(...logits);
-  const exps = logits.map((l) => Math.exp(l - max));
-  const sum = exps.reduce((a, b) => a + b, 0);
-  return exps.map((e) => e / sum);
-}
+import { callGeminiDecision } from './gemini_decision_service.js';
+import defaultDecisionBreaker from './connectivity_circuit_breaker.js';
 
 const RETRY_KEYWORD_REGEX = /\b(retry|try\s+again|start\s+over|let\s+me\s+try\s+again|can\s+i\s+try\s+again|can\s+i\s+start\s+over|wait\s+start\s+over|restart|redo|scratch\s+that|clear\s+that|erase\s+that)\b/i;
 
@@ -59,42 +53,41 @@ export async function evaluateRetryWithNLI(text = '') {
   const clean = text.trim();
   if (!clean) return { isRetry: false, entailment: 0, contradiction: 1 };
 
-  const { tokenizer, model } = await getNLIModel();
+  try {
+    const result = await defaultDecisionBreaker.execute(async (signal) => {
+      return await callGeminiDecision({
+        input: `Speaker said: "${clean}"`,
+        questions: {
+          retry: {
+            type: 'choice',
+            instructions: 'Is the speaker asking to redo, change, or correct their answer?',
+            criteria: {
+              RETRY: 'The speaker expresses intent to redo, change, try again, or correct their response.',
+              NOT_RETRY: 'The speaker is answering a question, telling a story, or making unrelated statements.',
+            },
+          },
+        },
+        signal,
+      });
+    });
 
-  // Multi-probe hypothesis check for semantic retry intent
-  const hypotheses = [
-    'The speaker is asking to redo or correct their response.',
-    'The speaker wants to try again or change their answer.',
-  ];
+    const ans = result?.answers?.retry;
+    const isRetry = ans?.choice === 'RETRY';
+    const entailment = Number((ans?.probabilities?.RETRY ?? (isRetry ? (ans?.confidence ?? 0.95) : 0)).toFixed(3));
+    const contradiction = Number((ans?.probabilities?.NOT_RETRY ?? (!isRetry ? (ans?.confidence ?? 0.95) : 0)).toFixed(3));
 
-  const premiseList = [clean, clean];
-  const encoded = await tokenizeDynamicBatch(tokenizer, premiseList, hypotheses, 48);
-  const output = await model(encoded);
-  const logitsData = output.logits.data;
-
-  // Pair 1
-  const [c1, e1, n1] = softmax([logitsData[0], logitsData[1], logitsData[2]]);
-  // Pair 2
-  const [c2, e2, n2] = softmax([logitsData[3], logitsData[4], logitsData[5]]);
-
-  const maxEntailment = Math.max(e1, e2);
-  const minContradiction = Math.min(c1, c2);
-  const avgNeutral = (n1 + n2) / 2;
-
-  const entailment = Number(maxEntailment.toFixed(3));
-  const contradiction = Number(minContradiction.toFixed(3));
-  const neutral = Number(avgNeutral.toFixed(3));
-
-  const isRetry = entailment >= 0.50 && contradiction < 0.35;
-
-  return {
-    isRetry,
-    entailment,
-    contradiction,
-    neutral,
-    method: 'NLI_SYSTEM_ONE',
-    confidence: entailment,
-  };
+    return {
+      isRetry,
+      entailment,
+      contradiction,
+      neutral: 0,
+      method: 'NLI_SYSTEM_ONE',
+      confidence: entailment,
+    };
+  } catch (err) {
+    console.warn('⚠️ evaluateRetryWithNLI Decision 1 call failed:', err?.message);
+    return { isRetry: false, entailment: 0, contradiction: 1, method: 'NLI_SYSTEM_ONE', confidence: 0 };
+  }
 }
 
 export async function detectRetryCommand(text = '') {
@@ -126,7 +119,7 @@ export async function detectRetryCommand(text = '') {
     };
   }
 
-  // 3. Layer 2: ONNX System 1 DeBERTa NLI evaluation
+  // 3. Layer 2: Decision 1 semantic evaluation
   const nliRes = await evaluateRetryWithNLI(text);
   if (nliRes.isRetry) {
     return {
@@ -144,3 +137,10 @@ export async function detectRetryCommand(text = '') {
     remainingTranscript: text.trim(),
   };
 }
+
+export default {
+  isRetryCommandFastPath,
+  splitTranscriptOnRetry,
+  evaluateRetryWithNLI,
+  detectRetryCommand,
+};

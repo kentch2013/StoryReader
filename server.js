@@ -6,10 +6,9 @@ import { fileURLToPath } from 'node:url';
 import bookRoutes from './routes/book_routes.js';
 import { getNLIModel } from './services/semantic_evaluator.js';
 
-dotenv.config();
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.join(__dirname, '.env') });
 
 export function createServer() {
   const app = express();
@@ -95,7 +94,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
   app.listen(PORT, () => {
     console.log(`StoryReader host listening on port ${PORT}`);
     getNLIModel()
-      .then(() => console.log('✅ [TIER 2] System 1 Cross-Encoder NLI model pre-warmed in RAM.'))
-      .catch((err) => console.warn('⚠️ [TIER 2] Could not pre-warm evaluator:', err.message));
+      .then(() => console.log('✅ [TIER 2] Gemini Decision 1 Service online.'))
+      .catch((err) => console.warn('⚠️ [TIER 2] Could not initialize evaluator:', err.message));
   });
 }
