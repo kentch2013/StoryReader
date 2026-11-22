@@ -141,7 +141,7 @@ export function getMockBookAnalysis(files = []) {
         lookout_prompt:
           'Before you read, keep an eye out for how Leo feels when he loses his favorite hat.',
         checkin_question: 'Why did Leo get upset when his hat blew away?',
-        question_type: 'cause_and_effect',
+        question_type: 'wh_causality',
         target_answer_concept:
           'He was upset because his grandmother made it for him and it was special.',
         keyword_clusters: [
@@ -192,6 +192,75 @@ export function getMockBookAnalysis(files = []) {
           characters: [
             { canonical_id: 'char_leo', canonical_name: 'Leo', aliases: ['Leo'] },
             { canonical_id: 'char_grandma', canonical_name: 'grandmother', aliases: ['grandma', 'granny', 'nana'] },
+          ],
+        },
+      },
+      {
+        chunk_id: 2,
+        page_range: 'Pages 3-4',
+        chunk_type: 'scene',
+        paraphrased_story_facts:
+          'Leo looked up and saw his hat caught in a tall oak tree. A friendly squirrel was sitting on the branch next to the red hat.',
+        story_facts: [
+          'Leo ran across the grass to look for his lost hat.',
+          'The red hat was caught high up in a tall oak tree.',
+          'A friendly squirrel was sitting on the branch right next to the red hat.',
+        ],
+        verbatim_page_text:
+          'Leo looked up and saw his hat caught in a tall oak tree. A friendly squirrel was sitting on the branch next to the red hat.',
+        lookout_prompt:
+          'Before you read, watch for what animal Leo spots high in the branches.',
+        checkin_question: 'Leo looked up into the branches and saw a bushy-tailed...',
+        question_type: 'completion_cloze',
+        target_answer_concept: 'A squirrel sitting near his hat.',
+        keyword_clusters: [
+          { concept_name: 'animal', synonyms: ['squirrel', 'tree squirrel'] },
+          { concept_name: 'location', synonyms: ['branch', 'tree', 'high up'] },
+        ],
+        acceptable_phrasings: [
+          'A squirrel in the tree.',
+          'He saw a little squirrel.',
+        ],
+        canonical_prototypes: [
+          { type: 'formal_full', text: 'He saw a bushy-tailed squirrel sitting on the branch.' },
+          { type: 'colloquial', text: 'A little tree squirrel.' },
+          { type: 'minimal_core', text: 'a squirrel' },
+          { type: 'partial_action', text: 'sitting in the tree' },
+          { type: 'common_distractor', text: 'a big black bird' },
+        ],
+        diagnostic_probes: {
+          target_mastery: {
+            hypothesis: 'A squirrel was sitting on the branch.',
+            feedback: 'Spot on! He spotted a squirrel right next to his hat!',
+          },
+          minimal_core: {
+            hypothesis: 'A squirrel.',
+            feedback: 'Exactly right! A squirrel!',
+          },
+          superficial_attribute: {
+            hypothesis: 'The tree is very tall.',
+            scaffold: 'Yes, the tree was tall! But look at what furry animal was in the branches.',
+          },
+          premise_echo: {
+            hypothesis: 'He saw something bushy-tailed.',
+            scaffold: 'Yes! What was that bushy-tailed animal in the tree?',
+          },
+          character_confusion: {
+            hypothesis: 'He saw a dog or cat in the tree.',
+            scaffold: 'Look closely at the picture! Can dogs climb up trees like that?',
+          },
+          distractor_misconception: {
+            hypothesis: 'He saw a bird in the tree.',
+            scaffold: 'It was not a bird! What animal with a bushy tail was up there?',
+          },
+        },
+        hint_level_1: 'Look at the branch near the hat in the picture.',
+        hint_level_2: 'What animal is sitting in the oak tree?',
+        scaffold_hint: 'Look for the little animal with a bushy tail in the tree!',
+        entity_graph: {
+          characters: [
+            { canonical_id: 'char_leo', canonical_name: 'Leo', aliases: ['Leo'] },
+            { canonical_id: 'char_squirrel', canonical_name: 'squirrel', aliases: ['bushy-tailed squirrel', 'little squirrel'] },
           ],
         },
       },

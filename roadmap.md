@@ -24,6 +24,7 @@
 | **M6** | Full SPA Orchestration, Viewfinder Redesign & Safari Audio Sync (Completed & Calibrated) | `public/index.html`, `public/style.css`, `public/js/app.js`, `public/js/camera_tray.js`, `public/js/audio_manager.js` | 150/150 tests passing across 24 suites, 100% contract immutability, UI pipeline audit passing | Full parent-child reading test with physical book over HTTPS tunnel |
 | **M6.1** | Continuous Listening, Ana Online Voice & Session Question Tracking (Completed & Verified) | `public/js/session_question_tracker.js`, `public/js/audio_manager.js`, `public/js/app.js`, `public/js/camera_tray.js` | 163/163 tests passing across 25 suites, 100% test contract immutability | Live co-reading with automatic page progression & multi-page question greying |
 | **M7** | Child Speech & Phonetic Resilience (Completed & Verified) | `services/phonetic_matcher.js`, `services/answer_evaluator.js`, `public/js/audio_manager.js` | 170/170 tests passing across 27 suites, 100% test contract immutability, Double-Metaphone child slurs & speech confidence gate | Verified child phonological slur normalization ("gramma" -> "grandma") & low-confidence audio microturn |
+| **M8** | Deterministic CROWD Dialogic Reading (Completed & Verified) | `prompts/book_analysis.js`, `services/gemini_service.js`, `BOOK_ANALYSIS_SCHEMA`, D-CROWD taxonomy | 173/173 tests passing across 28 suites, 100% test contract immutability, live multimodal pipeline audit on Robert screenshots | Live Gemini Vision analysis & Decision 1 evaluation across all 5 D-CROWD question archetypes |
 
 ---
 
@@ -309,3 +310,32 @@
   - Automated phonetic benchmark asserting $<0.06\text{ms}$ latency per normalization.
 * **4. Human Verification:**
   - Test slurred spoken speech (*"his gramma made it"*, *"his fren"*) and verify immediate Tier 1 mastery feedback in $<2\text{ms}$.
+
+---
+
+### Module 8: Deterministic CROWD (D-CROWD) Dialogic Reading Framework (Completed & Verified)
+* **1. Pipeline Extension:**
+  - **Deterministic CROWD Taxonomy Definition (`prompts/book_analysis.js`):**
+    - `completion_cloze`: Cloze sentence stem or refrain/rhyme completion where the child supplies a 1-2 word minimal core answer.
+    - `sequential_recall`: Immediate chronological step or specific tool/instrument recall directly grounded in story facts.
+    - `observable_visual`: Concrete physical detail, character facial expression, or spatial feature in the illustration.
+    - `wh_causality`: Motive or causal mechanism answering why or how a character resolved an obstacle (RL.2.3).
+    - `distancing_schema`: Universal real-world schema, category, or reality vs. fantasy check connecting story concepts to shared world knowledge.
+  - **Schema & Prompt Hardening:**
+    - Restricted `BOOK_ANALYSIS_SCHEMA.properties.chunks.items.properties.question_type.enum` strictly to the 5 D-CROWD taxonomy values.
+    - Enforced chunk variety rotation mandate (consecutive chunks must never reuse the same `question_type`).
+    - Banned open-ended, subjective, or private biographical questions ("your room", "your mom") to guarantee objective, automated speech grading in Module 3.
+  - **Mock Generation Updates (`services/gemini_service.js`):**
+    - `getMockBookAnalysis` updated to rotate distinct D-CROWD types across multiple sequential chunks (`wh_causality` $\rightarrow$ `completion_cloze`).
+* **2. Code Verification:**
+  - `test/dcrowd_dialogic_reading.test.js`: 3/3 tests passing (schema enum, system prompts, mock variety rotation).
+  - Full project regression suite passing **173/173 tests across 28 test suites** (`npm run verify`).
+  - Contract audit: 100% immutable (`✅ Contract Audit: Test files remained 100% immutable.`).
+* **3. Digital Samples & Live Model Audit:**
+  - Live execution harness `scripts/audit_robert_extended.js` ingesting 6 raw iPhone screenshots (`robert1.HEIC` - `robert6.HEIC`) via live `gemini-3.1-flash-lite` vision and `gemini-decision-1` semantic evaluation:
+    - Chunk 1: `sequential_recall` (*"Who came to the party for Robert's birthday?"*)
+    - Chunk 2: `wh_causality` (*"What happens when Robert puts his nose in the rose?"*)
+    - Chunk 3: `observable_visual` (*"What happens to the farm friends and the cake after the sneeze?"*)
+  - 33-point cognitive answer evaluation battery testing 11 child archetypes across all 3 chunks: 30/33 passing, with 3/3 expected auto-reveals on Attempt 2.
+* **4. Human Verification:**
+  - Verified live D-CROWD questions and responses on physical book scans without mock AI; verified zero recitation blocks and sub-40ms Tier 1 answer grading.

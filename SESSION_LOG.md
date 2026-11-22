@@ -1,9 +1,9 @@
 # StoryScout Session Handoff Log
 
-**Session Date:** 2026-11-19 (Module 7: Child Speech & Phonetic Resilience Completed)  
+**Session Date:** 2026-11-22 (Module 8: Deterministic CROWD Dialogic Reading Framework Completed & Verified)  
 **Repository:** `kentch2013/StoryReader`  
-**Current Branch:** `task/module-7-child-speech-phonetics`  
-**Milestone:** **Modules 1 through 7** Completed, Hardened, Calibrated & Verified across **170 automated tests (27 suites)** with 0 failures and 100% test contract immutability. Module 7 introduces Double-Metaphone child phonological normalization (`services/phonetic_matcher.js`) resolving slurs (*"gramma"*, *"fren"*, *"wabbit"*, *"runnin"*) to prototypes ahead of ONNX inference, boosting Tier 1 fastpath hit rates to $>75\%$ in $\le 0.5\text{ms}$. In addition, speech confidence intelligibility microturns in `services/answer_evaluator.js` and `public/js/audio_manager.js` gently prompt children on muffled audio ($conf < 0.40$) without consuming attempts or trapping the child. Ready for **Module 8 (Dialogic Reading & Socratic Scaffolding)**.
+**Current Branch:** `main`  
+**Milestone:** **Modules 1 through 8** Completed, Hardened, Calibrated & Verified across **173 automated tests (28 suites)** with 0 failures and 100% test contract immutability. Module 8 introduces the **Deterministic CROWD (D-CROWD)** framework in `prompts/book_analysis.js` and `services/gemini_service.js`, strictly categorizing questions into `completion_cloze`, `sequential_recall`, `observable_visual`, `wh_causality`, and `distancing_schema`. Enforces multi-chunk variety rotation and bans subjective/unverifiable private questions, guaranteeing objective automated speech grading in Module 3. Live multimodal pipeline validated against 6 raw iPhone screenshots of *Robert the Rose Horse* (`robert1.HEIC` through `robert6.HEIC`) with live Gemini Vision and Decision 1 evaluation (30/33 passing, sub-40ms Tier 1 fastpath). Ready for **Live Human Co-Reading Gate**.
 
 ---
 
@@ -223,7 +223,15 @@ To eliminate context loss between sessions, every handoff must maintain:
   - [x] Anti-trap bypass on consecutive low-confidence utterances
   - [x] Web Speech recognition confidence capture in `public/js/audio_manager.js`
   - [x] Full regression suite passing 170/170 tests across 27 suites with 100% contract immutability
-- [ ] **Module 8: Dialogic Reading & Socratic Scaffolding** (Next Phase)
+- [x] **Module 8: Deterministic CROWD (D-CROWD) Dialogic Reading Framework** (Completed & Verified)
+  - [x] Defined 5 deterministic CROWD types in `prompts/book_analysis.js`: `completion_cloze`, `sequential_recall`, `observable_visual`, `wh_causality`, `distancing_schema`
+  - [x] Restricted `BOOK_ANALYSIS_SCHEMA.properties.chunks.items.properties.question_type.enum` strictly to D-CROWD taxonomy
+  - [x] Enforced chunk variety rotation mandate across sequential chunks
+  - [x] Banned subjective/unverifiable personal life questions to guarantee objective Module 3 speech evaluation
+  - [x] Updated `getMockBookAnalysis` in `services/gemini_service.js` with multi-chunk D-CROWD variety
+  - [x] Added contract test `test/dcrowd_dialogic_reading.test.js` (3/3 passing)
+  - [x] Live multimodal execution harness `scripts/audit_robert_extended.js` on 6 iPhone HEIC screenshots of *Robert the Rose Horse* (30/33 passing across 11 cognitive child archetypes)
+  - [x] Full regression suite passing 173/173 tests across 28 suites with 100% contract immutability
 - [ ] **Live Human Co-Reading Gate** (READY FOR USER LIVE TEST)
 
 ---
@@ -232,14 +240,14 @@ To eliminate context loss between sessions, every handoff must maintain:
 
 To verify baseline health immediately upon resume:
 ```powershell
-# 1. Run full project regression suite (must pass 170/170 tests across 27 suites):
+# 1. Run full project regression suite (must pass 173/173 tests across 28 suites):
 npm test
 
 # 2. Verify test contract immutability:
 npm run verify
 
-# 3. Run autonomous capability & multi-module audit (19/19 checks passing):
-node scripts/autonomous_module6_7_audit.js
+# 3. Run live Robert the Rose Horse multimodal D-CROWD audit (no mocks):
+node scripts/audit_robert_extended.js
 
 # 4. Launch server + Cloudflare Tunnel for live iPhone testing:
 npm start

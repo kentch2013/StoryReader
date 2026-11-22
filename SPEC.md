@@ -42,6 +42,7 @@ StoryScout is a local, lightweight web application designed for a parent and chi
       "chunk_type": "scene" | "page",
       "lookout_prompt": "Before you read, watch for what the little bunny imagines doing.",
       "checkin_question": "What does the mother say she will do if the bunny runs away?",
+      "question_type": "sequential_recall",
       "target_answer_concept": "She will run after him because he is her little bunny.",
       "keyword_clusters": [
         { "concept_name": "action", "synonyms": ["run after", "chase", "follow"] },
@@ -81,6 +82,18 @@ StoryScout is a local, lightweight web application designed for a parent and chi
   ]
 }
 ```
+
+### 3.1. Deterministic CROWD (D-CROWD) Dialogic Reading Framework
+To prevent repetitive factual recall while strictly ensuring objective, automated speech grading in Module 3, check-in questions are classified into 5 deterministic CROWD dialogic reading types:
+1. `completion_cloze`: Cloze sentence stem or refrain/rhyme completion where the child supplies a 1-2 word minimal core answer.
+2. `sequential_recall`: Immediate chronological step or specific tool/instrument recall directly grounded in story facts.
+3. `observable_visual`: Verifiable concrete visual detail, character facial expression, or spatial feature in the illustration.
+4. `wh_causality`: Motive or causal mechanism answering why or how a character resolved an obstacle (RL.2.3).
+5. `distancing_schema`: Universal real-world schema, category, or reality vs. fantasy check connecting story concepts to shared world knowledge.
+
+**Pedagogical Constraints:**
+- **Chunk Variety Mandate:** Sequential chunks must rotate question types; consecutive chunks must never use the same `question_type`.
+- **Determinism Rule:** Distancing and Observable prompts must NEVER ask open-ended or subjective personal questions about the child's private life ("your room", "your mom") or unbounded scene explorations ("what is happening?"). All answers must be verifiable through story facts, picture details, or universal real-world schemas.
 
 ### Endpoint 2: `POST /api/evaluate-answer` (The Zero-Lag Socratic Stack)
 - **Input JSON:**

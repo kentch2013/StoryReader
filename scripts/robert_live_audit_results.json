@@ -1,0 +1,935 @@
+{
+  "timestamp": "2026-11-22T03:14:57.952Z",
+  "visionLatencyMs": 14133,
+  "summary": "A happy horse named Robert celebrates his birthday with all his farm friends. When he sniffs a rose on his birthday cake, he has a giant sneeze that causes a big mess.",
+  "totalChunks": 3,
+  "totalTests": 33,
+  "matches": 30,
+  "mismatches": 3,
+  "bookData": {
+    "is_legible": true,
+    "book_type": "fiction",
+    "summary": "A happy horse named Robert celebrates his birthday with all his farm friends. When he sniffs a rose on his birthday cake, he has a giant sneeze that causes a big mess.",
+    "chunks": [
+      {
+        "chunk_id": 1,
+        "page_range": "179-180",
+        "chunk_type": "scene",
+        "paraphrased_story_facts": "Robert is a happy little horse living on a farm with his mother and father. It is Robert's birthday, and he is hosting a party for all his farm friends.",
+        "lookout_prompt": "Before you read, watch for who comes to the party.",
+        "checkin_question": "Who came to the party for Robert's birthday?",
+        "question_type": "sequential_recall",
+        "target_answer_concept": "All his farm friends came to the party.",
+        "keyword_clusters": [
+          {
+            "concept_name": "Farm Friends",
+            "synonyms": [
+              "animal friends",
+              "buddies",
+              "farm animals",
+              "guests"
+            ]
+          },
+          {
+            "concept_name": "Birthday Party",
+            "synonyms": [
+              "celebration",
+              "party",
+              "birthday event",
+              "birthday time"
+            ]
+          }
+        ],
+        "acceptable_phrasings": [
+          "All his farm friends came to the party.",
+          "His friends from the farm came."
+        ],
+        "canonical_prototypes": [
+          {
+            "type": "formal_full",
+            "text": "All his farm friends came to the party."
+          },
+          {
+            "type": "colloquial",
+            "text": "His farm friends came."
+          },
+          {
+            "type": "minimal_core",
+            "text": "His farm friends."
+          },
+          {
+            "type": "functional_circumlocution",
+            "text": "The animals from the farm."
+          },
+          {
+            "type": "partial_action",
+            "text": "Friends came."
+          },
+          {
+            "type": "common_distractor",
+            "text": "His mother and father."
+          }
+        ],
+        "diagnostic_probes": {
+          "target_mastery": {
+            "hypothesis": "Farm friends as attendees.",
+            "feedback": "Exactly right, his friends joined the fun."
+          },
+          "minimal_core": {
+            "hypothesis": "Friends.",
+            "feedback": "Yes, all his farm friends were there."
+          },
+          "superficial_attribute": {
+            "hypothesis": "Child describes characters in the illustration.",
+            "scaffold": "Look at the text on page 180 to see who arrived."
+          },
+          "premise_echo": {
+            "hypothesis": "The question.",
+            "scaffold": "The text says 'All his farm friends' came."
+          },
+          "character_confusion": {
+            "hypothesis": "Child names parents instead of friends.",
+            "scaffold": "Parents live with him, but who came for the party?"
+          },
+          "distractor_misconception": {
+            "hypothesis": "Party is for mother or father.",
+            "scaffold": "It is Robert's birthday, so whose party is it?"
+          }
+        },
+        "hint_level_1": "Check the last line on page 180.",
+        "hint_level_2": "What group of people, or animals, joined the party?",
+        "scaffold_hint": "Look at the last line on page 180.",
+        "entity_graph": {
+          "characters": [
+            {
+              "canonical_id": "robert",
+              "canonical_name": "Robert",
+              "gender": "male"
+            },
+            {
+              "canonical_id": "parents",
+              "canonical_name": "Mother and Father",
+              "gender": "unknown"
+            }
+          ],
+          "social_relations": [
+            {
+              "subject_id": "robert",
+              "relation": "son_of",
+              "target_id": "parents"
+            }
+          ]
+        },
+        "story_facts": [
+          "Robert is a happy little horse.",
+          "Robert lives on a farm.",
+          "Robert lives with his mother and father.",
+          "Robert has a birthday.",
+          "All his farm friends came to his party."
+        ],
+        "grounding_verification": {
+          "is_grounded": true,
+          "lexical_pass": true,
+          "nli_score": {
+            "entailment": 0.99,
+            "contradiction": 0.01,
+            "neutral": 0
+          },
+          "flagged_for_review": false
+        }
+      },
+      {
+        "chunk_id": 2,
+        "page_range": "181-185",
+        "chunk_type": "scene",
+        "paraphrased_story_facts": "Robert's friends say happy birthday. The birthday cake is pink with a candle and is decorated with red roses. Robert puts his nose into a rose to smell it, then his eyes and nose begin to itch.",
+        "lookout_prompt": "Before you read, watch for what Robert does to the rose.",
+        "checkin_question": "What happens when Robert puts his nose in the rose?",
+        "question_type": "wh_causality",
+        "target_answer_concept": "His eyes and nose begin to itch.",
+        "keyword_clusters": [
+          {
+            "concept_name": "Itching Sensation",
+            "synonyms": [
+              "got itchy",
+              "felt itchy",
+              "nose and eyes itching",
+              "itchy feeling"
+            ]
+          },
+          {
+            "concept_name": "Sniffing Rose",
+            "synonyms": [
+              "smelled the flower",
+              "sniffed the rose",
+              "put nose in",
+              "smelled it"
+            ]
+          }
+        ],
+        "acceptable_phrasings": [
+          "His eyes and nose started to itch.",
+          "He got an itchy nose and eyes."
+        ],
+        "canonical_prototypes": [
+          {
+            "type": "formal_full",
+            "text": "His eyes and his nose began to itch."
+          },
+          {
+            "type": "colloquial",
+            "text": "His nose and eyes felt itchy."
+          },
+          {
+            "type": "minimal_core",
+            "text": "They itched."
+          },
+          {
+            "type": "functional_circumlocution",
+            "text": "He got an itchy feeling in his nose and eyes."
+          },
+          {
+            "type": "partial_action",
+            "text": "He itched."
+          },
+          {
+            "type": "common_distractor",
+            "text": "He sneezed."
+          }
+        ],
+        "diagnostic_probes": {
+          "target_mastery": {
+            "hypothesis": "Itching as the result.",
+            "feedback": "Exactly, the rose made him feel itchy."
+          },
+          "minimal_core": {
+            "hypothesis": "Itching.",
+            "feedback": "Yes, his nose and eyes were very itchy."
+          },
+          "superficial_attribute": {
+            "hypothesis": "Child talks about the cake color.",
+            "scaffold": "What did Robert feel after he sniffed the rose?"
+          },
+          "premise_echo": {
+            "hypothesis": "The question.",
+            "scaffold": "The text says his nose and eyes began to itch."
+          },
+          "character_confusion": {
+            "hypothesis": "Child talks about friends.",
+            "scaffold": "What happened to Robert after he sniffed the rose?"
+          },
+          "distractor_misconception": {
+            "hypothesis": "He sneezed immediately.",
+            "scaffold": "He felt something before the sneeze. What was it?"
+          }
+        },
+        "hint_level_1": "Look at the sentences on page 185.",
+        "hint_level_2": "How did Robert's nose and eyes feel after the sniff?",
+        "scaffold_hint": "Look at the sentences on page 185.",
+        "entity_graph": {
+          "characters": [
+            {
+              "canonical_id": "robert",
+              "canonical_name": "Robert",
+              "gender": "male"
+            }
+          ]
+        },
+        "story_facts": [
+          "There is a big cake.",
+          "The cake has big red roses.",
+          "Robert puts his nose into a rose.",
+          "Robert takes a big sniff.",
+          "Robert gets a funny feeling.",
+          "Robert's eyes begin to itch.",
+          "Robert's nose begins to itch."
+        ],
+        "grounding_verification": {
+          "is_grounded": false,
+          "failure_reason": "CONTEXT_BOUNDING_EXCEEDED",
+          "flagged_for_review": true
+        }
+      },
+      {
+        "chunk_id": 3,
+        "page_range": "186",
+        "chunk_type": "page",
+        "paraphrased_story_facts": "Robert sneezes loudly, shouting 'KERCHOO!'. His massive sneeze sends the cake, the roses, and all his farm friends flying into the air, and Robert falls flat on the ground.",
+        "lookout_prompt": "Before you read, watch for what happens when Robert sneezes.",
+        "checkin_question": "What happens to the farm friends and the cake after the sneeze?",
+        "question_type": "observable_visual",
+        "target_answer_concept": "They all went up into the air.",
+        "keyword_clusters": [
+          {
+            "concept_name": "Going Up",
+            "synonyms": [
+              "flew up",
+              "went in the air",
+              "flew into the air",
+              "shot up"
+            ]
+          },
+          {
+            "concept_name": "Sneeze Result",
+            "synonyms": [
+              "everything flew",
+              "messy explosion",
+              "flew everywhere",
+              "went up"
+            ]
+          }
+        ],
+        "acceptable_phrasings": [
+          "They all went up in the air.",
+          "The friends and cake flew up."
+        ],
+        "canonical_prototypes": [
+          {
+            "type": "formal_full",
+            "text": "The farm friends and the cake went up in the air."
+          },
+          {
+            "type": "colloquial",
+            "text": "They all flew up."
+          },
+          {
+            "type": "minimal_core",
+            "text": "They went up."
+          },
+          {
+            "type": "functional_circumlocution",
+            "text": "They flew into the air because of the sneeze."
+          },
+          {
+            "type": "partial_action",
+            "text": "Flew up."
+          },
+          {
+            "type": "common_distractor",
+            "text": "They ate the cake."
+          }
+        ],
+        "diagnostic_probes": {
+          "target_mastery": {
+            "hypothesis": "Child describes things flying/going up.",
+            "feedback": "That's it, the sneeze was so powerful they flew up!"
+          },
+          "minimal_core": {
+            "hypothesis": "They went up.",
+            "feedback": "Yes, everything went up into the air."
+          },
+          "superficial_attribute": {
+            "hypothesis": "Child describes Robert falling.",
+            "scaffold": "Look at what happened to the friends and the cake."
+          },
+          "premise_echo": {
+            "hypothesis": "The question.",
+            "scaffold": "The text says 'Up went his farm friends' and 'Up went the cake.'"
+          },
+          "character_confusion": {
+            "hypothesis": "Only the cake.",
+            "scaffold": "What else went up besides the cake?"
+          },
+          "distractor_misconception": {
+            "hypothesis": "They were happy.",
+            "scaffold": "Look at the picture, where are the friends now?"
+          }
+        },
+        "hint_level_1": "Look at the lines on page 186.",
+        "hint_level_2": "Where did the cake and the friends go?",
+        "scaffold_hint": "Look at the lines on page 186.",
+        "entity_graph": {
+          "characters": [
+            {
+              "canonical_id": "robert",
+              "canonical_name": "Robert",
+              "gender": "male"
+            }
+          ]
+        },
+        "story_facts": [
+          "Robert sneezed.",
+          "Robert yelled KERCHOO.",
+          "The farm friends went up.",
+          "The cake went up.",
+          "The roses went up.",
+          "Robert fell down flat."
+        ],
+        "grounding_verification": {
+          "is_grounded": false,
+          "lexical_pass": true,
+          "nli_score": {
+            "entailment": 0.34,
+            "contradiction": 0.66,
+            "neutral": 0
+          },
+          "failure_reason": "FACTUAL_CONTRADICTION_OR_UNENTAILED",
+          "flagged_for_review": true
+        }
+      }
+    ]
+  },
+  "evaluations": [
+    {
+      "chunk_id": 1,
+      "page_range": "179-180",
+      "question": "Who came to the party for Robert's birthday?",
+      "target_concept": "All his farm friends came to the party.",
+      "archetype": "1. Formal Target Mastery",
+      "transcript": "All his farm friends came to the party.",
+      "attempt_count": 1,
+      "expected_status": "mastered",
+      "actual_status": "mastered",
+      "resolved": true,
+      "is_match": true,
+      "spoken_feedback": "Exactly right, his friends joined the fun.",
+      "tier_resolved": "TIER_1_PROTOTYPE_FORMAL_FULL",
+      "cognitive_diagnosis": "MASTERED",
+      "latency_ms": 39
+    },
+    {
+      "chunk_id": 1,
+      "page_range": "179-180",
+      "question": "Who came to the party for Robert's birthday?",
+      "target_concept": "All his farm friends came to the party.",
+      "archetype": "2. Colloquial / Child Speech Variation",
+      "transcript": "His farm friends came.",
+      "attempt_count": 1,
+      "expected_status": "mastered",
+      "actual_status": "mastered",
+      "resolved": true,
+      "is_match": true,
+      "spoken_feedback": "Exactly right, his friends joined the fun.",
+      "tier_resolved": "TIER_1_PROTOTYPE_FORMAL_FULL",
+      "cognitive_diagnosis": "MASTERED",
+      "latency_ms": 17
+    },
+    {
+      "chunk_id": 1,
+      "page_range": "179-180",
+      "question": "Who came to the party for Robert's birthday?",
+      "target_concept": "All his farm friends came to the party.",
+      "archetype": "3. Minimal Core / Head Noun Only",
+      "transcript": "His farm friends.",
+      "attempt_count": 1,
+      "expected_status": "mastered",
+      "actual_status": "mastered",
+      "resolved": true,
+      "is_match": true,
+      "spoken_feedback": "Exactly right, his friends joined the fun.",
+      "tier_resolved": "TIER_1_PROTOTYPE_COLLOQUIAL",
+      "cognitive_diagnosis": "MASTERED",
+      "latency_ms": 6
+    },
+    {
+      "chunk_id": 1,
+      "page_range": "179-180",
+      "question": "Who came to the party for Robert's birthday?",
+      "target_concept": "All his farm friends came to the party.",
+      "archetype": "4. Character / Actor Substitution Confusion",
+      "transcript": "his mother and father did it",
+      "attempt_count": 1,
+      "expected_status": "needs_scaffold",
+      "actual_status": "needs_scaffold",
+      "resolved": false,
+      "is_match": true,
+      "spoken_feedback": "It is Robert's birthday, so whose party is it?",
+      "tier_resolved": "TIER_1_DISTRACTOR_TOKEN_MATCH",
+      "cognitive_diagnosis": "DISTRACTOR_MISCONCEPTION",
+      "latency_ms": 9
+    },
+    {
+      "chunk_id": 1,
+      "page_range": "179-180",
+      "question": "Who came to the party for Robert's birthday?",
+      "target_concept": "All his farm friends came to the party.",
+      "archetype": "5. Near-Miss / Minor Slot Defect",
+      "transcript": "it was because of yellow party. on the table",
+      "attempt_count": 1,
+      "expected_status": "needs_scaffold",
+      "actual_status": "needs_scaffold",
+      "resolved": false,
+      "is_match": true,
+      "spoken_feedback": "Look at the text on page 180 to see who arrived.",
+      "tier_resolved": "PARALLEL_DIAGNOSTIC_PROBING",
+      "cognitive_diagnosis": "SUPERFICIAL_ATTRIBUTE",
+      "latency_ms": 377
+    },
+    {
+      "chunk_id": 1,
+      "page_range": "179-180",
+      "question": "Who came to the party for Robert's birthday?",
+      "target_concept": "All his farm friends came to the party.",
+      "archetype": "6. Distractor Misconception",
+      "transcript": "His mother and father.",
+      "attempt_count": 1,
+      "expected_status": "needs_scaffold",
+      "actual_status": "needs_scaffold",
+      "resolved": false,
+      "is_match": true,
+      "spoken_feedback": "It is Robert's birthday, so whose party is it?",
+      "tier_resolved": "TIER_1_DISTRACTOR_TOKEN_MATCH",
+      "cognitive_diagnosis": "DISTRACTOR_MISCONCEPTION",
+      "latency_ms": 12
+    },
+    {
+      "chunk_id": 1,
+      "page_range": "179-180",
+      "question": "Who came to the party for Robert's birthday?",
+      "target_concept": "All his farm friends came to the party.",
+      "archetype": "7. Premise Echo (Question Repetition)",
+      "transcript": "Who came to the party for Robert's birthday",
+      "attempt_count": 1,
+      "expected_status": "needs_scaffold",
+      "actual_status": "needs_scaffold",
+      "resolved": false,
+      "is_match": true,
+      "spoken_feedback": "The text says 'All his farm friends' came.",
+      "tier_resolved": "PARALLEL_DIAGNOSTIC_PROBING",
+      "cognitive_diagnosis": "PREMISE_ECHO",
+      "latency_ms": 321
+    },
+    {
+      "chunk_id": 1,
+      "page_range": "179-180",
+      "question": "Who came to the party for Robert's birthday?",
+      "target_concept": "All his farm friends came to the party.",
+      "archetype": "8. Superficial / Visual Tangent",
+      "transcript": "he is a big brown horse with horseshoes",
+      "attempt_count": 1,
+      "expected_status": "needs_scaffold",
+      "actual_status": "needs_scaffold",
+      "resolved": false,
+      "is_match": true,
+      "spoken_feedback": "Look at the text on page 180 to see who arrived.",
+      "tier_resolved": "PARALLEL_DIAGNOSTIC_PROBING",
+      "cognitive_diagnosis": "SUPERFICIAL_ATTRIBUTE",
+      "latency_ms": 239
+    },
+    {
+      "chunk_id": 1,
+      "page_range": "179-180",
+      "question": "Who came to the party for Robert's birthday?",
+      "target_concept": "All his farm friends came to the party.",
+      "archetype": "9. Hesitation / Uncertainty (Shrug)",
+      "transcript": "i don't know maybe something happened",
+      "attempt_count": 1,
+      "expected_status": "needs_scaffold",
+      "actual_status": "needs_scaffold",
+      "resolved": false,
+      "is_match": true,
+      "spoken_feedback": "Look at the text on page 180 to see who arrived.",
+      "tier_resolved": "PARALLEL_DIAGNOSTIC_PROBING",
+      "cognitive_diagnosis": "SUPERFICIAL_ATTRIBUTE",
+      "latency_ms": 9
+    },
+    {
+      "chunk_id": 1,
+      "page_range": "179-180",
+      "question": "Who came to the party for Robert's birthday?",
+      "target_concept": "All his farm friends came to the party.",
+      "archetype": "10. Direct Contradiction / Negation",
+      "transcript": "no party. were there and nothing happened",
+      "attempt_count": 1,
+      "expected_status": "needs_scaffold",
+      "actual_status": "needs_scaffold",
+      "resolved": false,
+      "is_match": true,
+      "spoken_feedback": "It is Robert's birthday, so whose party is it?",
+      "tier_resolved": "PARALLEL_DIAGNOSTIC_PROBING",
+      "cognitive_diagnosis": "DISTRACTOR_MISCONCEPTION",
+      "latency_ms": 330
+    },
+    {
+      "chunk_id": 1,
+      "page_range": "179-180",
+      "question": "Who came to the party for Robert's birthday?",
+      "target_concept": "All his farm friends came to the party.",
+      "archetype": "11. Attempt 2 Socratic Auto-Reveal (No-Loop Rule)",
+      "transcript": "i still don't know",
+      "attempt_count": 2,
+      "expected_status": "needs_scaffold",
+      "actual_status": "off_track",
+      "resolved": true,
+      "is_match": false,
+      "spoken_feedback": "Great effort! In the story, All his farm friends came to the party. Let's keep reading!",
+      "tier_resolved": "PARALLEL_DIAGNOSTIC_PROBING",
+      "cognitive_diagnosis": "UNGROUNDED_OFF_TRACK",
+      "latency_ms": 274
+    },
+    {
+      "chunk_id": 2,
+      "page_range": "181-185",
+      "question": "What happens when Robert puts his nose in the rose?",
+      "target_concept": "His eyes and nose begin to itch.",
+      "archetype": "1. Formal Target Mastery",
+      "transcript": "His eyes and his nose began to itch.",
+      "attempt_count": 1,
+      "expected_status": "mastered",
+      "actual_status": "mastered",
+      "resolved": true,
+      "is_match": true,
+      "spoken_feedback": "Exactly, the rose made him feel itchy.",
+      "tier_resolved": "TIER_1_PROTOTYPE_FORMAL_FULL",
+      "cognitive_diagnosis": "MASTERED",
+      "latency_ms": 7
+    },
+    {
+      "chunk_id": 2,
+      "page_range": "181-185",
+      "question": "What happens when Robert puts his nose in the rose?",
+      "target_concept": "His eyes and nose begin to itch.",
+      "archetype": "2. Colloquial / Child Speech Variation",
+      "transcript": "His nose and eyes felt itchy.",
+      "attempt_count": 1,
+      "expected_status": "mastered",
+      "actual_status": "mastered",
+      "resolved": true,
+      "is_match": true,
+      "spoken_feedback": "Exactly, the rose made him feel itchy.",
+      "tier_resolved": "TIER_1_PROTOTYPE_COLLOQUIAL",
+      "cognitive_diagnosis": "MASTERED",
+      "latency_ms": 16
+    },
+    {
+      "chunk_id": 2,
+      "page_range": "181-185",
+      "question": "What happens when Robert puts his nose in the rose?",
+      "target_concept": "His eyes and nose begin to itch.",
+      "archetype": "3. Minimal Core / Head Noun Only",
+      "transcript": "They itched.",
+      "attempt_count": 1,
+      "expected_status": "mastered",
+      "actual_status": "mastered",
+      "resolved": true,
+      "is_match": true,
+      "spoken_feedback": "Exactly, the rose made him feel itchy.",
+      "tier_resolved": "TIER_1_PROTOTYPE_MINIMAL_CORE",
+      "cognitive_diagnosis": "MASTERED",
+      "latency_ms": 7
+    },
+    {
+      "chunk_id": 2,
+      "page_range": "181-185",
+      "question": "What happens when Robert puts his nose in the rose?",
+      "target_concept": "His eyes and nose begin to itch.",
+      "archetype": "4. Character / Actor Substitution Confusion",
+      "transcript": "his mother and father did it",
+      "attempt_count": 1,
+      "expected_status": "needs_scaffold",
+      "actual_status": "needs_scaffold",
+      "resolved": false,
+      "is_match": true,
+      "spoken_feedback": "Look at the sentences on page 185.",
+      "tier_resolved": "PARALLEL_DIAGNOSTIC_PROBING",
+      "cognitive_diagnosis": "UNGROUNDED_OFF_TRACK",
+      "latency_ms": 284
+    },
+    {
+      "chunk_id": 2,
+      "page_range": "181-185",
+      "question": "What happens when Robert puts his nose in the rose?",
+      "target_concept": "His eyes and nose begin to itch.",
+      "archetype": "5. Near-Miss / Minor Slot Defect",
+      "transcript": "it was because of yellow itch. on the table",
+      "attempt_count": 1,
+      "expected_status": "needs_scaffold",
+      "actual_status": "needs_scaffold",
+      "resolved": false,
+      "is_match": true,
+      "spoken_feedback": "What did Robert feel after he sniffed the rose?",
+      "tier_resolved": "PARALLEL_DIAGNOSTIC_PROBING",
+      "cognitive_diagnosis": "SUPERFICIAL_ATTRIBUTE",
+      "latency_ms": 481
+    },
+    {
+      "chunk_id": 2,
+      "page_range": "181-185",
+      "question": "What happens when Robert puts his nose in the rose?",
+      "target_concept": "His eyes and nose begin to itch.",
+      "archetype": "6. Distractor Misconception",
+      "transcript": "He sneezed.",
+      "attempt_count": 1,
+      "expected_status": "needs_scaffold",
+      "actual_status": "needs_scaffold",
+      "resolved": false,
+      "is_match": true,
+      "spoken_feedback": "He felt something before the sneeze. What was it?",
+      "tier_resolved": "TIER_1_DISTRACTOR_TOKEN_MATCH",
+      "cognitive_diagnosis": "DISTRACTOR_MISCONCEPTION",
+      "latency_ms": 14
+    },
+    {
+      "chunk_id": 2,
+      "page_range": "181-185",
+      "question": "What happens when Robert puts his nose in the rose?",
+      "target_concept": "His eyes and nose begin to itch.",
+      "archetype": "7. Premise Echo (Question Repetition)",
+      "transcript": "What happens when Robert puts his nose in the rose",
+      "attempt_count": 1,
+      "expected_status": "needs_scaffold",
+      "actual_status": "needs_scaffold",
+      "resolved": false,
+      "is_match": true,
+      "spoken_feedback": "The text says his nose and eyes began to itch.",
+      "tier_resolved": "PARALLEL_DIAGNOSTIC_PROBING",
+      "cognitive_diagnosis": "PREMISE_ECHO",
+      "latency_ms": 315
+    },
+    {
+      "chunk_id": 2,
+      "page_range": "181-185",
+      "question": "What happens when Robert puts his nose in the rose?",
+      "target_concept": "His eyes and nose begin to itch.",
+      "archetype": "8. Superficial / Visual Tangent",
+      "transcript": "he is a big brown horse with horseshoes",
+      "attempt_count": 1,
+      "expected_status": "needs_scaffold",
+      "actual_status": "needs_scaffold",
+      "resolved": false,
+      "is_match": true,
+      "spoken_feedback": "What did Robert feel after he sniffed the rose?",
+      "tier_resolved": "PARALLEL_DIAGNOSTIC_PROBING",
+      "cognitive_diagnosis": "SUPERFICIAL_ATTRIBUTE",
+      "latency_ms": 224
+    },
+    {
+      "chunk_id": 2,
+      "page_range": "181-185",
+      "question": "What happens when Robert puts his nose in the rose?",
+      "target_concept": "His eyes and nose begin to itch.",
+      "archetype": "9. Hesitation / Uncertainty (Shrug)",
+      "transcript": "i don't know maybe something happened",
+      "attempt_count": 1,
+      "expected_status": "needs_scaffold",
+      "actual_status": "needs_scaffold",
+      "resolved": false,
+      "is_match": true,
+      "spoken_feedback": "What did Robert feel after he sniffed the rose?",
+      "tier_resolved": "PARALLEL_DIAGNOSTIC_PROBING",
+      "cognitive_diagnosis": "SUPERFICIAL_ATTRIBUTE",
+      "latency_ms": 17
+    },
+    {
+      "chunk_id": 2,
+      "page_range": "181-185",
+      "question": "What happens when Robert puts his nose in the rose?",
+      "target_concept": "His eyes and nose begin to itch.",
+      "archetype": "10. Direct Contradiction / Negation",
+      "transcript": "no itch. were there and nothing happened",
+      "attempt_count": 1,
+      "expected_status": "needs_scaffold",
+      "actual_status": "needs_scaffold",
+      "resolved": false,
+      "is_match": true,
+      "spoken_feedback": "He felt something before the sneeze. What was it?",
+      "tier_resolved": "PARALLEL_DIAGNOSTIC_PROBING",
+      "cognitive_diagnosis": "DISTRACTOR_MISCONCEPTION",
+      "latency_ms": 359
+    },
+    {
+      "chunk_id": 2,
+      "page_range": "181-185",
+      "question": "What happens when Robert puts his nose in the rose?",
+      "target_concept": "His eyes and nose begin to itch.",
+      "archetype": "11. Attempt 2 Socratic Auto-Reveal (No-Loop Rule)",
+      "transcript": "i still don't know",
+      "attempt_count": 2,
+      "expected_status": "needs_scaffold",
+      "actual_status": "off_track",
+      "resolved": true,
+      "is_match": false,
+      "spoken_feedback": "Great effort! In the story, His eyes and nose begin to itch. Let's keep reading!",
+      "tier_resolved": "PARALLEL_DIAGNOSTIC_PROBING",
+      "cognitive_diagnosis": "UNGROUNDED_OFF_TRACK",
+      "latency_ms": 325
+    },
+    {
+      "chunk_id": 3,
+      "page_range": "186",
+      "question": "What happens to the farm friends and the cake after the sneeze?",
+      "target_concept": "They all went up into the air.",
+      "archetype": "1. Formal Target Mastery",
+      "transcript": "The farm friends and the cake went up in the air.",
+      "attempt_count": 1,
+      "expected_status": "mastered",
+      "actual_status": "mastered",
+      "resolved": true,
+      "is_match": true,
+      "spoken_feedback": "That's it, the sneeze was so powerful they flew up!",
+      "tier_resolved": "TIER_1_PROTOTYPE_FORMAL_FULL",
+      "cognitive_diagnosis": "MASTERED",
+      "latency_ms": 8
+    },
+    {
+      "chunk_id": 3,
+      "page_range": "186",
+      "question": "What happens to the farm friends and the cake after the sneeze?",
+      "target_concept": "They all went up into the air.",
+      "archetype": "2. Colloquial / Child Speech Variation",
+      "transcript": "They all flew up.",
+      "attempt_count": 1,
+      "expected_status": "mastered",
+      "actual_status": "mastered",
+      "resolved": true,
+      "is_match": true,
+      "spoken_feedback": "That's it, the sneeze was so powerful they flew up!",
+      "tier_resolved": "TIER_1_PROTOTYPE_COLLOQUIAL",
+      "cognitive_diagnosis": "MASTERED",
+      "latency_ms": 16
+    },
+    {
+      "chunk_id": 3,
+      "page_range": "186",
+      "question": "What happens to the farm friends and the cake after the sneeze?",
+      "target_concept": "They all went up into the air.",
+      "archetype": "3. Minimal Core / Head Noun Only",
+      "transcript": "They went up.",
+      "attempt_count": 1,
+      "expected_status": "mastered",
+      "actual_status": "mastered",
+      "resolved": true,
+      "is_match": true,
+      "spoken_feedback": "That's it, the sneeze was so powerful they flew up!",
+      "tier_resolved": "TIER_1_PROTOTYPE_MINIMAL_CORE",
+      "cognitive_diagnosis": "MASTERED",
+      "latency_ms": 3
+    },
+    {
+      "chunk_id": 3,
+      "page_range": "186",
+      "question": "What happens to the farm friends and the cake after the sneeze?",
+      "target_concept": "They all went up into the air.",
+      "archetype": "4. Character / Actor Substitution Confusion",
+      "transcript": "his mother and father did it",
+      "attempt_count": 1,
+      "expected_status": "needs_scaffold",
+      "actual_status": "needs_scaffold",
+      "resolved": false,
+      "is_match": true,
+      "spoken_feedback": "Look at the lines on page 186.",
+      "tier_resolved": "PARALLEL_DIAGNOSTIC_PROBING",
+      "cognitive_diagnosis": "UNGROUNDED_OFF_TRACK",
+      "latency_ms": 301
+    },
+    {
+      "chunk_id": 3,
+      "page_range": "186",
+      "question": "What happens to the farm friends and the cake after the sneeze?",
+      "target_concept": "They all went up into the air.",
+      "archetype": "5. Near-Miss / Minor Slot Defect",
+      "transcript": "it was because of yellow air. on the table",
+      "attempt_count": 1,
+      "expected_status": "needs_scaffold",
+      "actual_status": "needs_scaffold",
+      "resolved": false,
+      "is_match": true,
+      "spoken_feedback": "Look at what happened to the friends and the cake.",
+      "tier_resolved": "PARALLEL_DIAGNOSTIC_PROBING",
+      "cognitive_diagnosis": "SUPERFICIAL_ATTRIBUTE",
+      "latency_ms": 309
+    },
+    {
+      "chunk_id": 3,
+      "page_range": "186",
+      "question": "What happens to the farm friends and the cake after the sneeze?",
+      "target_concept": "They all went up into the air.",
+      "archetype": "6. Distractor Misconception",
+      "transcript": "They ate the cake.",
+      "attempt_count": 1,
+      "expected_status": "needs_scaffold",
+      "actual_status": "needs_scaffold",
+      "resolved": false,
+      "is_match": true,
+      "spoken_feedback": "Look at the picture, where are the friends now?",
+      "tier_resolved": "TIER_1_DISTRACTOR_TOKEN_MATCH",
+      "cognitive_diagnosis": "DISTRACTOR_MISCONCEPTION",
+      "latency_ms": 4
+    },
+    {
+      "chunk_id": 3,
+      "page_range": "186",
+      "question": "What happens to the farm friends and the cake after the sneeze?",
+      "target_concept": "They all went up into the air.",
+      "archetype": "7. Premise Echo (Question Repetition)",
+      "transcript": "What happens to the farm friends and the cake after the sneeze",
+      "attempt_count": 1,
+      "expected_status": "needs_scaffold",
+      "actual_status": "needs_scaffold",
+      "resolved": false,
+      "is_match": true,
+      "spoken_feedback": "The text says 'Up went his farm friends' and 'Up went the cake.'",
+      "tier_resolved": "PARALLEL_DIAGNOSTIC_PROBING",
+      "cognitive_diagnosis": "PREMISE_ECHO",
+      "latency_ms": 303
+    },
+    {
+      "chunk_id": 3,
+      "page_range": "186",
+      "question": "What happens to the farm friends and the cake after the sneeze?",
+      "target_concept": "They all went up into the air.",
+      "archetype": "8. Superficial / Visual Tangent",
+      "transcript": "he is a big brown horse with horseshoes",
+      "attempt_count": 1,
+      "expected_status": "needs_scaffold",
+      "actual_status": "needs_scaffold",
+      "resolved": false,
+      "is_match": true,
+      "spoken_feedback": "Look at what happened to the friends and the cake.",
+      "tier_resolved": "PARALLEL_DIAGNOSTIC_PROBING",
+      "cognitive_diagnosis": "SUPERFICIAL_ATTRIBUTE",
+      "latency_ms": 280
+    },
+    {
+      "chunk_id": 3,
+      "page_range": "186",
+      "question": "What happens to the farm friends and the cake after the sneeze?",
+      "target_concept": "They all went up into the air.",
+      "archetype": "9. Hesitation / Uncertainty (Shrug)",
+      "transcript": "i don't know maybe something happened",
+      "attempt_count": 1,
+      "expected_status": "needs_scaffold",
+      "actual_status": "needs_scaffold",
+      "resolved": false,
+      "is_match": true,
+      "spoken_feedback": "Look at what happened to the friends and the cake.",
+      "tier_resolved": "PARALLEL_DIAGNOSTIC_PROBING",
+      "cognitive_diagnosis": "SUPERFICIAL_ATTRIBUTE",
+      "latency_ms": 7
+    },
+    {
+      "chunk_id": 3,
+      "page_range": "186",
+      "question": "What happens to the farm friends and the cake after the sneeze?",
+      "target_concept": "They all went up into the air.",
+      "archetype": "10. Direct Contradiction / Negation",
+      "transcript": "no air. were there and nothing happened",
+      "attempt_count": 1,
+      "expected_status": "needs_scaffold",
+      "actual_status": "needs_scaffold",
+      "resolved": false,
+      "is_match": true,
+      "spoken_feedback": "Look at the picture, where are the friends now?",
+      "tier_resolved": "PARALLEL_DIAGNOSTIC_PROBING",
+      "cognitive_diagnosis": "DISTRACTOR_MISCONCEPTION",
+      "latency_ms": 340
+    },
+    {
+      "chunk_id": 3,
+      "page_range": "186",
+      "question": "What happens to the farm friends and the cake after the sneeze?",
+      "target_concept": "They all went up into the air.",
+      "archetype": "11. Attempt 2 Socratic Auto-Reveal (No-Loop Rule)",
+      "transcript": "i still don't know",
+      "attempt_count": 2,
+      "expected_status": "needs_scaffold",
+      "actual_status": "off_track",
+      "resolved": true,
+      "is_match": false,
+      "spoken_feedback": "Great effort! In the story, They all went up into the air. Let's keep reading!",
+      "tier_resolved": "PARALLEL_DIAGNOSTIC_PROBING",
+      "cognitive_diagnosis": "UNGROUNDED_OFF_TRACK",
+      "latency_ms": 321
+    }
+  ]
+}

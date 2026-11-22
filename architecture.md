@@ -483,6 +483,18 @@ To satisfy iOS Safari's Web Speech API security requirement without certificate 
    - ASR transcription artifacts (e.g. slight homophone errors) are ignored if the conceptual kernel is present.
    - Feedback is capped at 25 words to prevent overwhelming auditory processing.
 
+### 9.1. Deterministic CROWD (D-CROWD) Dialogic Reading Framework
+To eliminate question monotony across multi-chunk books while strictly preserving objective, automated speech grading in Module 3, Whitehurst's dialogic reading taxonomy is adapted into a deterministic framework:
+- **`completion_cloze` (C):** Sentence stem or rhyme/refrain completion where the child supplies a 1–2 word minimal core answer.
+- **`sequential_recall` (R):** Chronological next step or specific tool/instrument retrieval directly grounded in story facts.
+- **`observable_visual` (O):** Verifiable concrete visual detail, character facial expression, or spatial feature in the illustration (replaces unbounded scene descriptions).
+- **`wh_causality` (W):** Character motivation or physical mechanism answering why or how an obstacle was resolved (RL.2.3).
+- **`distancing_schema` (D):** Universal real-world schema, category, or reality vs. fantasy check connecting story concepts to shared world knowledge (replaces ungradeable personal biography questions like "how is this like your room?").
+
+**Pedagogical Rules:**
+1. **Chunk Variety Mandate:** Consecutive chunks must never use the same `question_type`.
+2. **Subjectivity Ban:** Prompts must never ask open-ended or unverifiable questions about the child's private life. All target concepts must be verifiable against story facts, visual details, or universal schemas.
+
 ---
 
 ## 10. Implementation Roadmap & Verification Gates

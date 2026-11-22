@@ -49,8 +49,15 @@ Strict Generation Rules:
      4. "functional_circumlocution": Describing what the character does, uses, or looks like without naming the key noun (e.g. "someone who catches fish with a net or pole", "the lady who waters plants", "the air that blows").
      5. "partial_action": Key verb/action without full context (e.g. "knitted", "went up"). Must NOT include the full correct agent or noun (e.g. "friends came" should NOT be partial_action if "friends" is the correct agent).
      6. "common_distractor": A plausible misunderstanding to catch and scaffold.
-12. "question_type":
-   - One of 'cause_and_effect', 'character_motivation', 'literal_fact', 'sequential_action'.
+12. "question_type" (Deterministic CROWD Dialogic Reading Framework):
+   - Exactly one of:
+     * 'completion_cloze': Cloze sentence stem or refrain/rhyme completion where the child supplies a 1-2 word minimal core answer.
+     * 'sequential_recall': Immediate chronological step or specific tool/instrument recall directly grounded in story facts.
+     * 'observable_visual': Verifiable concrete visual detail, character facial expression, or spatial feature in the illustration.
+     * 'wh_causality': Motive or causal mechanism answering why or how a character resolved an obstacle (RL.2.3).
+     * 'distancing_schema': Universal real-world schema, category, or reality vs. fantasy check connecting story concepts to shared world knowledge.
+   - CHUNK VARIETY MANDATE: Across sequential chunks, actively rotate through different D-CROWD question types. Never assign the same question_type to consecutive chunks.
+   - DETERMINISM RULE: Distancing and Observable prompts must NEVER ask open-ended or subjective personal questions about the child's private life ("your room", "your mom") or unbounded scene explorations ("what is happening?"). All answers must be verifiable through story facts, picture details, or universal real-world schemas.
 13. "diagnostic_probes":
    - Parallel probing hypotheses and scaffolds/feedback for 6 diagnostic conditions.
    - CRITICAL REQUIREMENT FOR HYPOTHESES: Every hypothesis MUST be stated as a direct factual story proposition or concrete event/action description (e.g. "The mother will catch fish with a net or pole", "The mother is a gardener who waters plants"). NEVER use meta-commentary about the child (e.g. NEVER write "Child understands...", "Child identified the word...", or "Child confused...").
@@ -116,8 +123,15 @@ Strict Generation Rules:
    - Concise primary hint (matches hint_level_1). Under 15 words.
 11. "canonical_prototypes":
    - Exactly 6 standardized response archetypes for deterministic speech matching (formal_full, colloquial, minimal_core, functional_circumlocution, partial_action, common_distractor).
-12. "question_type":
-   - One of 'cause_and_effect', 'character_motivation', 'literal_fact', 'sequential_action'.
+12. "question_type" (Deterministic CROWD Dialogic Reading Framework):
+   - Exactly one of:
+     * 'completion_cloze': Cloze sentence stem or refrain/rhyme completion where the child supplies a 1-2 word minimal core answer.
+     * 'sequential_recall': Immediate chronological step or specific tool/instrument recall directly grounded in story facts.
+     * 'observable_visual': Verifiable concrete visual detail, character facial expression, or spatial feature in the illustration.
+     * 'wh_causality': Motive or causal mechanism answering why or how a character resolved an obstacle (RL.2.3).
+     * 'distancing_schema': Universal real-world schema, category, or reality vs. fantasy check connecting story concepts to shared world knowledge.
+   - CHUNK VARIETY MANDATE: Across sequential chunks, actively rotate through different D-CROWD question types. Never assign the same question_type to consecutive chunks.
+   - DETERMINISM RULE: Distancing and Observable prompts must NEVER ask open-ended or subjective personal questions about the child's private life ("your room", "your mom") or unbounded scene explorations ("what is happening?"). All answers must be verifiable through story facts, picture details, or universal real-world schemas.
 13. "diagnostic_probes":
    - Parallel probing hypotheses and scaffolds/feedback for 6 diagnostic conditions.
    - CRITICAL REQUIREMENT FOR HYPOTHESES: Every hypothesis MUST be stated as a direct factual story proposition or concrete event/action description.
@@ -175,7 +189,14 @@ export const BOOK_ANALYSIS_SCHEMA = {
           checkin_question: { type: Type.STRING },
           question_type: {
             type: Type.STRING,
-            enum: ['cause_and_effect', 'character_motivation', 'literal_fact', 'sequential_action'],
+            enum: [
+              'completion_cloze',
+              'sequential_recall',
+              'observable_visual',
+              'wh_causality',
+              'distancing_schema',
+            ],
+            description: 'Deterministic CROWD dialogic reading classification',
           },
           target_answer_concept: { type: Type.STRING },
           keyword_clusters: {
