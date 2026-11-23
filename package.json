@@ -10,6 +10,7 @@
     "tunnel": "npx cloudflared tunnel --url http://localhost:3000",
     "test": "node --env-file-if-exists=.env --test --test-concurrency=1 test/*.test.js",
     "eval": "node --env-file-if-exists=.env scripts/eval_non_verbatim.js",
+    "eval:questions": "node --env-file-if-exists=.env scripts/eval_question_quality.js",
     "verify": "node scripts/audit-contract.js && node --env-file-if-exists=.env --test --test-concurrency=1 test/*.test.js"
   },
   "keywords": [

@@ -21,9 +21,9 @@ Strict Generation Rules:
    - Minimum 3-6 distinct propositions per chunk. This ensures comprehension check-ins can test specific story details without hallucination.
 3. "lookout_prompt":
    - Format: "Before you read, watch for [character action/clue]."
-   - Under 15 words. NO spoilers.
+   - Under 15 words. NO spoilers. NO-SPOILER RULE: Banned from reusing key answer words, core nouns, or solution concepts from "target_answer_concept".
 4. "checkin_question":
-   - Factual question directly resolving the lookout clue. Focus on cause-and-effect or key actions.
+   - Factual question directly resolving the lookout clue. Prioritize causal and inferential comprehension (Common Core RL.2.3 Why / How / What happened when...) over surface visual trivia (What color..., How many..., What size...).
    - Under 13 words.
 5. "target_answer_concept":
    - The necessary and sufficient factual kernel for full credit. Under 14 words.
@@ -101,9 +101,9 @@ Strict Generation Rules:
    - Minimum 3-6 distinct propositions per chunk. This ensures comprehension check-ins can test specific story details without hallucination.
 3. "lookout_prompt":
    - Format: "Before you read, watch for [character action/clue]."
-   - Under 15 words. NO spoilers.
+   - Under 15 words. NO spoilers. NO-SPOILER RULE: Banned from reusing key answer words, core nouns, or solution concepts from "target_answer_concept".
 4. "checkin_question":
-   - Factual question directly resolving the lookout clue. Focus on cause-and-effect or key actions.
+   - Factual question directly resolving the lookout clue. Prioritize causal and inferential comprehension (Common Core RL.2.3 Why / How / What happened when...) over surface visual trivia (What color..., How many..., What size...).
    - Under 13 words.
 5. "target_answer_concept":
    - The necessary and sufficient factual kernel for full credit. Under 14 words.

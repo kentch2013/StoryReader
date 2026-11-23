@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import { GoogleGenAI, Type } from '@google/genai';
 import {
   BOOK_ANALYSIS_SYSTEM_PROMPT,
@@ -103,6 +104,149 @@ export function classifyModelResponse(response) {
     status: 'ok',
     text: response.text,
   };
+}
+
+const PEDAGOGY_STOPWORDS = new Set([
+  'that', 'this', 'with', 'from', 'they', 'them', 'their', 'theirs',
+  'there', 'these', 'those', 'then', 'than', 'when', 'where', 'which',
+  'what', 'who', 'whom', 'whose', 'why', 'how', 'have', 'having', 'had',
+  'been', 'were', 'being', 'will', 'would', 'could', 'should', 'about',
+  'above', 'below', 'under', 'again', 'further', 'once', 'here', 'more',
+  'most', 'other', 'some', 'such', 'only', 'own', 'same', 'so', 'than',
+  'too', 'very', 'just', 'before', 'after', 'read', 'watch', 'look',
+  'keep', 'find', 'does', 'doing', 'done', 'because', 'into', 'through',
+  'during', 'each', 'both', 'between', 'while',
+]);
+
+/**
+ * Audits a chunk's pedagogical soundness, lookout spoiler risk, and question brevity.
+ *
+ * @param {Object} chunk
+ * @returns {{ spoiler_leak: boolean, is_trivia_only: boolean, word_count_ok: boolean, passed: boolean, shared_words: string[] }}
+ */
+export function auditChunkPedagogy(chunk = {}) {
+  const lookoutPrompt = typeof chunk.lookout_prompt === 'string' ? chunk.lookout_prompt : '';
+  const targetConcept = typeof chunk.target_answer_concept === 'string' ? chunk.target_answer_concept : '';
+  const checkinQuestion = typeof chunk.checkin_question === 'string' ? chunk.checkin_question : '';
+  const questionType = chunk.question_type || '';
+
+  // Extract character names and aliases from entity_graph to exclude them from content-word spoiler detection
+  const characterWords = new Set();
+  if (Array.isArray(chunk.entity_graph?.characters)) {
+    for (const char of chunk.entity_graph.characters) {
+      if (typeof char.canonical_name === 'string') {
+        char.canonical_name.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).forEach((w) => {
+          if (w.length >= 4) characterWords.add(w);
+        });
+      }
+      if (Array.isArray(char.aliases)) {
+        for (const alias of char.aliases) {
+          if (typeof alias === 'string') {
+            alias.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).forEach((w) => {
+              if (w.length >= 4) characterWords.add(w);
+            });
+          }
+        }
+      }
+    }
+  }
+
+  function extractContentWords(text) {
+    const words = new Set();
+    const tokens = text.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/);
+    for (const token of tokens) {
+      if (token.length >= 4 && !PEDAGOGY_STOPWORDS.has(token) && !characterWords.has(token)) {
+        words.add(token);
+      }
+    }
+    return words;
+  }
+
+  const lookoutWords = extractContentWords(lookoutPrompt);
+  const targetWords = extractContentWords(targetConcept);
+
+  const sharedWords = [];
+  for (const word of lookoutWords) {
+    if (targetWords.has(word)) {
+      sharedWords.push(word);
+    }
+  }
+
+  // 1. spoiler_leak: true if lookout_prompt shares >= 2 content words with target_answer_concept
+  const spoiler_leak = sharedWords.length >= 2;
+
+  // 2. is_trivia_only: true if checkin_question matches /^(what color|how many|what size)\b/i and question_type !== 'observable_visual'
+  const triviaRegex = /^(what color|how many|what size)\b/i;
+  const is_trivia_only = triviaRegex.test(checkinQuestion.trim()) && questionType !== 'observable_visual';
+
+  // 3. word_count_ok: checkin_question <= 15 words and lookout_prompt <= 16 words
+  const qWordCount = checkinQuestion.trim() ? checkinQuestion.trim().split(/\s+/).filter(Boolean).length : 0;
+  const lWordCount = lookoutPrompt.trim() ? lookoutPrompt.trim().split(/\s+/).filter(Boolean).length : 0;
+  const word_count_ok = qWordCount <= 15 && lWordCount <= 16;
+
+  // 4. passed: !spoiler_leak && !is_trivia_only && word_count_ok
+  const passed = !spoiler_leak && !is_trivia_only && word_count_ok;
+
+  return {
+    spoiler_leak,
+    is_trivia_only,
+    word_count_ok,
+    passed,
+    shared_words: sharedWords,
+    word_counts: {
+      question: qWordCount,
+      lookout: lWordCount,
+    },
+  };
+}
+
+const MAX_BOOK_CACHE_ENTRIES = 25;
+const bookAnalysisCache = new Map();
+
+export function computeBookCacheKey(files = []) {
+  const hash = crypto.createHash('sha256');
+  for (const file of files) {
+    hash.update(file.mimetype || 'image/jpeg');
+    hash.update(file.buffer || Buffer.alloc(0));
+  }
+  return hash.digest('hex');
+}
+
+export function clearBookAnalysisCache() {
+  bookAnalysisCache.clear();
+}
+
+function getFromCache(cacheKey) {
+  if (process.env.DISABLE_BOOK_CACHE === 'true') return null;
+  if (!bookAnalysisCache.has(cacheKey)) return null;
+  const entry = bookAnalysisCache.get(cacheKey);
+  // Re-insert to mark as MRU
+  bookAnalysisCache.delete(cacheKey);
+  bookAnalysisCache.set(cacheKey, entry);
+  return JSON.parse(JSON.stringify(entry));
+}
+
+function setInCache(cacheKey, analysis) {
+  if (process.env.DISABLE_BOOK_CACHE === 'true') return;
+  if (bookAnalysisCache.has(cacheKey)) {
+    bookAnalysisCache.delete(cacheKey);
+  } else if (bookAnalysisCache.size >= MAX_BOOK_CACHE_ENTRIES) {
+    const oldestKey = bookAnalysisCache.keys().next().value;
+    bookAnalysisCache.delete(oldestKey);
+  }
+  const entryToStore = JSON.parse(JSON.stringify(analysis));
+  delete entryToStore._cacheHit;
+  bookAnalysisCache.set(cacheKey, entryToStore);
+}
+
+export function offsetPageRange(pageRangeStr, pageOffset) {
+  if (!pageRangeStr || typeof pageRangeStr !== 'string' || !pageOffset) {
+    return pageRangeStr;
+  }
+  return pageRangeStr.replace(/\b(\d+)\b/g, (match) => {
+    const pageNum = parseInt(match, 10);
+    return String(pageNum + pageOffset);
+  });
 }
 
 export function getMockBookAnalysis(files = []) {
@@ -272,6 +416,7 @@ export function getMockBookAnalysis(files = []) {
       if (!chunk.paraphrased_story_facts && chunk.verbatim_page_text) {
         chunk.paraphrased_story_facts = chunk.verbatim_page_text;
       }
+      chunk.pedagogy_audit = auditChunkPedagogy(chunk);
     }
   }
 
@@ -356,7 +501,7 @@ export async function executeBookAnalysisWithFallback(apiFn, options = {}) {
   return sanitizeAnalysisProbes(parsed);
 }
 
-export async function analyzeBookPages(files) {
+export async function analyzeBookBatch(files) {
   if (!files || !Array.isArray(files) || files.length === 0) {
     throw new Error('No files provided');
   }
@@ -372,6 +517,7 @@ export async function analyzeBookPages(files) {
         chunk.grounding_verification = await verifyGroundingFidelity(chunk, {
           imageBuffer: files[0]?.buffer,
         });
+        chunk.pedagogy_audit = auditChunkPedagogy(chunk);
       }
     }
     return analysis;
@@ -389,6 +535,8 @@ export async function analyzeBookPages(files) {
 
   contents.push('Analyze these book pages in sequence according to Grade 2 reading standards.');
 
+  const thinkingBudget = parseInt(process.env.BOOK_ANALYSIS_THINKING_BUDGET || '512', 10);
+
   const analysis = await executeBookAnalysisWithFallback(async (modelName) => {
     // Adaptive Anti-Recitation Pipeline:
     // Pass 1: Try Direct Extraction to preserve the author's exact sentences and story text without forced paraphrasing.
@@ -401,15 +549,35 @@ export async function analyzeBookPages(files) {
           responseSchema: BOOK_ANALYSIS_SCHEMA,
           maxOutputTokens: 8192,
         };
-        if (typeof modelName === 'string' && (modelName.includes('3.1') || modelName.includes('thinking'))) {
-          config.thinkingConfig = { thinkingBudget: 0 };
+
+        if (thinkingBudget >= 0) {
+          config.thinkingConfig = { thinkingBudget };
         }
 
-        const res = await ai.models.generateContent({
-          model: modelName,
-          contents,
-          config,
-        });
+        let res;
+        try {
+          res = await ai.models.generateContent({
+            model: modelName,
+            contents,
+            config,
+          });
+        } catch (err) {
+          const errMsg = (err && typeof err.message === 'string') ? err.message : '';
+          const isThinkingErr = (err?.status === 400 || (err?.code && String(err.code).includes('INVALID'))) &&
+            (errMsg.toLowerCase().includes('thinkingbudget') || errMsg.toLowerCase().includes('thinkingconfig'));
+
+          if (isThinkingErr && config.thinkingConfig && config.thinkingConfig.thinkingBudget !== 0) {
+            console.warn('⚠️ [THINKING RETRY] Invalid argument for thinkingConfig/thinkingBudget. Retrying with thinkingBudget: 0');
+            config.thinkingConfig = { thinkingBudget: 0 };
+            res = await ai.models.generateContent({
+              model: modelName,
+              contents,
+              config,
+            });
+          } else {
+            throw err;
+          }
+        }
 
         const outcome = classifyModelResponse(res);
         if (outcome.status === 'retryable') {
@@ -428,6 +596,9 @@ export async function analyzeBookPages(files) {
     };
 
     try {
+      if (process.env.DIRECT_PARAPHRASE_MODE === 'true') {
+        return await invokeModel(BOOK_ANALYSIS_SYSTEM_PROMPT, true);
+      }
       return await invokeModel(BOOK_ANALYSIS_DIRECT_SYSTEM_PROMPT, false);
     } catch (err) {
       if (err.code === 'RECITATION_BLOCKED' || (typeof err.message === 'string' && err.message.toLowerCase().includes('recitation'))) {
@@ -444,8 +615,73 @@ export async function analyzeBookPages(files) {
         imageBuffer: files[0]?.buffer,
         mimeType: files[0]?.mimetype,
       });
+      chunk.pedagogy_audit = auditChunkPedagogy(chunk);
     }
   }
+  return analysis;
+}
+
+export async function analyzeBookPages(files) {
+  if (!files || !Array.isArray(files) || files.length === 0) {
+    throw new Error('No files provided');
+  }
+
+  const cacheKey = computeBookCacheKey(files);
+  const cached = getFromCache(cacheKey);
+  if (cached) {
+    cached._cacheHit = true;
+    return cached;
+  }
+
+  let analysis;
+  if (files.length > 6) {
+    const BATCH_SIZE = 6;
+    const batchResults = [];
+    for (let i = 0; i < files.length; i += BATCH_SIZE) {
+      const batchFiles = files.slice(i, i + BATCH_SIZE);
+      const batchAnalysis = await analyzeBookBatch(batchFiles);
+      if (!batchAnalysis || !batchAnalysis.is_legible) {
+        batchAnalysis._cacheHit = false;
+        return batchAnalysis;
+      }
+      batchResults.push({ analysis: batchAnalysis, pageOffset: i });
+    }
+
+    const mergedChunks = [];
+    const summaries = [];
+    let bookType = 'fiction';
+
+    for (const { analysis: bAnalysis, pageOffset } of batchResults) {
+      if (bAnalysis.summary) summaries.push(bAnalysis.summary);
+      if (bAnalysis.book_type) bookType = bAnalysis.book_type;
+      if (Array.isArray(bAnalysis.chunks)) {
+        for (const chunk of bAnalysis.chunks) {
+          const adjustedChunk = {
+            ...chunk,
+            page_range: offsetPageRange(chunk.page_range, pageOffset),
+          };
+          mergedChunks.push(adjustedChunk);
+        }
+      }
+    }
+
+    mergedChunks.forEach((chunk, idx) => {
+      chunk.chunk_id = idx + 1;
+    });
+
+    analysis = {
+      is_legible: true,
+      error_message: null,
+      book_type: bookType,
+      summary: summaries.join(' '),
+      chunks: mergedChunks,
+    };
+  } else {
+    analysis = await analyzeBookBatch(files);
+  }
+
+  analysis._cacheHit = false;
+  setInCache(cacheKey, analysis);
   return analysis;
 }
 
@@ -527,11 +763,16 @@ export async function classifyAnswerSemantic(data = {}) {
 }
 
 export default {
+  analyzeBookBatch,
   analyzeBookPages,
+  auditChunkPedagogy,
+  clearBookAnalysisCache,
   classifyAnswerSemantic,
   classifyModelResponse,
+  computeBookCacheKey,
   executeBookAnalysisWithFallback,
   getMockAnswerClassification,
   getMockBookAnalysis,
+  offsetPageRange,
   safeJsonParse,
 };

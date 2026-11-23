@@ -45,6 +45,7 @@ router.post('/analyze-book', upload.array('images'), async (req, res, next) => {
 
     const durationMs = Date.now() - startTime;
     res.setHeader('X-Analysis-Duration-Ms', String(durationMs));
+    res.setHeader('X-Analysis-Cache', analysis?._cacheHit ? 'HIT' : 'MISS');
 
     if (!analysis || !analysis.is_legible) {
       return res.status(422).json({
