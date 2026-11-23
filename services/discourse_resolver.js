@@ -9,13 +9,28 @@
  * 5. Hierarchical Ambiguity Cascade with Free Micro-Turn
  */
 
-const CROSS_GEN_REGEX = /\b(mothers?|fathers?|moms?|dads?)\s+(nana|grandma|grandmother|granny|grandpa|grandfather|gramps)\b/i;
+const CROSS_GEN_REGEX = /\b(?:(mothers?|fathers?|moms?|dads?)(?:'s)?\s+(nana|grandma|grandmother|granny|grandpa|grandfather|gramps)|(nana|grandma|grandmother|granny|grandpa|grandfather|gramps)(?:'s)?\s+(mothers?|fathers?|moms?|dads?))\b/i;
 const POSSESSIVE_PRONOUNS = new Set(['his', 'her', 'their', 'its']);
+
+const PRONOUN_REGEXES = {
+  he: /\bhe\b/gi,
+  him: /\bhim\b/gi,
+  his: /\bhis\b/gi,
+  she: /\bshe\b/gi,
+  her: /\bher\b/gi,
+  it: /\bit\b/gi,
+  they: /\bthey\b/gi,
+  them: /\bthem\b/gi,
+  their: /\btheir\b/gi,
+};
 
 function escapeRegex(str = '') {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+/**
+ * Formats referent replacement handling possessives and safe aliasing.
+ */
 function formatReferentReplacement(pronoun, rawName, rubric) {
   const safe = getSafeReferentReplacement(rawName, rubric);
   const name = (safe || '').toLowerCase().trim();
@@ -26,6 +41,32 @@ function formatReferentReplacement(pronoun, rawName, rubric) {
     return name.endsWith('s') ? `${name}'` : `${name}'s`;
   }
   return name;
+}
+
+/**
+ * Replaces a pronoun in the transcript, scoping possessive "her" vs objective "her".
+ */
+function replacePronounInTranscript(text, pronoun, rawName, rubric) {
+  const p = pronoun.toLowerCase();
+  const safe = getSafeReferentReplacement(rawName, rubric);
+  const name = (safe || '').toLowerCase().trim();
+  const possessiveForm = name.endsWith("'s") || name.endsWith("'") ? name : (name.endsWith('s') ? `${name}'` : `${name}'s`);
+
+  if (p === 'her') {
+    // Distinguish possessive "her [noun]" from objective "for her"
+    return text.replace(/\bher\b(?:\s+([a-z0-9]+))?/gi, (match, nextWord) => {
+      if (nextWord && !['is', 'was', 'did', 'does', 'said', 'went', 'gave', 'made', 'and', 'but', 'or', 'because'].includes(nextWord.toLowerCase())) {
+        return `${possessiveForm} ${nextWord}`;
+      }
+      return name + (nextWord ? ` ${nextWord}` : '');
+    });
+  }
+
+  if (POSSESSIVE_PRONOUNS.has(p)) {
+    return text.replace(PRONOUN_REGEXES[p] || new RegExp(`\\b${escapeRegex(p)}\\b`, 'gi'), possessiveForm);
+  }
+
+  return text.replace(PRONOUN_REGEXES[p] || new RegExp(`\\b${escapeRegex(p)}\\b`, 'gi'), name);
 }
 
 /**
@@ -94,6 +135,15 @@ export function resolveDiscourse(normalizedTranscript = '', rubric = {}, options
     return result;
   }
 
+  // Pre-index entity_graph characters in a Map once per call
+  const charMap = new Map();
+  if (Array.isArray(entityGraph?.characters)) {
+    for (const c of entityGraph.characters) {
+      if (c.canonical_id) charMap.set(c.canonical_id.toLowerCase().trim(), c);
+      if (c.canonical_name) charMap.set(c.canonical_name.toLowerCase().trim(), c);
+    }
+  }
+
   // =========================================================================
   // 1. Cross-Generational Mismatch Detection
   // =========================================================================
@@ -122,18 +172,35 @@ export function resolveDiscourse(normalizedTranscript = '', rubric = {}, options
   }
 
   // Conflicting recipient detection against story_context.recipient
-  const storyRecipient = (rubric.story_context?.recipient || rubric.entity_graph?.discourse_referents?.him || '').toLowerCase().trim();
-  if (storyRecipient) {
+  const rawStoryRecipient = (rubric.story_context?.recipient || rubric.entity_graph?.discourse_referents?.him || '').toLowerCase().trim();
+  if (rawStoryRecipient) {
     const beneficiaryMatch = transcript.match(
       /\b(?:for\s+(?:a\s+|the\s+|his\s+|her\s+|my\s+)?(dog|cat|pet|grampa|grandpa|friend|someone\s+else|sister|brother|dad|father)|(?:a\s+|the\s+|his\s+|her\s+|my\s+)?(dog|cat|pet|grampa|grandpa|friend|someone\s+else|sister|brother|dad|father)(?:'s|s)?\s+(?:hat|item|thing|stuff|one))\b/i
     );
     if (beneficiaryMatch) {
-      const statedBeneficiary = (beneficiaryMatch[1] || beneficiaryMatch[2]).toLowerCase();
-      result.character_confusion = true;
-      result.cognitive_diagnosis = 'CHARACTER_CONFUSION';
-      const recipientLabel = rubric.story_context?.recipient || storyRecipient || 'them';
-      result.spoken_prompt = `That was for ${recipientLabel}, not ${statedBeneficiary}!`;
-      return result;
+      const statedBeneficiary = (beneficiaryMatch[1] || beneficiaryMatch[2]).toLowerCase().trim();
+
+      // Collect storyRecipient and all its aliases
+      const recipientAliases = new Set([rawStoryRecipient]);
+      const rChar = charMap.get(rawStoryRecipient);
+      if (rChar && Array.isArray(rChar.aliases)) {
+        for (const a of rChar.aliases) {
+          if (a) recipientAliases.add(a.toLowerCase().trim());
+        }
+      }
+
+      // ONLY flag character_confusion if statedBeneficiary actually differs from recipient and its aliases
+      const isMatch = recipientAliases.has(statedBeneficiary) ||
+        rawStoryRecipient.includes(statedBeneficiary) ||
+        statedBeneficiary.includes(rawStoryRecipient);
+
+      if (!isMatch) {
+        result.character_confusion = true;
+        result.cognitive_diagnosis = 'CHARACTER_CONFUSION';
+        const recipientLabel = rubric.story_context?.recipient || rawStoryRecipient || 'them';
+        result.spoken_prompt = `That was for ${recipientLabel}, not ${statedBeneficiary}!`;
+        return result;
+      }
     }
   }
 
@@ -148,27 +215,14 @@ export function resolveDiscourse(normalizedTranscript = '', rubric = {}, options
           if (!normComp) continue;
           const canonicalName = (char.canonical_name || char.canonical_id || '').toLowerCase();
 
-          // Guard against stutter if normComp is already a prefix of canonicalName (e.g. "uncle" in "uncle duane")
-          if (canonicalName && canonicalName !== normComp && canonicalName.startsWith(normComp + ' ')) {
-            const suffix = canonicalName.slice(normComp.length).trim();
-            const guardedRegex = new RegExp(`\\b${escapeRegex(normComp)}\\b(?!\\s+${escapeRegex(suffix)})`, 'gi');
-            transcript = transcript.replace(guardedRegex, canonicalName);
-            continue;
-          }
-
-          const regex = new RegExp(`\\b${escapeRegex(normComp)}\\b`, 'gi');
-          if (regex.test(transcript)) {
-            transcript = transcript.replace(regex, canonicalName);
+          const compRegex = new RegExp(`\\b${escapeRegex(normComp)}\\b`, 'gi');
+          if (compRegex.test(transcript)) {
+            const rep = getSafeReferentReplacement(canonicalName, rubric);
+            transcript = transcript.replace(compRegex, rep);
           }
         }
       }
     }
-  } else {
-    // Fallback kinship normalization for rubrics without entity_graph
-    transcript = transcript
-      .replace(/\b(mothers?\s+mother|fathers?\s+mother|moms?\s+mom|dads?\s+mom|grand\s+mother)\b/gi, 'grandmother')
-      .replace(/\b(mothers?\s+father|fathers?\s+father|moms?\s+dad|dads?\s+dad|grand\s+father)\b/gi, 'grandfather')
-      .replace(/\bgrampa\b/gi, 'grandpa');
   }
 
   // =========================================================================
@@ -176,25 +230,18 @@ export function resolveDiscourse(normalizedTranscript = '', rubric = {}, options
   // =========================================================================
   if (entityGraph && Array.isArray(entityGraph.social_relations)) {
     for (const rel of entityGraph.social_relations) {
-      let targetName = rel.target_id;
-      if (Array.isArray(entityGraph.characters)) {
-        const found = entityGraph.characters.find(
-          (c) =>
-            c.canonical_id === rel.target_id ||
-            c.canonical_name?.toLowerCase() === rel.target_id?.toLowerCase()
-        );
-        if (found) {
-          targetName = found.canonical_name || found.canonical_id;
-        }
-      }
+      const targetId = (rel.target_id || '').toLowerCase();
+      const targetChar = charMap.get(targetId);
+      const targetName = targetChar ? (targetChar.canonical_name || targetChar.canonical_id) : targetId;
+      const safeTargetName = getSafeReferentReplacement(targetName, rubric);
 
       if (Array.isArray(rel.aliases)) {
         for (const alias of rel.aliases) {
-          const normAlias = alias.toLowerCase().replace(/['’]/g, '').replace(/[^a-z0-9\s]/g, '').trim();
+          const normAlias = alias.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
           if (!normAlias) continue;
-          const regex = new RegExp(`\\b${escapeRegex(normAlias)}\\b`, 'gi');
-          if (regex.test(transcript)) {
-            transcript = transcript.replace(regex, targetName);
+          const aliasRegex = new RegExp(`\\b${escapeRegex(normAlias)}\\b`, 'gi');
+          if (aliasRegex.test(transcript)) {
+            transcript = transcript.replace(aliasRegex, safeTargetName);
           }
         }
       }
@@ -204,13 +251,25 @@ export function resolveDiscourse(normalizedTranscript = '', rubric = {}, options
   // =========================================================================
   // 4. Anaphora / Pronoun Resolution & Hierarchical Ambiguity Cascade
   // =========================================================================
-  const discourseReferents = entityGraph?.discourse_referents;
+  let discourseReferents = entityGraph?.discourse_referents;
+  // Support array form [{ pronoun, referent }] if provided
+  if (Array.isArray(discourseReferents)) {
+    const map = {};
+    for (const item of discourseReferents) {
+      if (item && item.pronoun && item.referent) {
+        map[item.pronoun.toLowerCase()] = item.referent;
+      }
+    }
+    discourseReferents = map;
+  }
 
   const femalePronouns = ['she', 'her'];
   const malePronouns = ['he', 'him', 'his'];
+  const pluralPronouns = ['they', 'them', 'their'];
 
   const containsFemalePronoun = femalePronouns.some((p) => new RegExp(`\\b${p}\\b`, 'i').test(transcript));
   const containsMalePronoun = malePronouns.some((p) => new RegExp(`\\b${p}\\b`, 'i').test(transcript));
+  const containsPluralPronoun = pluralPronouns.some((p) => new RegExp(`\\b${p}\\b`, 'i').test(transcript));
 
   let ambiguousPronounFound = false;
   let activeCandidates = [];
@@ -238,16 +297,13 @@ export function resolveDiscourse(normalizedTranscript = '', rubric = {}, options
     }
   }
 
-  const pluralPronouns = ['they', 'them', 'their'];
-
   // Resolve unambiguous single-candidate gender pronouns if not explicitly provided in discourseReferents
   if (containsFemalePronoun && !discourseReferents?.she && discourseReferents?.she !== null) {
     const femaleChars = entityGraph?.characters?.filter((c) => c.gender === 'female') || [];
     if (femaleChars.length === 1) {
       const rawName = femaleChars[0].canonical_name || femaleChars[0].canonical_id;
       femalePronouns.forEach((p) => {
-        const rep = formatReferentReplacement(p, rawName, rubric);
-        transcript = transcript.replace(new RegExp(`\\b${p}\\b`, 'gi'), rep);
+        transcript = replacePronounInTranscript(transcript, p, rawName, rubric);
       });
     }
   }
@@ -257,20 +313,17 @@ export function resolveDiscourse(normalizedTranscript = '', rubric = {}, options
     if (maleChars.length === 1) {
       const rawName = maleChars[0].canonical_name || maleChars[0].canonical_id;
       malePronouns.forEach((p) => {
-        const rep = formatReferentReplacement(p, rawName, rubric);
-        transcript = transcript.replace(new RegExp(`\\b${p}\\b`, 'gi'), rep);
+        transcript = replacePronounInTranscript(transcript, p, rawName, rubric);
       });
     }
   }
 
-  const containsPluralPronoun = pluralPronouns.some((p) => new RegExp(`\\b${p}\\b`, 'i').test(transcript));
   if (containsPluralPronoun && !discourseReferents?.they && discourseReferents?.they !== null) {
     const pluralChars = entityGraph?.characters?.filter((c) => c.gender === 'plural' || c.is_plural) || [];
     if (pluralChars.length === 1) {
       const rawName = pluralChars[0].canonical_name || pluralChars[0].canonical_id;
       pluralPronouns.forEach((p) => {
-        const rep = formatReferentReplacement(p, rawName, rubric);
-        transcript = transcript.replace(new RegExp(`\\b${p}\\b`, 'gi'), rep);
+        transcript = replacePronounInTranscript(transcript, p, rawName, rubric);
       });
     }
   }
@@ -284,18 +337,14 @@ export function resolveDiscourse(normalizedTranscript = '', rubric = {}, options
 
     if (mentionedCandidates.length === 1) {
       const resolvedName = getSafeReferentReplacement(mentionedCandidates[0], rubric);
-      const char = entityGraph.characters?.find(
-        (c) => (c.canonical_name || c.canonical_id).toLowerCase() === mentionedCandidates[0].toLowerCase()
-      );
+      const char = charMap.get(mentionedCandidates[0].toLowerCase());
       if (char?.gender === 'female' || activeGender === 'female') {
         femalePronouns.forEach((p) => {
-          const rep = formatReferentReplacement(p, resolvedName, rubric);
-          transcript = transcript.replace(new RegExp(`\\b${p}\\b`, 'gi'), rep);
+          transcript = replacePronounInTranscript(transcript, p, resolvedName, rubric);
         });
       } else if (char?.gender === 'male' || activeGender === 'male') {
         malePronouns.forEach((p) => {
-          const rep = formatReferentReplacement(p, resolvedName, rubric);
-          transcript = transcript.replace(new RegExp(`\\b${p}\\b`, 'gi'), rep);
+          transcript = replacePronounInTranscript(transcript, p, resolvedName, rubric);
         });
       }
     } else {
@@ -304,11 +353,12 @@ export function resolveDiscourse(normalizedTranscript = '', rubric = {}, options
       if (Array.isArray(entityGraph.characters)) {
         const matchingActionCandidates = [];
         for (const candName of activeCandidates) {
-          const char = entityGraph.characters.find(
-            (c) => (c.canonical_name || c.canonical_id).toLowerCase() === candName.toLowerCase()
-          );
+          const char = charMap.get(candName.toLowerCase());
           if (char && Array.isArray(char.actions)) {
-            const hasAction = char.actions.some((act) => transcript.includes(act.toLowerCase()));
+            // Word-boundary matching for action words
+            const hasAction = char.actions.some((act) =>
+              new RegExp(`\\b${escapeRegex(act.toLowerCase().trim())}\\b`, 'i').test(transcript)
+            );
             if (hasAction) {
               matchingActionCandidates.push(candName);
             }
@@ -321,18 +371,14 @@ export function resolveDiscourse(normalizedTranscript = '', rubric = {}, options
 
       if (uniqueActionCandidate) {
         const resolvedActionCandidate = getSafeReferentReplacement(uniqueActionCandidate, rubric);
-        const char = entityGraph.characters?.find(
-          (c) => (c.canonical_name || c.canonical_id).toLowerCase() === uniqueActionCandidate.toLowerCase()
-        );
+        const char = charMap.get(uniqueActionCandidate.toLowerCase());
         if (char?.gender === 'female' || activeGender === 'female') {
           femalePronouns.forEach((p) => {
-            const rep = formatReferentReplacement(p, resolvedActionCandidate, rubric);
-            transcript = transcript.replace(new RegExp(`\\b${p}\\b`, 'gi'), rep);
+            transcript = replacePronounInTranscript(transcript, p, resolvedActionCandidate, rubric);
           });
         } else if (char?.gender === 'male' || activeGender === 'male') {
           malePronouns.forEach((p) => {
-            const rep = formatReferentReplacement(p, resolvedActionCandidate, rubric);
-            transcript = transcript.replace(new RegExp(`\\b${p}\\b`, 'gi'), rep);
+            transcript = replacePronounInTranscript(transcript, p, resolvedActionCandidate, rubric);
           });
         }
       } else {
@@ -344,9 +390,15 @@ export function resolveDiscourse(normalizedTranscript = '', rubric = {}, options
           result.is_microturn = true;
           result.microturn_used = true;
           result.cognitive_diagnosis = 'AMBIGUOUS_REFERENT';
-          const cand1 = activeCandidates[0];
-          const cand2 = activeCandidates[1];
-          result.spoken_prompt = `Do you mean ${cand1} or ${cand2}? Tell me which one!`;
+
+          let candListStr;
+          if (activeCandidates.length === 2) {
+            candListStr = `${activeCandidates[0]} or ${activeCandidates[1]}`;
+          } else {
+            const allButLast = activeCandidates.slice(0, -1).join(', ');
+            candListStr = `${allButLast}, or ${activeCandidates[activeCandidates.length - 1]}`;
+          }
+          result.spoken_prompt = `Do you mean ${candListStr}? Tell me which one!`;
           result.grounded_transcript = transcript;
           return result;
         } else {
@@ -363,9 +415,7 @@ export function resolveDiscourse(normalizedTranscript = '', rubric = {}, options
   if (discourseReferents) {
     for (const [pronoun, referent] of Object.entries(discourseReferents)) {
       if (typeof referent === 'string' && referent.trim()) {
-        const rep = formatReferentReplacement(pronoun, referent, rubric);
-        const regex = new RegExp(`\\b${escapeRegex(pronoun)}\\b`, 'gi');
-        transcript = transcript.replace(regex, rep);
+        transcript = replacePronounInTranscript(transcript, pronoun, referent, rubric);
       }
     }
   }

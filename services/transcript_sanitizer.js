@@ -1,16 +1,20 @@
 const SHRUG_RESPONSES = new Set([
   'i dont know',
+  'i do not know',
   'idk',
   'nothing',
   'no idea',
   'pass',
   'what',
   'i forget',
+  'i forgot',
   'dunno',
   'not sure',
+  'im not sure',
+  'i am not sure',
 ]);
 
-const NEGATION_REGEX = /\b(not|no|didnt|did\s+not|never|wasnt|was\s+not|isnt|is\s+not|dont|do\s+not|cant|cannot|wont|wouldnt|aint)\b/i;
+const NEGATION_REGEX = /\b(not|no|none|nothing|nobody|nowhere|neither|nor|didnt|did\s+not|never|wasnt|was\s+not|isnt|is\s+not|dont|do\s+not|cant|cannot|wont|wouldnt|aint|couldnt|shouldnt|havent|hasnt|hadnt|arent|werent)\b/i;
 
 export function normalizeTranscript(text = '') {
   if (!text || typeof text !== 'string') {
@@ -22,11 +26,8 @@ export function normalizeTranscript(text = '') {
     .replace(/['’]/g, '')
     .replace(/[^a-z0-9\s]/g, ' ');
 
-  let prev;
-  do {
-    prev = cleaned;
-    cleaned = cleaned.replace(/^\s*(um+|uh+|well|so|you know)\b\s*/gi, '');
-  } while (cleaned !== prev);
+  // Single anchored regex replacing do/while loop: strips leading filler sequences (um, uh, well, so, you know)
+  cleaned = cleaned.replace(/^(?:\s*(?:um+|uh+|you\s+know|ah+|well|so)\b\s*)+/gi, '');
 
   cleaned = cleaned.replace(/\b(um+|uh+)\b/gi, ' ');
 
@@ -46,7 +47,8 @@ export function isShrugOrEmpty(normalizedText = '') {
   }
 
   const trimmed = normalizedText.trim();
-  if (trimmed.length < 2) {
+  // Allow valid 1-character alphanumeric answers (e.g., "5", "a")
+  if (trimmed.length === 0) {
     return true;
   }
 

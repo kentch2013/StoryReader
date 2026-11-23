@@ -219,10 +219,30 @@ function encodeMetaphoneCode(str) {
   return code;
 }
 
+const PROTECTED_IN_WORDS = new Set([
+  'TRAIN', 'BRAIN', 'CABIN', 'RAIN', 'MAIN', 'CHAIN', 'SPIN',
+  'CHIN', 'TWIN', 'SKIN', 'ROBIN', 'DOLPHIN', 'PENGUIN', 'COIN',
+  'JOIN', 'AGAIN', 'PUPPY', 'KITTEN', 'CHIN', 'SHIN', 'TIN', 'PIN', 'BIN', 'WIN'
+]);
+
+const PROTECTED_W_WORDS = new Set([
+  'WATER', 'WOLF', 'WALK', 'WENT', 'WAS', 'WITH', 'WOOD', 'WHAT',
+  'WHEN', 'WHERE', 'WHY', 'WHO', 'WARM', 'WIND', 'WINDY', 'WET',
+  'WELL', 'WISH', 'WILL', 'WOULD', 'WHITE', 'WORK', 'WORLD', 'WAY',
+  'WE', 'WERE'
+]);
+
+const PHONETIC_STOPWORDS = new Set([
+  'a', 'an', 'the', 'in', 'on', 'at', 'to', 'for', 'of', 'it',
+  'he', 'she', 'him', 'her', 'his', 'was', 'is', 'and', 'with',
+  'that', 'this', 'there', 'they', 'them', 'their', 'we', 'you',
+  'water', 'walk', 'went', 'was', 'wood', 'wolf', 'train', 'brain', 'rain'
+]);
+
 /**
  * Computes Double Metaphone dual phonetic codes [primary, secondary] for a word,
  * incorporating child phonological transformation rules:
- * - terminal IN -> ING (e.g. runnin -> running)
+ * - terminal IN -> ING (e.g. runnin -> running, for multisyllabic verb stems)
  * - silent D in NDM / NDP (e.g. grandma / grandpa)
  * - terminal consonant stop reduction in ND / NT (e.g. friend -> fren)
  * - child gliding W -> R at start of word before vowel (e.g. wabbit -> rabbit)
@@ -241,8 +261,8 @@ export function doubleMetaphone(word) {
     return ['', ''];
   }
 
-  // Child Rule 1: Terminal IN -> ING (e.g. runnin -> running)
-  if (clean.length >= 4 && clean.endsWith('IN')) {
+  // Child Rule 1: Terminal IN -> ING restricted to multisyllabic stems (length >= 5 and not protected)
+  if (clean.length >= 5 && clean.endsWith('IN') && !PROTECTED_IN_WORDS.has(clean)) {
     clean = clean.slice(0, -2) + 'ING';
   }
 
@@ -265,8 +285,8 @@ export function doubleMetaphone(word) {
     secondaryStr = secondaryStr.slice(0, -1); // FRIEND -> FRIEN
   }
 
-  // Child Rule 4: Gliding W -> R at start of word before vowel (e.g. wabbit -> rabbit)
-  if (/^W[AEIOUY]/.test(secondaryStr)) {
+  // Child Rule 4: Gliding W -> R at start of word before vowel, excluding protected common words
+  if (/^W[AEIOUY]/.test(secondaryStr) && !PROTECTED_W_WORDS.has(clean)) {
     secondaryStr = 'R' + secondaryStr.slice(1);
   }
 
@@ -361,7 +381,17 @@ export function matchPhoneticKeyword(transcriptToken, targetKeywords, options = 
     }
   }
 
-  // 2. Short words (<= 3 chars) require exact equality
+  // 2. Stopword and short word guard
+  if (PHONETIC_STOPWORDS.has(token.toLowerCase())) {
+    for (const target of targetKeywords) {
+      if (typeof target === 'string' && target.trim().toLowerCase() === token) {
+        return target;
+      }
+    }
+    return null;
+  }
+
+  // 3. Short words (<= 3 chars) require exact equality
   if (token.length <= 3) {
     for (const target of targetKeywords) {
       if (typeof target === 'string' && target.trim().toLowerCase() === token) {
@@ -371,14 +401,14 @@ export function matchPhoneticKeyword(transcriptToken, targetKeywords, options = 
     return null;
   }
 
-  // 3. Exact match check
+  // 4. Exact match check
   for (const target of targetKeywords) {
     if (typeof target === 'string' && target.trim().toLowerCase() === token) {
       return target;
     }
   }
 
-  // 4. Phonetic + similarity match
+  // 5. Phonetic + similarity match
   const [tPri, tSec] = doubleMetaphone(token);
   let bestMatch = null;
   let bestSimilarity = -1;
@@ -388,7 +418,8 @@ export function matchPhoneticKeyword(transcriptToken, targetKeywords, options = 
     const tgt = target.trim().toLowerCase();
     if (tgt.length <= 3) continue; // Short targets require exact equality
 
-    const [kPri, kSec] = doubleMetaphone(tgt);
+    const targetCodes = options.targetMetaphones?.get(tgt) || doubleMetaphone(tgt);
+    const [kPri, kSec] = targetCodes;
     const sharesCode = Boolean(
       (tPri && (tPri === kPri || tPri === kSec)) ||
       (tSec && (tSec === kPri || tSec === kSec))
@@ -435,10 +466,12 @@ export function normalizeChildPhonetics(transcript, keywordClusters = [], option
       if (Array.isArray(cluster.synonyms)) {
         for (const syn of cluster.synonyms) {
           if (typeof syn === 'string') {
-            const clean = syn.trim().toLowerCase();
-            if (clean && !targetWordSet.has(clean)) {
-              targetWordSet.add(clean);
-              targetWords.push(clean);
+            const parts = syn.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(Boolean);
+            for (const clean of parts) {
+              if (clean && !targetWordSet.has(clean)) {
+                targetWordSet.add(clean);
+                targetWords.push(clean);
+              }
             }
           }
         }
@@ -450,7 +483,7 @@ export function normalizeChildPhonetics(transcript, keywordClusters = [], option
   if (Array.isArray(prototypes)) {
     for (const proto of prototypes) {
       if (proto && typeof proto.text === 'string') {
-        const words = proto.text.split(/\s+/).map((w) => w.trim().toLowerCase());
+        const words = proto.text.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(Boolean);
         for (const w of words) {
           if (w && !targetWordSet.has(w)) {
             targetWordSet.add(w);
@@ -463,6 +496,14 @@ export function normalizeChildPhonetics(transcript, keywordClusters = [], option
 
   if (targetWords.length === 0) {
     return transcript;
+  }
+
+  // Precompute target doubleMetaphone codes into a Map
+  const targetMetaphones = new Map();
+  for (const tgt of targetWords) {
+    if (tgt.length > 3) {
+      targetMetaphones.set(tgt, doubleMetaphone(tgt));
+    }
   }
 
   const tokens = transcript.split(/\s+/);
@@ -481,8 +522,15 @@ export function normalizeChildPhonetics(transcript, keywordClusters = [], option
     const word = match[2];
     const trailing = match[3];
 
+    // Skip stopwords that aren't target words before running Levenshtein
+    if (PHONETIC_STOPWORDS.has(word.toLowerCase()) && !targetWordSet.has(word.toLowerCase())) {
+      normalizedTokens.push(token);
+      continue;
+    }
+
     const matchedTarget = matchPhoneticKeyword(word, targetWords, {
       distractors: options.distractors,
+      targetMetaphones,
     });
 
     if (matchedTarget) {

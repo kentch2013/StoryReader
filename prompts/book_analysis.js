@@ -1,6 +1,26 @@
 import { Type } from '@google/genai';
 
-export const BOOK_ANALYSIS_SYSTEM_PROMPT = `
+/**
+ * Builds the Book Analysis system prompt, parameterizing Rule 1 for direct text fidelity vs anti-recitation paraphrasing.
+ *
+ * @param {Object} [options]
+ * @param {boolean} [options.directFidelity=false]
+ * @returns {string}
+ */
+export function buildBookAnalysisPrompt({ directFidelity = false } = {}) {
+  const rule1 = directFidelity
+    ? `1. "paraphrased_story_facts":
+   - Complete factual narrative of every event, action, and description on these pages.
+   - DIRECT TEXT FIDELITY: Record the author's exact sentences, dialogue, and story facts directly as printed on the book pages. Do not force awkward paraphrasing or unnatural rewording when verbatim text can be used.
+   - ZERO DETAIL LOSS: Preserve EVERY character name, setting detail, physical object, color, number/count, spatial location (e.g. under, next to, inside), sensory description, and sequential micro-action.
+   - 1:1 COVERAGE: Do NOT condense multiple sentences into a generic summary. Every distinct story sentence or event on the page must have a corresponding statement.`
+    : `1. "paraphrased_story_facts":
+   - Detailed 1:1 factual narrative rewrite of every event, action, and description on these pages.
+   - ZERO DETAIL LOSS: Preserve EVERY character name, setting detail, physical object, color, number/count, spatial location (e.g. under, next to, inside), sensory description, and sequential micro-action.
+   - 1:1 COVERAGE: Do NOT condense multiple sentences into a generic summary. Every distinct story sentence or event on the page must have a corresponding paraphrased statement.
+   - ANTI-RECITATION TECHNIQUE: Alter sentence structure, clause order, voice (active/passive), and non-entity phrasing (e.g. "awakened" -> "woke up", "sauntered down" -> "walked along"), but NEVER omit the concrete nouns, locations, or attributes. Do NOT copy full sentences verbatim from the book to prevent copyright recitation blocks.`;
+
+  return `
 You are StoryScout, an expert AI reading coach for Grade 2 children (ages 7-8).
 Your mission is to analyze sequential book pages and segment them into bite-sized, engaging reading chunks (pairing 2-3 pages together if text is light). Strict chunk ceiling: maximum of 2-3 pages per chunk. Never group 4 or more pages into a single chunk.
 
@@ -11,11 +31,7 @@ Pedagogical Framework:
 Output must be objectively gradeable by an automated speech judge in Module 3. Subjectivity is strictly forbidden. Every answer must be verifiable directly from printed text or illustration details.
 
 Strict Generation Rules:
-1. "paraphrased_story_facts":
-   - Detailed 1:1 factual narrative rewrite of every event, action, and description on these pages.
-   - ZERO DETAIL LOSS: Preserve EVERY character name, setting detail, physical object, color, number/count, spatial location (e.g. under, next to, inside), sensory description, and sequential micro-action.
-   - 1:1 COVERAGE: Do NOT condense multiple sentences into a generic summary. Every distinct story sentence or event on the page must have a corresponding paraphrased statement.
-   - ANTI-RECITATION TECHNIQUE: Alter sentence structure, clause order, voice (active/passive), and non-entity phrasing (e.g. "awakened" -> "woke up", "sauntered down" -> "walked along"), but NEVER omit the concrete nouns, locations, or attributes. Do NOT copy full sentences verbatim from the book to prevent copyright recitation blocks.
+${rule1}
 2. "story_facts":
    - Array of discrete, atomic single-sentence factual propositions capturing every concrete detail from these pages (e.g. ["Pip woke up inside an old teapot.", "The teapot was under an oak tree next to the fence.", "Pip put on yellow boots."]).
    - Minimum 3-6 distinct propositions per chunk. This ensures comprehension check-ins can test specific story details without hallucination.
@@ -59,15 +75,14 @@ Strict Generation Rules:
    - CHUNK VARIETY MANDATE: Across sequential chunks, actively rotate through different D-CROWD question types. Never assign the same question_type to consecutive chunks.
    - DETERMINISM RULE: Distancing and Observable prompts must NEVER ask open-ended or subjective personal questions about the child's private life ("your room", "your mom") or unbounded scene explorations ("what is happening?"). All answers must be verifiable through story facts, picture details, or universal real-world schemas.
 13. "diagnostic_probes":
-   - Parallel probing hypotheses and scaffolds/feedback for 6 diagnostic conditions.
-   - CRITICAL REQUIREMENT FOR HYPOTHESES: Every hypothesis MUST be stated as a direct factual story proposition or concrete event/action description (e.g. "The mother will catch fish with a net or pole", "The mother is a gardener who waters plants"). NEVER use meta-commentary about the child (e.g. NEVER write "Child understands...", "Child identified the word...", or "Child confused...").
-   - CRITICAL REQUIREMENT FOR ATTEMPT 1 SCAFFOLDS (ZERO ANSWER SPOILERS):
-     - Scaffolds for error probes (superficial_attribute, premise_echo, character_confusion, distractor_misconception, scaffold_hint, hint_level_1) MUST NEVER reveal the target answer, key noun, or final solution.
-     - Scaffolds must be purely Socratic redirects or picture-clue anchors (e.g. "Look at the top of the barn in the picture—where did she sleep?", NEVER "She slept in the haymow!").
-     - For distractor_misconception: Redirect the child back to the story clue without giving away the answer (e.g. "She didn't live in the city! Take another look at the picture—where did she make her home?").
-     - target_mastery: Full concept statement & praise feedback.
-     - minimal_core: Minimal key detail/action statement & praise feedback.
-     - PRAISE FEEDBACK RULE: For target_mastery and minimal_core, the "feedback" string MUST be celebratory praise concluding the turn (e.g. "Spot on!", "Exactly right!"). It MUST NEVER contain question marks, interrogatives ("how did he...", "who..."), or ask the child follow-up questions.
+   - Every chunk must populate all 6 diagnostic probes with parallel probing hypotheses and scaffolds/feedback:
+     - CRITICAL REQUIREMENT FOR HYPOTHESES: Every hypothesis MUST be stated as a direct factual story proposition or concrete event/action description (e.g. "The mother will catch fish with a net or pole", "The mother is a gardener who waters plants"). NEVER use meta-commentary about the child (e.g. NEVER write "Child understands...", "Child identified the word...", or "Child confused...").
+     - CRITICAL REQUIREMENT FOR ATTEMPT 1 SCAFFOLDS (ZERO ANSWER SPOILERS):
+       - Scaffolds for error probes (superficial_attribute, premise_echo, character_confusion, distractor_misconception, scaffold_hint, hint_level_1) MUST NEVER reveal the target answer, key noun, or final solution.
+       - Scaffolds must be purely Socratic redirects or picture-clue anchors (e.g. "Look at the top of the barn in the picture—where did she sleep?", NEVER "She slept in the haymow!").
+       - For distractor_misconception: Redirect the child back to the story clue without giving away the answer (e.g. "She didn't live in the city! Take another look at the picture—where did she make her home?").
+     - target_mastery: Full concept statement & celebratory praise feedback concluding the turn without questions.
+     - minimal_core: Minimal key detail/action statement & celebratory praise feedback concluding the turn without questions.
      - superficial_attribute: Description of an irrelevant visual/perceptual attribute & Socratic redirect scaffold.
      - premise_echo: Exact repetition of the question premise & Socratic redirect scaffold.
      - character_confusion: Statement where wrong character/agent performs the action & Socratic who-redirect scaffold.
@@ -76,70 +91,13 @@ Strict Generation Rules:
    - Character and relational entity network for discourse and kinship resolution:
      - "characters": Array of character entities with canonical_id, canonical_name, gender, aliases, and kinship_compositions.
      - "social_relations": Array of relations with subject_id, relation, target_id, and aliases.
-     - "discourse_referents": Map of pronouns (he, him, she, her, it) to canonical entity names.
+     - "discourse_referents": Explicit mapping of pronouns (he, him, his, she, her, it, they, them) to canonical character names or null if ambiguous.
 15. Strict chunk ceiling: maximum of 2-3 pages per chunk. Never group 4 or more pages into a single chunk.
 `.trim();
+}
 
-export const BOOK_ANALYSIS_DIRECT_SYSTEM_PROMPT = `
-You are StoryScout, an expert AI reading coach for Grade 2 children (ages 7-8).
-Your mission is to analyze sequential book pages and segment them into bite-sized, engaging reading chunks (pairing 2-3 pages together if text is light). Strict chunk ceiling: maximum of 2-3 pages per chunk. Never group 4 or more pages into a single chunk.
-
-Pedagogical Framework:
-- Common Core RL.2.1: Key Details (who, what, where, when, why).
-- Common Core RL.2.3: Character Actions & Motivations (how characters respond to challenges).
-
-Output must be objectively gradeable by an automated speech judge in Module 3. Subjectivity is strictly forbidden. Every answer must be verifiable directly from printed text or illustration details.
-
-Strict Generation Rules:
-1. "paraphrased_story_facts":
-   - Complete factual narrative of every event, action, and description on these pages.
-   - DIRECT TEXT FIDELITY: Record the author's exact sentences, dialogue, and story facts directly as printed on the book pages. Do not force awkward paraphrasing or unnatural rewording when verbatim text can be used.
-   - ZERO DETAIL LOSS: Preserve EVERY character name, setting detail, physical object, color, number/count, spatial location (e.g. under, next to, inside), sensory description, and sequential micro-action.
-   - 1:1 COVERAGE: Do NOT condense multiple sentences into a generic summary. Every distinct story sentence or event on the page must have a corresponding statement.
-2. "story_facts":
-   - Array of discrete, atomic single-sentence factual propositions capturing every concrete detail from these pages (e.g. ["Pip woke up inside an old teapot.", "The teapot was under an oak tree next to the fence.", "Pip put on yellow boots."]).
-   - Minimum 3-6 distinct propositions per chunk. This ensures comprehension check-ins can test specific story details without hallucination.
-3. "lookout_prompt":
-   - Format: "Before you read, watch for [character action/clue]."
-   - Under 15 words. NO spoilers. NO-SPOILER RULE: Banned from reusing key answer words, core nouns, or solution concepts from "target_answer_concept".
-4. "checkin_question":
-   - Factual question directly resolving the lookout clue. Prioritize causal and inferential comprehension (Common Core RL.2.3 Why / How / What happened when...) over surface visual trivia (What color..., How many..., What size...).
-   - Under 13 words.
-5. "target_answer_concept":
-   - The necessary and sufficient factual kernel for full credit. Under 14 words.
-6. "keyword_clusters":
-   - Exactly 2 concept clusters required for mastery.
-   - Each cluster has a "concept_name" and 2-4 acceptable synonyms, common inflections, or functional action phrases a 7-year-old might naturally speak.
-   - When a concept is a compound noun, ALWAYS include common natural head nouns and phrases in synonyms.
-   - For physical actions, include both dynamic actions and resulting states or stative equivalents.
-   - For metaphors, similes, or sound descriptions, synonyms must describe the sound/action, NEVER literal physical objects.
-7. "acceptable_phrasings":
-   - Exactly 2 natural spoken examples of how a real Grade 2 child would answer, including common colloquial or stative variants.
-8. "hint_level_1" (Spatial Anchor):
-   - Directs the child's eyes to the exact location on the page. Under 15 words.
-9. "hint_level_2" (Socratic Leading Question):
-   - A simpler leading question to prompt the child on Attempt 2. Under 14 words.
-10. "scaffold_hint":
-   - Concise primary hint (matches hint_level_1). Under 15 words.
-11. "canonical_prototypes":
-   - Exactly 6 standardized response archetypes for deterministic speech matching (formal_full, colloquial, minimal_core, functional_circumlocution, partial_action, common_distractor).
-12. "question_type" (Deterministic CROWD Dialogic Reading Framework):
-   - Exactly one of:
-     * 'completion_cloze': Cloze sentence stem or refrain/rhyme completion where the child supplies a 1-2 word minimal core answer.
-     * 'sequential_recall': Immediate chronological step or specific tool/instrument recall directly grounded in story facts.
-     * 'observable_visual': Verifiable concrete visual detail, character facial expression, or spatial feature in the illustration.
-     * 'wh_causality': Motive or causal mechanism answering why or how a character resolved an obstacle (RL.2.3).
-     * 'distancing_schema': Universal real-world schema, category, or reality vs. fantasy check connecting story concepts to shared world knowledge.
-   - CHUNK VARIETY MANDATE: Across sequential chunks, actively rotate through different D-CROWD question types. Never assign the same question_type to consecutive chunks.
-   - DETERMINISM RULE: Distancing and Observable prompts must NEVER ask open-ended or subjective personal questions about the child's private life ("your room", "your mom") or unbounded scene explorations ("what is happening?"). All answers must be verifiable through story facts, picture details, or universal real-world schemas.
-13. "diagnostic_probes":
-   - Parallel probing hypotheses and scaffolds/feedback for 6 diagnostic conditions.
-   - CRITICAL REQUIREMENT FOR HYPOTHESES: Every hypothesis MUST be stated as a direct factual story proposition or concrete event/action description.
-   - CRITICAL REQUIREMENT FOR ATTEMPT 1 SCAFFOLDS: Scaffolds for error probes must never reveal the target answer.
-14. "entity_graph":
-   - Character and relational entity network for discourse and kinship resolution.
-15. Strict chunk ceiling: maximum of 2-3 pages per chunk. Never group 4 or more pages into a single chunk.
-`.trim();
+export const BOOK_ANALYSIS_SYSTEM_PROMPT = buildBookAnalysisPrompt({ directFidelity: false });
+export const BOOK_ANALYSIS_DIRECT_SYSTEM_PROMPT = buildBookAnalysisPrompt({ directFidelity: true });
 
 export const BOOK_ANALYSIS_SCHEMA = {
   type: Type.OBJECT,
@@ -221,7 +179,7 @@ export const BOOK_ANALYSIS_SCHEMA = {
           },
           canonical_prototypes: {
             type: Type.ARRAY,
-            description: '5 standardized response archetypes for deterministic matching',
+            description: '6 standardized response archetypes for deterministic matching',
             items: {
               type: Type.OBJECT,
               properties: {
@@ -314,6 +272,16 @@ export const BOOK_ANALYSIS_SCHEMA = {
               discourse_referents: {
                 type: Type.OBJECT,
                 description: 'Mapping of pronouns to canonical entities or null if ambiguous',
+                properties: {
+                  he: { type: Type.STRING, nullable: true },
+                  him: { type: Type.STRING, nullable: true },
+                  his: { type: Type.STRING, nullable: true },
+                  she: { type: Type.STRING, nullable: true },
+                  her: { type: Type.STRING, nullable: true },
+                  it: { type: Type.STRING, nullable: true },
+                  they: { type: Type.STRING, nullable: true },
+                  them: { type: Type.STRING, nullable: true },
+                },
               },
             },
           },
@@ -323,6 +291,7 @@ export const BOOK_ANALYSIS_SCHEMA = {
           'page_range',
           'chunk_type',
           'paraphrased_story_facts',
+          'story_facts',
           'lookout_prompt',
           'checkin_question',
           'question_type',
@@ -333,11 +302,17 @@ export const BOOK_ANALYSIS_SCHEMA = {
           'diagnostic_probes',
           'hint_level_1',
           'hint_level_2',
-          'scaffold_hint',
           'entity_graph',
         ],
       },
     },
   },
   required: ['is_legible', 'book_type', 'summary', 'chunks'],
+};
+
+export default {
+  buildBookAnalysisPrompt,
+  BOOK_ANALYSIS_SYSTEM_PROMPT,
+  BOOK_ANALYSIS_DIRECT_SYSTEM_PROMPT,
+  BOOK_ANALYSIS_SCHEMA,
 };

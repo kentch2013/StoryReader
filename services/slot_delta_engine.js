@@ -3,7 +3,7 @@
  *
  * Implements universal semantic role verification:
  * - Compares transcript against target semantic slots:
- *   { agent, action, theme, recipient, attribute }
+ *   { agent, action, theme, recipient, attribute, location }
  * - Classifies slots into MATCH, MISSING, or CONFLICT
  * - Calculates degree of correctness
  * - Synthesizes tailored "affirm + isolate + contrast" repair prompts
@@ -27,20 +27,139 @@ const VERB_STEM_MAP = {
   sounded: ['sound', 'sounding', 'sounds', 'sounded'],
   shake: ['shook', 'shaking', 'shakes', 'shake'],
   shook: ['shake', 'shaking', 'shakes', 'shook'],
+  make: ['made', 'making', 'makes', 'make'],
+  made: ['make', 'making', 'makes', 'made'],
+  making: ['make', 'made', 'makes', 'making'],
+  knit: ['knitted', 'knitting', 'knits', 'knit'],
+  knitted: ['knit', 'knitting', 'knits', 'knitted'],
+  knitting: ['knit', 'knitted', 'knits', 'knitting'],
+  sew: ['sewed', 'sewing', 'sews', 'sewn', 'sew'],
+  sewed: ['sew', 'sewing', 'sews', 'sewn', 'sewed'],
+  wear: ['wore', 'wearing', 'wears', 'worn', 'wear'],
+  wore: ['wear', 'wearing', 'wears', 'worn', 'wore'],
+  run: ['ran', 'running', 'runs', 'run'],
+  ran: ['run', 'running', 'runs', 'ran'],
+  fly: ['flew', 'flying', 'flies', 'flown', 'fly'],
+  flew: ['fly', 'flying', 'flies', 'flown', 'flew'],
+  blow: ['blew', 'blowing', 'blows', 'blown', 'blow'],
+  blew: ['blow', 'blowing', 'blows', 'blown', 'blew'],
+  give: ['gave', 'giving', 'gives', 'given', 'give'],
+  gave: ['give', 'giving', 'gives', 'given', 'gave'],
+  drop: ['dropped', 'dropping', 'drops', 'drop'],
+  dropped: ['drop', 'dropping', 'drops', 'dropped'],
+  play: ['played', 'playing', 'plays', 'play'],
+  played: ['play', 'playing', 'plays', 'played'],
+  bark: ['barked', 'barking', 'barks', 'bark'],
+  barked: ['bark', 'barking', 'barks', 'barked'],
+  meow: ['meowed', 'meowing', 'meows', 'meow'],
+  meowed: ['meow', 'meowing', 'meows', 'meowed'],
 };
+
+const NEGATION_CUES = new Set([
+  'not',
+  "didn't",
+  'didnt',
+  'never',
+  'no',
+  "don't",
+  'dont',
+  "wasn't",
+  'wasnt',
+  "isn't",
+  'isnt',
+  "won't",
+  'wont',
+  "couldn't",
+  'couldnt',
+  'cannot',
+  "can't",
+  'cant',
+]);
 
 function escapeRegex(str = '') {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-/**
- * Checks if a word/phrase exists in text as whole tokens.
- */
-function containsToken(text = '', token = '') {
-  if (!text || !token) return false;
-  const cleanToken = token.toLowerCase().trim();
-  const re = new RegExp(`\\b${escapeRegex(cleanToken)}('?s)?\\b`, 'i');
-  return re.test(text);
+function getLemmaVariants(word = '') {
+  const w = word.toLowerCase().trim();
+  const set = new Set([w]);
+  if (VERB_STEM_MAP[w]) {
+    for (const v of VERB_STEM_MAP[w]) set.add(v);
+  }
+  if (w.endsWith('ing') && w.length > 5) {
+    const base = w.slice(0, -3);
+    set.add(base);
+    set.add(base + 'e');
+    if (base.length > 2 && base[base.length - 1] === base[base.length - 2]) {
+      set.add(base.slice(0, -1));
+    }
+  } else if (w.endsWith('ed') && w.length > 4) {
+    const base = w.slice(0, -2);
+    set.add(base);
+    set.add(base + 'e');
+    if (base.length > 2 && base[base.length - 1] === base[base.length - 2]) {
+      set.add(base.slice(0, -1));
+    }
+  } else if (w.endsWith('es') && w.length > 4) {
+    set.add(w.slice(0, -2));
+    set.add(w.slice(0, -1));
+  } else if (w.endsWith('s') && !w.endsWith('ss') && w.length > 3) {
+    set.add(w.slice(0, -1));
+  }
+  return set;
+}
+
+function matchPhraseInTokens(textTokens, phrase = '', checkNegation = true) {
+  if (!textTokens || textTokens.length === 0 || !phrase) return { matched: false, isNegated: false };
+  const pTokens = phrase.toLowerCase().trim().match(/[a-z0-9]+(?:'[a-z0-9]+)?/g) || [];
+  if (pTokens.length === 0) return { matched: false, isNegated: false };
+
+  let foundMatch = false;
+  let nonNegatedMatch = false;
+
+  for (let i = 0; i <= textTokens.length - pTokens.length; i++) {
+    let matchesAll = true;
+    for (let j = 0; j < pTokens.length; j++) {
+      const t = textTokens[i + j];
+      const p = pTokens[j];
+      if (t === p || t === p + "'s" || p === t + "'s") {
+        continue;
+      }
+      if (pTokens.length === 1 && getLemmaVariants(p).has(t)) {
+        continue;
+      }
+      matchesAll = false;
+      break;
+    }
+
+    if (matchesAll) {
+      foundMatch = true;
+      let isNegated = false;
+      if (checkNegation) {
+        if (i > 0 && NEGATION_CUES.has(textTokens[i - 1])) {
+          isNegated = true;
+        } else if (
+          i > 1 &&
+          NEGATION_CUES.has(textTokens[i - 2]) &&
+          ['a', 'the', 'his', 'her', 'their', 'an', 'really', 'did'].includes(textTokens[i - 1])
+        ) {
+          isNegated = true;
+        }
+      }
+      if (!isNegated) {
+        nonNegatedMatch = true;
+        break;
+      }
+    }
+  }
+
+  if (nonNegatedMatch) {
+    return { matched: true, isNegated: false };
+  }
+  if (foundMatch) {
+    return { matched: true, isNegated: true };
+  }
+  return { matched: false, isNegated: false };
 }
 
 /**
@@ -52,6 +171,7 @@ function containsToken(text = '', token = '') {
  */
 export function evaluateSlotDelta(transcript = '', rubric = {}) {
   const text = (transcript || '').toLowerCase().trim();
+  const textTokens = text.match(/[a-z0-9]+(?:'[a-z0-9]+)?/g) || [];
   const rawSlots = rubric.semantic_slots || {};
 
   // Normalize slots from rubric or fallback to story_context / entity_graph
@@ -81,19 +201,21 @@ export function evaluateSlotDelta(transcript = '', rubric = {}) {
     };
   }
 
+  const checkMatch = (phrase, checkNegation = true) => {
+    const res = matchPhraseInTokens(textTokens, phrase, checkNegation);
+    return res.matched && (!checkNegation || !res.isNegated);
+  };
+
   // 1. Attribute Slot Check (e.g., color, size, material)
   if (slots.attribute) {
     const canonical = (slots.attribute.canonical || '').toLowerCase().trim();
     const synonyms = (slots.attribute.synonyms || []).map((s) => s.toLowerCase().trim());
-    const distractors = (slots.attribute.distractors || [
-      'blue', 'red', 'green', 'yellow', 'purple', 'black', 'white', 'orange', 'pink'
-    ]).map((d) => d.toLowerCase().trim());
+    const distractors = (slots.attribute.distractors || []).map((d) => d.toLowerCase().trim());
 
-    if (containsToken(text, canonical) || synonyms.some((s) => containsToken(text, s))) {
+    if ((canonical && checkMatch(canonical)) || synonyms.some((s) => checkMatch(s))) {
       matches.attribute = canonical;
     } else {
-      // Find conflicting attribute mention
-      const matchedDistractor = distractors.find((d) => d !== canonical && containsToken(text, d));
+      const matchedDistractor = distractors.find((d) => d !== canonical && checkMatch(d, false));
       if (matchedDistractor) {
         conflicts.attribute = { stated: matchedDistractor, canonical };
       } else {
@@ -106,34 +228,58 @@ export function evaluateSlotDelta(transcript = '', rubric = {}) {
   if (slots.agent) {
     const canonical = (slots.agent.canonical || '').toLowerCase().trim();
     const synonyms = (slots.agent.synonyms || []).map((s) => s.toLowerCase().trim());
-    
+
     // Check kinship/aliases from entity_graph if available
     let allValid = [canonical, ...synonyms];
     const char = rubric.entity_graph?.characters?.find(
-      (c) => (c.canonical_name || c.canonical_id).toLowerCase() === canonical
+      (c) => (c.canonical_name || c.canonical_id || '').toLowerCase() === canonical
     );
     if (char && Array.isArray(char.aliases)) {
       allValid = [...allValid, ...char.aliases.map((a) => a.toLowerCase().trim())];
     }
 
-    // Check if canonical agent is only mentioned as a possessive modifier of another entity (e.g. "Rattles' brother", "Rattles brother", "her brother")
-    const possessivePattern = new RegExp(`\\b(?:${allValid.map(escapeRegex).join('|')})('s)?\\s+(brother|sister|mother|father|mom|dad|friend|cousin|uncle|aunt|grandma|grandpa)\\b`, 'i');
-    const possessiveMatch = text.match(possessivePattern);
+    const validTokens = allValid
+      .filter((v) => typeof v === 'string' && v.trim().length > 0)
+      .map((v) => v.toLowerCase().trim());
 
+    let possessiveMatch = null;
+    if (validTokens.length > 0) {
+      const possessivePattern = new RegExp(
+        `\\b(?:${validTokens.map(escapeRegex).join('|')})('s)?\\s+(brother|sister|mother|father|mom|dad|friend|cousin|uncle|aunt|grandma|grandpa)\\b`,
+        'i'
+      );
+      possessiveMatch = text.match(possessivePattern);
+    }
+
+    let hasIndependentMatch = false;
     if (possessiveMatch) {
+      // Check whether canonical or synonyms appear independently outside the possessive phrase
+      const textWithoutPossessive = (
+        text.slice(0, possessiveMatch.index) +
+        ' ' +
+        text.slice(possessiveMatch.index + possessiveMatch[0].length)
+      ).trim();
+      const tokensWithoutPossessive = textWithoutPossessive.match(/[a-z0-9]+(?:'[a-z0-9]+)?/g) || [];
+      hasIndependentMatch = validTokens.some(
+        (v) =>
+          matchPhraseInTokens(tokensWithoutPossessive, v, true).matched &&
+          !matchPhraseInTokens(tokensWithoutPossessive, v, true).isNegated
+      );
+    }
+
+    if (possessiveMatch && !hasIndependentMatch) {
       conflicts.agent = { stated: possessiveMatch[2].toLowerCase(), canonical };
-    } else if (allValid.some((v) => containsToken(text, v))) {
+    } else if (validTokens.some((v) => checkMatch(v))) {
       matches.agent = canonical;
     } else {
-      // Check if another known character or person entity was mentioned
+      // Check distractors supplied by rubric and other known characters from entity_graph
+      const explicitDistractors = (slots.agent.distractors || []).map((d) => d.toLowerCase().trim());
       const otherChars = (rubric.entity_graph?.characters || [])
-        .map((c) => (c.canonical_name || c.canonical_id).toLowerCase().trim())
-        .filter((c) => c !== canonical && c !== (slots.recipient?.canonical || '').toLowerCase().trim());
-      
-      const commonEntities = ['mom', 'mother', 'dad', 'father', 'grandpa', 'grandfather', 'sister', 'brother', 'friend', 'cat', 'dog', 'teacher'];
-      const candidateConfused = [...new Set([...otherChars, ...commonEntities])];
+        .map((c) => (c.canonical_name || c.canonical_id || '').toLowerCase().trim())
+        .filter((c) => c && c !== canonical && c !== (slots.recipient?.canonical || '').toLowerCase().trim());
 
-      const statedAgent = candidateConfused.find((cand) => cand !== canonical && containsToken(text, cand));
+      const candidateConfused = [...new Set([...explicitDistractors, ...otherChars])].filter(Boolean);
+      const statedAgent = candidateConfused.find((cand) => cand !== canonical && checkMatch(cand, false));
       if (statedAgent) {
         conflicts.agent = { stated: statedAgent, canonical };
       } else {
@@ -145,18 +291,17 @@ export function evaluateSlotDelta(transcript = '', rubric = {}) {
   // 3. Recipient / Beneficiary Slot Check
   if (slots.recipient) {
     const canonical = (slots.recipient.canonical || '').toLowerCase().trim();
-    const synonyms = (slots.recipient.synonyms || ['him', 'her', 'the boy', 'the girl']).map((s) => s.toLowerCase().trim());
+    const synonyms = (slots.recipient.synonyms || []).map((s) => s.toLowerCase().trim());
 
-    if (containsToken(text, canonical) || synonyms.some((s) => containsToken(text, s))) {
+    if ((canonical && checkMatch(canonical)) || synonyms.some((s) => checkMatch(s))) {
       matches.recipient = canonical;
     } else {
-      // Check distractors and other known characters
       const explicitDistractors = (slots.recipient.distractors || []).map((d) => d.toLowerCase().trim());
       const otherChars = (rubric.entity_graph?.characters || [])
-        .map((c) => (c.canonical_name || c.canonical_id).toLowerCase().trim())
-        .filter((c) => c !== canonical && c !== (slots.agent?.canonical || '').toLowerCase().trim());
-      const allDistractors = [...new Set([...explicitDistractors, ...otherChars])];
-      const matchedDistractor = allDistractors.find((d) => d && containsToken(text, d));
+        .map((c) => (c.canonical_name || c.canonical_id || '').toLowerCase().trim())
+        .filter((c) => c && c !== canonical && c !== (slots.agent?.canonical || '').toLowerCase().trim());
+      const allDistractors = [...new Set([...explicitDistractors, ...otherChars])].filter(Boolean);
+      const matchedDistractor = allDistractors.find((d) => d && checkMatch(d, false));
 
       if (matchedDistractor) {
         conflicts.recipient = { stated: matchedDistractor, canonical };
@@ -183,28 +328,13 @@ export function evaluateSlotDelta(transcript = '', rubric = {}) {
   if (slots.action) {
     const canonical = (slots.action.canonical || '').toLowerCase().trim();
     const synonyms = (slots.action.synonyms || []).map((s) => s.toLowerCase().trim());
-    const distractors = (
-      slots.action.distractors && slots.action.distractors.length > 0
-        ? slots.action.distractors
-        : ['bark', 'barks', 'barked', 'barking', 'meow', 'meows', 'meowed', 'hiss', 'hisses', 'hissed', 'growl', 'growled', 'yell', 'yelled', 'screamed', 'cried', 'bit', 'biting', 'ran', 'running', 'slept', 'sleeping']
-    ).map((d) => d.toLowerCase().trim());
+    const distractors = (slots.action.distractors || []).map((d) => d.toLowerCase().trim());
 
-    // Expand canonical and synonyms with morphological/stem variants
-    const baseActionWords = [canonical, ...synonyms];
-    const expandedActionWords = new Set(baseActionWords);
-    for (const w of baseActionWords) {
-      if (VERB_STEM_MAP[w]) {
-        for (const variant of VERB_STEM_MAP[w]) {
-          expandedActionWords.add(variant);
-        }
-      }
-    }
-    const allActions = Array.from(expandedActionWords);
-
-    if (allActions.some((s) => containsToken(text, s))) {
+    const allActionVariants = [canonical, ...synonyms].filter(Boolean);
+    if (allActionVariants.some((s) => checkMatch(s))) {
       matches.action = canonical;
     } else {
-      const matchedDistractor = distractors.find((d) => d !== canonical && containsToken(text, d));
+      const matchedDistractor = distractors.find((d) => d !== canonical && checkMatch(d, false));
       if (matchedDistractor) {
         conflicts.action = { stated: matchedDistractor, canonical };
       } else {
@@ -213,36 +343,61 @@ export function evaluateSlotDelta(transcript = '', rubric = {}) {
     }
   }
 
-  // 5. Theme / Object / Location Slot Check
-  const slotKey = slots.location ? 'location' : 'theme';
-  const themeSlot = slots.location || slots.theme;
-  if (themeSlot) {
-    const canonical = (themeSlot.canonical || '').toLowerCase().trim();
-    const synonyms = (themeSlot.synonyms || ['it']).map((s) => s.toLowerCase().trim());
-    const distractors = (
-      themeSlot.distractors && themeSlot.distractors.length > 0
-        ? themeSlot.distractors
-        : ['shoulder', 'head', 'back', 'arm', 'kitchen', 'house', 'city', 'pet shop']
-    ).map((d) => d.toLowerCase().trim());
+  // 5. Theme / Object Slot Check
+  if (slots.theme) {
+    const canonical = (slots.theme.canonical || '').toLowerCase().trim();
+    const synonyms = (slots.theme.synonyms || []).map((s) => s.toLowerCase().trim());
+    const distractors = (slots.theme.distractors || []).map((d) => d.toLowerCase().trim());
 
-    if (containsToken(text, canonical) || synonyms.some((s) => containsToken(text, s)) || (containsToken(text, 'it') && !distractors.some((d) => containsToken(text, d)))) {
-      matches[slotKey] = canonical;
+    if ((canonical && checkMatch(canonical)) || synonyms.some((s) => checkMatch(s))) {
+      matches.theme = canonical;
     } else {
-      const matchedDistractor = distractors.find((d) => d !== canonical && containsToken(text, d));
+      const matchedDistractor = distractors.find((d) => d !== canonical && checkMatch(d, false));
       if (matchedDistractor) {
-        conflicts[slotKey] = { stated: matchedDistractor, canonical };
+        conflicts.theme = { stated: matchedDistractor, canonical };
       } else {
-        missing.push(slotKey);
+        missing.push('theme');
+      }
+    }
+  }
+
+  // 6. Location Slot Check
+  if (slots.location) {
+    const canonical = (slots.location.canonical || '').toLowerCase().trim();
+    const synonyms = (slots.location.synonyms || []).map((s) => s.toLowerCase().trim());
+    const distractors = (slots.location.distractors || []).map((d) => d.toLowerCase().trim());
+
+    if ((canonical && checkMatch(canonical)) || synonyms.some((s) => checkMatch(s))) {
+      matches.location = canonical;
+    } else {
+      const matchedDistractor = distractors.find((d) => d !== canonical && checkMatch(d, false));
+      if (matchedDistractor) {
+        conflicts.location = { stated: matchedDistractor, canonical };
+      } else {
+        // Universal prepositional location extraction ("in the [X]", "at [X]")
+        const locationMatch = text.match(
+          /\b(?:in|at|into|inside|on|near)\s+(?:the\s+|a\s+|an\s+|his\s+|her\s+|my\s+)?([a-z]+)\b/i
+        );
+        if (locationMatch) {
+          const stated = locationMatch[1].toLowerCase().trim();
+          if (stated !== canonical && !synonyms.includes(stated) && !['a', 'the', 'it', 'his', 'her', 'my'].includes(stated)) {
+            conflicts.location = { stated, canonical };
+          } else {
+            missing.push('location');
+          }
+        } else {
+          missing.push('location');
+        }
       }
     }
   }
 
   const matchCount = Object.keys(matches).length;
   const conflictCount = Object.keys(conflicts).length;
-  const totalEvaluated = matchCount + conflictCount;
+  const totalSlots = activeSlotKeys.length;
 
-  const accuracyDegree = totalEvaluated > 0 ? matchCount / totalEvaluated : 0;
-  
+  const accuracyDegree = totalSlots > 0 ? matchCount / totalSlots : 0;
+
   // A NEAR_MISS occurs when the child has at least one confirmed correct slot
   // and EXACTLY ONE conflicted slot
   const isNearMiss = matchCount >= 1 && conflictCount === 1;
@@ -293,4 +448,5 @@ export function generateRepairPrompt({ conflictedSlot }) {
 
 export default {
   evaluateSlotDelta,
+  generateRepairPrompt,
 };
