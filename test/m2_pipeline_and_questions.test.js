@@ -10,6 +10,8 @@ import {
 } from '../services/gemini_service.js';
 import bookRoutes from '../routes/book_routes.js';
 
+process.env.MOCK_AI = 'true';
+
 test('Task 2.1: Cache hit/miss tracks _cacheHit and clearBookAnalysisCache() resets cache', async () => {
   clearBookAnalysisCache();
 
