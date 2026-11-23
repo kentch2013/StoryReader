@@ -53,6 +53,8 @@ export class SafariAudioManager {
     this._activeListenOptions = null;
     this._finalizedTranscripts = [];
     this._sessionFinals = new Map();
+    this._finalizedAlternatives = [];
+    this._sessionAlternatives = new Map();
     this._sessionInterim = '';
     this._lastConfidence = null;
     this._lastAlternatives = [];
@@ -379,6 +381,8 @@ export class SafariAudioManager {
     this._isListening = true;
     this._finalizedTranscripts = [];
     this._sessionFinals.clear();
+    this._finalizedAlternatives = [];
+    this._sessionAlternatives.clear();
     this._sessionInterim = '';
     this._lastConfidence = null;
     this._lastAlternatives = [];
@@ -391,8 +395,61 @@ export class SafariAudioManager {
   clearTranscript() {
     this._finalizedTranscripts = [];
     this._sessionFinals.clear();
+    this._finalizedAlternatives = [];
+    this._sessionAlternatives.clear();
     this._sessionInterim = '';
     this._lastAlternatives = [];
+  }
+
+  _computeAlternatives() {
+    const allSegmentAlts = [
+      ...this._finalizedAlternatives,
+      ...Array.from(this._sessionAlternatives.values()),
+    ].filter((alts) => Array.isArray(alts) && alts.length > 0);
+
+    if (allSegmentAlts.length === 0) {
+      return [];
+    }
+
+    if (allSegmentAlts.length === 1) {
+      return [...allSegmentAlts[0]];
+    }
+
+    const maxK = Math.min(3, Math.max(...allSegmentAlts.map((s) => s.length)));
+    const combinedAlts = [];
+
+    for (let k = 0; k < maxK; k++) {
+      const phrase = allSegmentAlts
+        .map((seg) => seg[k] || seg[0])
+        .filter(Boolean)
+        .join(' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      if (phrase && !combinedAlts.includes(phrase)) {
+        combinedAlts.push(phrase);
+      }
+    }
+
+    if (combinedAlts.length < 3) {
+      for (let s = 0; s < allSegmentAlts.length; s++) {
+        const seg = allSegmentAlts[s];
+        for (let a = 1; a < seg.length; a++) {
+          const phrase = allSegmentAlts
+            .map((otherSeg, idx) => (idx === s ? seg[a] : otherSeg[0]))
+            .filter(Boolean)
+            .join(' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+          if (phrase && !combinedAlts.includes(phrase)) {
+            combinedAlts.push(phrase);
+            if (combinedAlts.length >= 3) break;
+          }
+        }
+        if (combinedAlts.length >= 3) break;
+      }
+    }
+
+    return combinedAlts;
   }
 
   async restartListening(options = null) {
@@ -445,8 +502,9 @@ export class SafariAudioManager {
             }
           }
           if (alts.length > 0) {
-            this._lastAlternatives = alts;
+            this._sessionAlternatives.set(idx, alts);
           }
+          this._lastAlternatives = this._computeAlternatives();
         } else {
           interim = transcript;
         }
@@ -495,7 +553,11 @@ export class SafariAudioManager {
         for (const finalVal of this._sessionFinals.values()) {
           if (finalVal) this._finalizedTranscripts.push(finalVal);
         }
+        for (const altVals of this._sessionAlternatives.values()) {
+          if (altVals && altVals.length > 0) this._finalizedAlternatives.push(altVals);
+        }
         this._sessionFinals.clear();
+        this._sessionAlternatives.clear();
         this._sessionInterim = '';
 
         this._startRecognitionSession();
@@ -525,13 +587,18 @@ export class SafariAudioManager {
     for (const finalVal of this._sessionFinals.values()) {
       if (finalVal) this._finalizedTranscripts.push(finalVal);
     }
+    for (const altVals of this._sessionAlternatives.values()) {
+      if (altVals && altVals.length > 0) this._finalizedAlternatives.push(altVals);
+    }
     this._sessionFinals.clear();
+    this._sessionAlternatives.clear();
     if (this._sessionInterim) {
       this._finalizedTranscripts.push(this._sessionInterim);
       this._sessionInterim = '';
     }
 
     const transcript = this.getFullTranscript();
+    this._lastAlternatives = this._computeAlternatives();
     this._setState(AUDIO_STATE.IDLE);
     return {
       transcript,
@@ -552,7 +619,10 @@ export class SafariAudioManager {
     }
     this._finalizedTranscripts = [];
     this._sessionFinals.clear();
+    this._finalizedAlternatives = [];
+    this._sessionAlternatives.clear();
     this._sessionInterim = '';
+    this._lastAlternatives = [];
     this._setState(AUDIO_STATE.IDLE);
   }
 
@@ -570,6 +640,8 @@ export class SafariAudioManager {
     this.cancelListening();
     this._lastConfidence = null;
     this._lastAlternatives = [];
+    this._finalizedAlternatives = [];
+    this._sessionAlternatives.clear();
     this._setState(this._isUnlocked ? AUDIO_STATE.IDLE : AUDIO_STATE.LOCKED);
   }
 }

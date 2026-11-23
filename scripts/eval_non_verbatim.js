@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import 'dotenv/config';
 import { evaluateChildAnswer } from '../services/answer_evaluator.js';
 import { defaultDecisionBreaker } from '../services/connectivity_circuit_breaker.js';
 
@@ -10,8 +11,16 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, '..');
 
-const isLive = process.argv.includes('--live') && Boolean(process.env.GEMINI_API_KEY);
-if (!isLive) {
+const wantsLive = process.argv.includes('--live');
+if (wantsLive && !process.env.GEMINI_API_KEY) {
+  console.error('❌ Error: --live mode requested but GEMINI_API_KEY is missing or empty in environment.');
+  process.exit(1);
+}
+
+const isLive = wantsLive && Boolean(process.env.GEMINI_API_KEY);
+if (isLive) {
+  delete process.env.MOCK_AI;
+} else {
   process.env.MOCK_AI = 'true';
 }
 
