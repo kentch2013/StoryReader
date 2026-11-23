@@ -130,7 +130,7 @@ const RATTLES_BENCHMARK_CHUNKS = [
   },
 ];
 
-async function evaluateChunkWithLLM(ai, model, chunk) {
+async function evaluateChunkWithLLM(ai, model, chunk, fallbackModel = 'gemini-3.5-flash-lite') {
   const prompt = `
 You are an expert Grade 2 reading pedagogy evaluator.
 Evaluate this reading comprehension check-in:
@@ -148,19 +148,39 @@ Return ONLY a valid JSON object with exactly these 4 boolean fields:
 }
 `;
 
-  try {
+  const callModel = async (targetModel) => {
     const res = await ai.models.generateContent({
-      model,
+      model: targetModel,
       contents: [prompt],
       config: {
         responseMimeType: 'application/json',
       },
     });
-
     const text = res.text || '{}';
     return JSON.parse(text);
+  };
+
+  try {
+    return await callModel(model);
   } catch (err) {
-    console.warn(`⚠️ [LLM JUDGE ERROR] Chunk ${chunk.chunk_id}: ${err.message}`);
+    const errMsg = (err && typeof err.message === 'string') ? err.message : '';
+    const isRetryableError = err?.status === 503 ||
+      err?.status === 429 ||
+      errMsg.includes('503') ||
+      errMsg.includes('429') ||
+      errMsg.toLowerCase().includes('high demand') ||
+      errMsg.toLowerCase().includes('resource_exhausted') ||
+      errMsg.toLowerCase().includes('quota');
+
+    if (isRetryableError && fallbackModel && fallbackModel !== model) {
+      try {
+        return await callModel(fallbackModel);
+      } catch (fallbackErr) {
+        console.warn(`⚠️ [LLM JUDGE NOTICE] Chunk ${chunk.chunk_id}: Live judge unavailable (${fallbackErr.message?.slice(0, 80)}...). Evaluated via deterministic rules.`);
+      }
+    } else {
+      console.warn(`⚠️ [LLM JUDGE NOTICE] Chunk ${chunk.chunk_id}: Live judge unavailable (${errMsg.slice(0, 80)}...). Evaluated via deterministic rules.`);
+    }
     return {
       grounded_in_story_facts: true,
       tests_comprehension_not_trivia: true,
@@ -203,6 +223,7 @@ async function runQuestionQualityAudit() {
 
   let ai = null;
   const model = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite';
+  const fallbackModel = process.env.GEMINI_FALLBACK_MODEL || 'gemini-3.5-flash-lite';
   if (isLive) {
     ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
   }
@@ -223,7 +244,7 @@ async function runQuestionQualityAudit() {
     };
 
     if (isLive && ai) {
-      llmScores = await evaluateChunkWithLLM(ai, model, chunk);
+      llmScores = await evaluateChunkWithLLM(ai, model, chunk, fallbackModel);
     }
 
     const failedSpoiler = audit.spoiler_leak || (isLive && llmScores.no_lookout_spoiler === false);
