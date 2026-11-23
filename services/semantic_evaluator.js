@@ -127,15 +127,25 @@ export async function evaluateSemanticMatch(normalizedTranscript, rubric = {}) {
   }
 
   const transcript = normalizedTranscript.trim();
-  const decision = await defaultDecisionBreaker.execute(async (signal) => {
-    return await classifyWithDecisionModel({
-      checkin_question: rubric.checkin_question || 'Why did this happen in the story?',
-      target_answer_concept: rubric.target_answer_concept || 'The target comprehension concept.',
-      child_transcript: transcript,
-      story_context: rubric.story_context || null,
-      signal,
-    });
-  });
+  const decision = await defaultDecisionBreaker.execute(
+    async (signal) => {
+      return await classifyWithDecisionModel({
+        checkin_question: rubric.checkin_question || 'Why did this happen in the story?',
+        target_answer_concept: rubric.target_answer_concept || 'The target comprehension concept.',
+        child_transcript: transcript,
+        story_context: rubric.story_context || null,
+        signal,
+      });
+    },
+    () => {
+      return classifyWithDecisionModel({
+        checkin_question: rubric.checkin_question || 'Why did this happen in the story?',
+        target_answer_concept: rubric.target_answer_concept || 'The target comprehension concept.',
+        child_transcript: transcript,
+        story_context: rubric.story_context || null,
+      });
+    }
+  );
 
   const category = decision?.category || 'OFF_TRACK';
   const probs = decision?.probabilities || {};
@@ -238,15 +248,25 @@ export async function evaluateDiagnosticProbes(normalizedTranscript, rubric = {}
     };
   }
 
-  const decision = await defaultDecisionBreaker.execute(async (signal) => {
-    return await classifyWithDecisionModel({
-      checkin_question: rubric.checkin_question || 'Question from the story',
-      target_answer_concept: rubric.target_answer_concept || 'Target answer concept',
-      child_transcript: normalizedTranscript.trim(),
-      story_context: rubric.story_context || null,
-      signal,
-    });
-  });
+  const decision = await defaultDecisionBreaker.execute(
+    async (signal) => {
+      return await classifyWithDecisionModel({
+        checkin_question: rubric.checkin_question || 'Question from the story',
+        target_answer_concept: rubric.target_answer_concept || 'Target answer concept',
+        child_transcript: normalizedTranscript.trim(),
+        story_context: rubric.story_context || null,
+        signal,
+      });
+    },
+    () => {
+      return classifyWithDecisionModel({
+        checkin_question: rubric.checkin_question || 'Question from the story',
+        target_answer_concept: rubric.target_answer_concept || 'Target answer concept',
+        child_transcript: normalizedTranscript.trim(),
+        story_context: rubric.story_context || null,
+      });
+    }
+  );
 
   const category = decision?.category || 'OFF_TRACK';
   const probs = decision?.probabilities || {};

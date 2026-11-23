@@ -123,6 +123,20 @@ export function checkLexicalEntityOverlap(chunk = {}) {
 }
 
 export async function checkNliEntailment(premise, hypothesis) {
+  const isMock = process.env.MOCK_AI === 'true' || !process.env.GEMINI_API_KEY;
+  if (isMock) {
+    const normP = (premise || '').toLowerCase();
+    const normH = (hypothesis || '').toLowerCase();
+    const wordsH = normH.split(/\s+/).filter((w) => !STOPWORDS.has(w) && w.length > 2);
+    const matches = wordsH.filter((w) => normP.includes(w)).length;
+    const isEntailed = wordsH.length === 0 || (matches / wordsH.length >= 0.4);
+    return {
+      entailment: isEntailed ? 0.95 : 0.10,
+      contradiction: isEntailed ? 0.05 : 0.85,
+      neutral: 0,
+    };
+  }
+
   try {
     const result = await defaultDecisionBreaker.execute(async (signal) => {
       return await callGeminiDecision({

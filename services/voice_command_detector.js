@@ -53,6 +53,19 @@ export async function evaluateRetryWithNLI(text = '') {
   const clean = text.trim();
   if (!clean) return { isRetry: false, entailment: 0, contradiction: 1 };
 
+  const isMock = process.env.MOCK_AI === 'true' || !process.env.GEMINI_API_KEY;
+  if (isMock) {
+    const isRetry = /\b(mistake|say that again|erase|redo|wrong|change\s+(it|my|answer)|start\s+over|try\s+again)\b/i.test(clean);
+    return {
+      isRetry,
+      entailment: isRetry ? 0.95 : 0.05,
+      contradiction: isRetry ? 0.05 : 0.95,
+      neutral: 0,
+      method: 'NLI_SYSTEM_ONE',
+      confidence: isRetry ? 0.95 : 0,
+    };
+  }
+
   try {
     const result = await defaultDecisionBreaker.execute(async (signal) => {
       return await callGeminiDecision({

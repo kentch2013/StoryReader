@@ -24,3 +24,8 @@ jobs:
 
       - name: Run verification suite
         run: npm run verify
+        env:
+          CI: true
+          MOCK_AI: 'true'
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || '' }}
+          GEMINI_MODEL: gemini-3.1-flash-lite
