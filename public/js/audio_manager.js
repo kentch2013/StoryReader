@@ -55,6 +55,7 @@ export class SafariAudioManager {
     this._sessionFinals = new Map();
     this._sessionInterim = '';
     this._lastConfidence = null;
+    this._lastAlternatives = [];
   }
 
   get state() {
@@ -380,6 +381,7 @@ export class SafariAudioManager {
     this._sessionFinals.clear();
     this._sessionInterim = '';
     this._lastConfidence = null;
+    this._lastAlternatives = [];
 
     this._setState(AUDIO_STATE.LISTENING);
     this._startRecognitionSession();
@@ -390,6 +392,7 @@ export class SafariAudioManager {
     this._finalizedTranscripts = [];
     this._sessionFinals.clear();
     this._sessionInterim = '';
+    this._lastAlternatives = [];
   }
 
   async restartListening(options = null) {
@@ -410,6 +413,11 @@ export class SafariAudioManager {
     }
 
     const rec = new this._SpeechRecognition();
+    try {
+      rec.maxAlternatives = 3;
+    } catch (_) {
+      // browser mock or read-only property safeguard
+    }
     rec.continuous = true;
     rec.interimResults = true;
     rec.lang = (this._activeListenOptions && this._activeListenOptions.lang) || this._defaultLang;
@@ -429,6 +437,16 @@ export class SafariAudioManager {
 
         if (result && result.isFinal) {
           this._sessionFinals.set(idx, transcript);
+          const alts = [];
+          for (let a = 0; a < result.length && alts.length < 3; a++) {
+            const candidate = result[a]?.transcript?.trim();
+            if (candidate && !alts.includes(candidate)) {
+              alts.push(candidate);
+            }
+          }
+          if (alts.length > 0) {
+            this._lastAlternatives = alts;
+          }
         } else {
           interim = transcript;
         }
@@ -515,7 +533,11 @@ export class SafariAudioManager {
 
     const transcript = this.getFullTranscript();
     this._setState(AUDIO_STATE.IDLE);
-    return { transcript, confidence: this._lastConfidence };
+    return {
+      transcript,
+      confidence: this._lastConfidence,
+      alternatives: this._lastAlternatives || [],
+    };
   }
 
   cancelListening() {
@@ -547,6 +569,7 @@ export class SafariAudioManager {
     this.cancelSpeech();
     this.cancelListening();
     this._lastConfidence = null;
+    this._lastAlternatives = [];
     this._setState(this._isUnlocked ? AUDIO_STATE.IDLE : AUDIO_STATE.LOCKED);
   }
 }

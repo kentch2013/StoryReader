@@ -9,6 +9,7 @@
     "dev": "node --watch server.js",
     "tunnel": "npx cloudflared tunnel --url http://localhost:3000",
     "test": "node --env-file-if-exists=.env --test --test-concurrency=1 test/*.test.js",
+    "eval": "node scripts/eval_non_verbatim.js",
     "verify": "node scripts/audit-contract.js && node --env-file-if-exists=.env --test --test-concurrency=1 test/*.test.js"
   },
   "keywords": [

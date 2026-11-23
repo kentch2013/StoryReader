@@ -19,6 +19,13 @@ export class CloudCircuitBreaker {
     this.failureCount = 0;
     this.state = 'CLOSED'; // 'CLOSED' (healthy), 'OPEN' (offline/tripped), 'HALF_OPEN'
     this.lastStateChange = Date.now();
+    this.stats = {
+      calls: 0,
+      successes: 0,
+      timeouts: 0,
+      failures: 0,
+      circuitOpenSkips: 0,
+    };
   }
 
   isOpen() {
@@ -37,7 +44,9 @@ export class CloudCircuitBreaker {
   }
 
   async execute(cloudFn, fallbackFn = () => null) {
+    this.stats.calls += 1;
     if (this.isOpen()) {
+      this.stats.circuitOpenSkips += 1;
       return typeof fallbackFn === 'function' ? fallbackFn('OFFLINE_OR_CIRCUIT_OPEN') : null;
     }
 
@@ -52,12 +61,18 @@ export class CloudCircuitBreaker {
     } catch (err) {
       clearTimeout(timer);
       const isAbort = err.name === 'AbortError' || err.message?.includes('aborted');
+      if (isAbort) {
+        this.stats.timeouts += 1;
+      } else {
+        this.stats.failures += 1;
+      }
       this.recordFailure(isAbort ? 'TIMEOUT_EXCEEDED' : err.message);
       return typeof fallbackFn === 'function' ? fallbackFn(isAbort ? 'TIMEOUT_EXCEEDED' : err.message) : null;
     }
   }
 
   recordSuccess() {
+    this.stats.successes += 1;
     this.failureCount = 0;
     this.state = 'CLOSED';
   }
@@ -71,15 +86,30 @@ export class CloudCircuitBreaker {
     }
   }
 
+  getStats() {
+    return {
+      ...this.stats,
+      state: this.state,
+      failureCount: this.failureCount,
+    };
+  }
+
   reset() {
     this.failureCount = 0;
     this.state = 'CLOSED';
     this.lastStateChange = Date.now();
+    this.stats = {
+      calls: 0,
+      successes: 0,
+      timeouts: 0,
+      failures: 0,
+      circuitOpenSkips: 0,
+    };
   }
 }
 
 export const defaultDecisionBreaker = new CloudCircuitBreaker({
-  timeoutMs: parseInt(process.env.DECISION_TIMEOUT_MS || '800', 10),
+  timeoutMs: parseInt(process.env.DECISION_TIMEOUT_MS || '1800', 10),
   maxFailures: 2,
   coolDownMs: 15000,
   name: 'GeminiDecisionBreaker',

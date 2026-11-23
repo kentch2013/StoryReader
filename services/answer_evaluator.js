@@ -15,6 +15,38 @@ import { evaluateSlotDelta } from './slot_delta_engine.js';
 
 const ADVERSARIAL_INJECTION_REGEX = /\b(ignore\s+previous|system\s+prompt|jailbreak|disregard|you\s+are\s+now|developer\s+mode)\b/i;
 
+const FILLER_TOKENS = new Set([
+  'um',
+  'uh',
+  'uhh',
+  'hmm',
+  'er',
+  'like',
+  'idk',
+  'dunno',
+  'i',
+  "don't",
+  'dont',
+  'know',
+  'nothing',
+  'pass',
+]);
+
+export function isEligibleForCloudEscalation(normalizedTranscript) {
+  if (!normalizedTranscript || typeof normalizedTranscript !== 'string') {
+    return false;
+  }
+  const tokens = normalizedTranscript
+    .toLowerCase()
+    .replace(/[^\w\s']/g, ' ')
+    .split(/\s+/)
+    .map((t) => t.replace(/^'+|'+$/g, ''))
+    .filter(Boolean);
+
+  const meaningfulTokens = tokens.filter((token) => !FILLER_TOKENS.has(token));
+  return meaningfulTokens.length >= 1;
+}
+
 function makeEvalResult({
   status,
   spoken_feedback,
@@ -28,6 +60,9 @@ function makeEvalResult({
   if (attempt_count >= 2 && resolved && status === 'off_track') {
     diagnostics.is_auto_reveal = true;
   }
+  if (status === 'mastered' && diagnostics.matched_alternative_index === undefined) {
+    diagnostics.matched_alternative_index = 0;
+  }
   return {
     status,
     spoken_feedback,
@@ -38,6 +73,186 @@ function makeEvalResult({
     microturn_used,
     diagnostics,
   };
+}
+
+async function evaluateTranscriptLocally(transcriptCandidate, data, attempt, feedback) {
+  let normalized = normalizeTranscript(transcriptCandidate);
+  normalized = normalizeChildPhonetics(normalized, data.keyword_clusters, {
+    canonicalPrototypes: data.canonical_prototypes,
+  });
+
+  const discourseResult = resolveDiscourse(normalized, data, {
+    microturn_used: data.microturn_used === true,
+    attempt_count: attempt,
+  });
+  const grounded = discourseResult.grounded_transcript || normalized;
+
+  const localDiag = {
+    normalized_transcript: normalized,
+    grounded_transcript: grounded,
+    raw_transcript: transcriptCandidate,
+    tier_resolved: null,
+    tier1: {
+      is_shrug: false,
+      question_echo: false,
+      matched_clusters: 0,
+      total_clusters: Array.isArray(data.keyword_clusters) ? data.keyword_clusters.length : 0,
+      phrasing_match: false,
+      prototype_token_match: null,
+    },
+    tier2_semantic: null,
+    tier3_gemini: {
+      invoked: false,
+      reason: 'Bypassed - resolved locally by Tier 1 or Tier 2',
+    },
+    discourse: discourseResult,
+  };
+
+  // 1. Slot Delta Gate
+  if (data.semantic_slots) {
+    const slotDelta = evaluateSlotDelta(grounded, data);
+    const activeSlotCount = Object.keys(slotDelta.matched_slots).length;
+    if (
+      activeSlotCount >= 3 &&
+      slotDelta.accuracy_degree === 1 &&
+      slotDelta.missing_slots.length === 0 &&
+      Object.keys(slotDelta.conflicted_slots).length === 0
+    ) {
+      localDiag.cognitive_diagnosis = 'MASTERED';
+      localDiag.slot_delta = slotDelta;
+      localDiag.tier_resolved = 'SLOT_FRAME_ALL_MATCH';
+      return makeEvalResult({
+        status: 'mastered',
+        spoken_feedback:
+          data.diagnostic_probes?.target_mastery?.feedback ||
+          data.diagnostic_probes?.minimal_core?.feedback ||
+          feedback.praise,
+        follow_up_prompt: null,
+        attempt_count: attempt,
+        resolved: true,
+        is_microturn: false,
+        microturn_used: data.microturn_used === true,
+        diagnostics: localDiag,
+      });
+    }
+  }
+
+  // 2. Canonical Prototypes Token Matcher
+  if (Array.isArray(data.canonical_prototypes) && data.canonical_prototypes.length > 0) {
+    const protoResult = scoreMultiReference(grounded, data.canonical_prototypes);
+    localDiag.tier1.prototype_token_match = protoResult;
+    if (protoResult.matched && !protoResult.isDistractor) {
+      localDiag.tier_resolved = `TIER_1_PROTOTYPE_${protoResult.prototypeType?.toUpperCase()}`;
+      localDiag.cognitive_diagnosis = 'MASTERED';
+      const spokenFeedback =
+        data.diagnostic_probes?.target_mastery?.feedback ||
+        feedback.praise;
+
+      return makeEvalResult({
+        status: 'mastered',
+        spoken_feedback: spokenFeedback,
+        follow_up_prompt: null,
+        attempt_count: attempt,
+        resolved: true,
+        is_microturn: false,
+        microturn_used: data.microturn_used === true,
+        diagnostics: localDiag,
+      });
+    }
+  }
+
+  // 3. Keyword clusters & Acceptable phrasings
+  const hasSlotContext = Boolean(data.story_context?.recipient || data.story_context?.object);
+  const clusterMatch = matchKeywordClusters(grounded, data.keyword_clusters);
+  const phrasingMatch = matchAcceptablePhrasings(grounded, data.acceptable_phrasings);
+  localDiag.tier1.phrasing_match = phrasingMatch;
+  if (!hasSlotContext && (clusterMatch || phrasingMatch)) {
+    localDiag.tier_resolved = clusterMatch ? 'TIER_1_CLUSTER_ALL_MATCH' : 'TIER_1_PHRASING_MATCH';
+    localDiag.cognitive_diagnosis = 'MASTERED';
+    return makeEvalResult({
+      status: 'mastered',
+      spoken_feedback: feedback.praise,
+      follow_up_prompt: null,
+      attempt_count: attempt,
+      resolved: true,
+      is_microturn: false,
+      microturn_used: data.microturn_used === true,
+      diagnostics: localDiag,
+    });
+  }
+
+  // 4. Parallel Diagnostic Probes
+  const hasDiagnosticProbes = Boolean(
+    data.diagnostic_probes &&
+    typeof data.diagnostic_probes === 'object' &&
+    Object.keys(data.diagnostic_probes).length > 0
+  );
+  if (hasDiagnosticProbes) {
+    try {
+      const probeResult = await evaluateDiagnosticProbes(grounded, data);
+      if (probeResult && probeResult.isMatch) {
+        localDiag.tier_resolved = 'PARALLEL_DIAGNOSTIC_PROBING';
+        localDiag.cognitive_diagnosis = probeResult.cognitive_diagnosis;
+        localDiag.probe_scores = probeResult.probeScores;
+        localDiag.tier2_semantic = {
+          isMatch: probeResult.isMatch,
+          cognitive_diagnosis: probeResult.cognitive_diagnosis,
+          entailment: probeResult.entailment,
+          contradiction: probeResult.contradiction,
+          neutral: probeResult.neutral,
+          scoreTable: probeResult.probeScores,
+        };
+        return makeEvalResult({
+          status: 'mastered',
+          spoken_feedback: probeResult.spoken_feedback,
+          follow_up_prompt: null,
+          attempt_count: attempt,
+          resolved: true,
+          is_microturn: false,
+          microturn_used: data.microturn_used === true,
+          diagnostics: localDiag,
+        });
+      }
+    } catch (_) {}
+  }
+
+  // 5. Local Cross-Encoder NLI Evaluator
+  try {
+    const semanticResult = await evaluateSemanticMatch(grounded, data);
+    if (semanticResult && semanticResult.isMatch && !semanticResult.isDistractor) {
+      localDiag.tier2_semantic = semanticResult;
+      localDiag.tier_resolved = 'TIER_2_NLI_ENTAILMENT_MATCH';
+      localDiag.cognitive_diagnosis = 'MASTERED';
+      return makeEvalResult({
+        status: 'mastered',
+        spoken_feedback: feedback.praise,
+        follow_up_prompt: null,
+        attempt_count: attempt,
+        resolved: true,
+        is_microturn: false,
+        microturn_used: data.microturn_used === true,
+        diagnostics: localDiag,
+      });
+    }
+  } catch (_) {}
+
+  return null;
+}
+
+async function tryRescueWithAlternatives(alternatives, primaryTranscript, data, attempt, feedback) {
+  const primaryClean = (primaryTranscript || '').trim().toLowerCase();
+  for (let idx = 0; idx < alternatives.length; idx++) {
+    const alt = alternatives[idx].trim();
+    if (idx === 0 || alt.toLowerCase() === primaryClean) {
+      continue;
+    }
+    const rescueResult = await evaluateTranscriptLocally(alt, data, attempt, feedback);
+    if (rescueResult && rescueResult.status === 'mastered') {
+      rescueResult.diagnostics.matched_alternative_index = idx;
+      return rescueResult;
+    }
+  }
+  return null;
 }
 
 export async function evaluateChildAnswer(data = {}) {
@@ -72,6 +287,23 @@ export async function evaluateChildAnswer(data = {}) {
   const wordTokens = grounded.split(' ').filter(Boolean);
   const cloudAllowed = (data.enable_cloud_fallback === true || process.env.ENABLE_CLOUD_FALLBACK === 'true') &&
     process.env.OFFLINE_MODE !== 'true';
+
+  const alternatives = Array.isArray(data.transcript_alternatives)
+    ? data.transcript_alternatives
+        .filter((t) => typeof t === 'string' && t.trim().length > 0)
+        .slice(0, 3)
+    : [];
+
+  let altRescueChecked = false;
+  let cachedAltRescue = null;
+  const checkAlternatives = async () => {
+    if (altRescueChecked) return cachedAltRescue;
+    altRescueChecked = true;
+    if (alternatives.length > 1) {
+      cachedAltRescue = await tryRescueWithAlternatives(alternatives, data.child_transcript, data, attempt, feedback);
+    }
+    return cachedAltRescue;
+  };
 
   const diagnostics = {
     normalized_transcript: normalized,
@@ -213,6 +445,9 @@ export async function evaluateChildAnswer(data = {}) {
   if (data.semantic_slots) {
     const slotDelta = evaluateSlotDelta(grounded, data);
     if (slotDelta.is_near_miss && slotDelta.repair_prompt) {
+      const altRescue = await checkAlternatives();
+      if (altRescue) return altRescue;
+
       diagnostics.cognitive_diagnosis = 'NEAR_MISS_REPAIR';
       diagnostics.slot_delta = slotDelta;
       diagnostics.tier_resolved = 'SLOT_DELTA_NEAR_MISS_REPAIR';
@@ -262,6 +497,9 @@ export async function evaluateChildAnswer(data = {}) {
     diagnostics.tier1.prototype_token_match = protoResult;
 
     if (protoResult.isDistractor) {
+      const altRescue = await checkAlternatives();
+      if (altRescue) return altRescue;
+
       diagnostics.tier_resolved = 'TIER_1_DISTRACTOR_TOKEN_MATCH';
       diagnostics.cognitive_diagnosis = 'DISTRACTOR_MISCONCEPTION';
 
@@ -376,7 +614,10 @@ export async function evaluateChildAnswer(data = {}) {
       }
 
       // Check Decision Model for Functional Circumlocutions when diagnosis is UNGROUNDED_OFF_TRACK
-      if (result.cognitive_diagnosis === 'UNGROUNDED_OFF_TRACK' && cloudAllowed && wordTokens.length >= 3) {
+      if (result.cognitive_diagnosis === 'UNGROUNDED_OFF_TRACK' && cloudAllowed && isEligibleForCloudEscalation(grounded)) {
+        const altRescue = await checkAlternatives();
+        if (altRescue) return altRescue;
+
         const classification = await classifyAnswerSemantic({
           checkin_question: data.checkin_question,
           target_answer_concept: data.target_answer_concept,
@@ -399,6 +640,9 @@ export async function evaluateChildAnswer(data = {}) {
           });
         }
       }
+
+      const altRescue = await checkAlternatives();
+      if (altRescue) return altRescue;
 
       if (attempt >= 2) {
         return makeEvalResult({
@@ -431,6 +675,9 @@ export async function evaluateChildAnswer(data = {}) {
   diagnostics.tier1.question_echo = isEcho;
 
   if (isEcho) {
+    const altRescue = await checkAlternatives();
+    if (altRescue) return altRescue;
+
     diagnostics.tier_resolved = 'TIER_1_QUESTION_ECHO_SCAFFOLD';
     diagnostics.cognitive_diagnosis = 'PREMISE_ECHO';
     if (attempt >= 2) {
@@ -494,6 +741,9 @@ export async function evaluateChildAnswer(data = {}) {
   diagnostics.tier2_semantic = semanticResult;
 
   if (semanticResult && semanticResult.isDistractor) {
+    const altRescue = await checkAlternatives();
+    if (altRescue) return altRescue;
+
     diagnostics.tier_resolved = semanticResult.contradiction >= 0.80
       ? 'TIER_2_NLI_CONTRADICTION_REJECTION'
       : 'TIER_2_NLI_DISTRACTOR_REJECTION';
@@ -540,10 +790,13 @@ export async function evaluateChildAnswer(data = {}) {
   diagnostics.tier_resolved = 'TIER_2_NLI_BELOW_THRESHOLD';
 
   // Tier 2.5 / Tier 3: Zero-token Decision Arbiter & Cloud Fallback
-  // Invoked for unmapped or ambiguous speech >= 3 words when cloud decision/fallback is explicitly requested
-  if (wordTokens.length >= 3 && cloudAllowed) {
+  // Invoked for unmapped or ambiguous speech when cloud decision/fallback is explicitly requested
+  if (isEligibleForCloudEscalation(grounded) && cloudAllowed) {
+    const altRescue = await checkAlternatives();
+    if (altRescue) return altRescue;
+
     diagnostics.tier3_gemini.invoked = true;
-    diagnostics.tier3_gemini.reason = 'Invoked for unmapped or ambiguous speech >= 3 words';
+    diagnostics.tier3_gemini.reason = 'Invoked for unmapped or ambiguous speech with eligible cloud escalation';
 
     const classification = await classifyAnswerSemantic({
       checkin_question: data.checkin_question,
@@ -608,6 +861,9 @@ export async function evaluateChildAnswer(data = {}) {
     diagnostics.tier_resolved = 'TIER_3_GEMINI_NEEDS_SCAFFOLD';
   }
 
+  const altRescue = await checkAlternatives();
+  if (altRescue) return altRescue;
+
   if (attempt >= 2) {
     return makeEvalResult({
       status: 'off_track',
@@ -635,4 +891,5 @@ export async function evaluateChildAnswer(data = {}) {
 
 export default {
   evaluateChildAnswer,
+  isEligibleForCloudEscalation,
 };

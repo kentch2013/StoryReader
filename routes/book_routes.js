@@ -69,7 +69,14 @@ router.post('/evaluate-answer', express.json(), async (req, res, next) => {
       });
     }
 
-    const result = await evaluateChildAnswer(req.body);
+    const payload = {
+      ...req.body,
+      transcript_alternatives: Array.isArray(req.body.transcript_alternatives)
+        ? req.body.transcript_alternatives.filter((t) => typeof t === 'string' && t.trim().length > 0)
+        : [],
+    };
+
+    const result = await evaluateChildAnswer(payload);
     if (req.socket?.destroyed) {
       return;
     }

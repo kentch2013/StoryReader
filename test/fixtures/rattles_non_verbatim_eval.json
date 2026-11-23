@@ -1,0 +1,1322 @@
+[
+  {
+    "id": "Q1_verbatim",
+    "question_id": "Q1",
+    "bucket": "verbatim_correct",
+    "checkin_question": "Where did Rattles live with her family?",
+    "target_answer_concept": "Rattles lived in the haymow in the barn.",
+    "child_transcript": "She lived in the haymow.",
+    "expected_status": "mastered",
+    "keyword_clusters": [
+      { "concept_name": "location", "synonyms": ["haymow", "hay mow", "hayloft", "barn", "hay bales"] }
+    ],
+    "acceptable_phrasings": [
+      "She lived in the haymow.",
+      "In the barn with the hay.",
+      "haymow"
+    ],
+    "canonical_prototypes": [
+      { "type": "formal_full", "text": "Rattles lived in the haymow in the barn." },
+      { "type": "colloquial", "text": "She lived in the haymow." },
+      { "type": "minimal_core", "text": "In the barn with the hay." },
+      { "type": "functional_circumlocution", "text": "Her family made their little home up in the barn." },
+      { "type": "short_elliptical", "text": "haymow" },
+      { "type": "common_distractor", "text": "She lived in a pet shop in the city." }
+    ],
+    "semantic_slots": {
+      "agent": { "canonical": "Rattles", "synonyms": ["the kitty", "the cat", "she"] },
+      "location": { "canonical": "haymow", "synonyms": ["hay mow", "hayloft", "barn", "hay bales"], "distractors": ["kitchen", "house", "city", "pet shop"] }
+    }
+  },
+  {
+    "id": "Q1_paraphrase",
+    "question_id": "Q1",
+    "bucket": "non_verbatim_paraphrase",
+    "checkin_question": "Where did Rattles live with her family?",
+    "target_answer_concept": "Rattles lived in the haymow in the barn.",
+    "child_transcript": "Her family made their little home up in the barn.",
+    "expected_status": "mastered",
+    "keyword_clusters": [
+      { "concept_name": "location", "synonyms": ["haymow", "hay mow", "hayloft", "barn", "hay bales"] }
+    ],
+    "acceptable_phrasings": [
+      "She lived in the haymow.",
+      "In the barn with the hay.",
+      "Her family made their little home up in the barn."
+    ],
+    "canonical_prototypes": [
+      { "type": "formal_full", "text": "Rattles lived in the haymow in the barn." },
+      { "type": "colloquial", "text": "She lived in the haymow." },
+      { "type": "minimal_core", "text": "In the barn with the hay." },
+      { "type": "functional_circumlocution", "text": "Her family made their little home up in the barn." },
+      { "type": "short_elliptical", "text": "haymow" },
+      { "type": "common_distractor", "text": "She lived in a pet shop in the city." }
+    ],
+    "semantic_slots": {
+      "agent": { "canonical": "Rattles", "synonyms": ["the kitty", "the cat", "she"] },
+      "location": { "canonical": "haymow", "synonyms": ["hay mow", "hayloft", "barn", "hay bales"] }
+    }
+  },
+  {
+    "id": "Q1_short",
+    "question_id": "Q1",
+    "bucket": "short_elliptical_1_2_words",
+    "checkin_question": "Where did Rattles live with her family?",
+    "target_answer_concept": "Rattles lived in the haymow in the barn.",
+    "child_transcript": "haymow",
+    "expected_status": "mastered",
+    "keyword_clusters": [
+      { "concept_name": "location", "synonyms": ["haymow", "hay mow", "hayloft", "barn", "hay bales"] }
+    ],
+    "acceptable_phrasings": [
+      "She lived in the haymow.",
+      "In the barn with the hay.",
+      "haymow"
+    ],
+    "canonical_prototypes": [
+      { "type": "formal_full", "text": "Rattles lived in the haymow in the barn." },
+      { "type": "colloquial", "text": "She lived in the haymow." },
+      { "type": "minimal_core", "text": "In the barn with the hay." },
+      { "type": "functional_circumlocution", "text": "Her family made their little home up in the barn." },
+      { "type": "short_elliptical", "text": "haymow" },
+      { "type": "common_distractor", "text": "She lived in a pet shop in the city." }
+    ],
+    "semantic_slots": {
+      "agent": { "canonical": "Rattles", "synonyms": ["the kitty", "the cat", "she"] },
+      "location": { "canonical": "haymow", "synonyms": ["hay mow", "hayloft", "barn", "hay bales"] }
+    }
+  },
+  {
+    "id": "Q1_stt",
+    "question_id": "Q1",
+    "bucket": "stt_homophone_with_alternatives",
+    "checkin_question": "Where did Rattles live with her family?",
+    "target_answer_concept": "Rattles lived in the haymow in the barn.",
+    "child_transcript": "she lived in the pay mow",
+    "transcript_alternatives": ["she lived in the pay mow", "she lived in the haymow"],
+    "expected_status": "mastered",
+    "keyword_clusters": [
+      { "concept_name": "location", "synonyms": ["haymow", "hay mow", "hayloft", "barn", "hay bales"] }
+    ],
+    "acceptable_phrasings": [
+      "She lived in the haymow.",
+      "In the barn with the hay.",
+      "haymow"
+    ],
+    "canonical_prototypes": [
+      { "type": "formal_full", "text": "Rattles lived in the haymow in the barn." },
+      { "type": "colloquial", "text": "She lived in the haymow." },
+      { "type": "minimal_core", "text": "In the barn with the hay." },
+      { "type": "functional_circumlocution", "text": "Her family made their little home up in the barn." },
+      { "type": "short_elliptical", "text": "haymow" },
+      { "type": "common_distractor", "text": "She lived in a pet shop in the city." }
+    ],
+    "semantic_slots": {
+      "agent": { "canonical": "Rattles", "synonyms": ["the kitty", "the cat", "she"] },
+      "location": { "canonical": "haymow", "synonyms": ["hay mow", "hayloft", "barn", "hay bales"] }
+    }
+  },
+  {
+    "id": "Q1_partial",
+    "question_id": "Q1",
+    "bucket": "partial_or_near_miss",
+    "checkin_question": "Where did Rattles live with her family?",
+    "target_answer_concept": "Rattles lived in the haymow in the barn.",
+    "child_transcript": "She lived in the kitchen.",
+    "expected_status": "needs_scaffold",
+    "keyword_clusters": [
+      { "concept_name": "location", "synonyms": ["haymow", "hay mow", "hayloft", "barn", "hay bales"] }
+    ],
+    "acceptable_phrasings": [
+      "She lived in the haymow.",
+      "In the barn with the hay."
+    ],
+    "canonical_prototypes": [
+      { "type": "formal_full", "text": "Rattles lived in the haymow in the barn." },
+      { "type": "colloquial", "text": "She lived in the haymow." },
+      { "type": "minimal_core", "text": "In the barn with the hay." },
+      { "type": "common_distractor", "text": "She lived in a pet shop in the city." }
+    ],
+    "semantic_slots": {
+      "agent": { "canonical": "Rattles", "synonyms": ["the kitty", "the cat", "she"] },
+      "location": { "canonical": "haymow", "synonyms": ["hay mow", "hayloft", "barn", "hay bales"], "distractors": ["kitchen", "house", "city", "pet shop"] }
+    }
+  },
+  {
+    "id": "Q1_distractor",
+    "question_id": "Q1",
+    "bucket": "distractor_or_off_track",
+    "checkin_question": "Where did Rattles live with her family?",
+    "target_answer_concept": "Rattles lived in the haymow in the barn.",
+    "child_transcript": "She lived in a pet shop in the city.",
+    "expected_status": "needs_scaffold",
+    "keyword_clusters": [
+      { "concept_name": "location", "synonyms": ["haymow", "hay mow", "hayloft", "barn", "hay bales"] }
+    ],
+    "acceptable_phrasings": [
+      "She lived in the haymow.",
+      "In the barn with the hay."
+    ],
+    "canonical_prototypes": [
+      { "type": "formal_full", "text": "Rattles lived in the haymow in the barn." },
+      { "type": "colloquial", "text": "She lived in the haymow." },
+      { "type": "minimal_core", "text": "In the barn with the hay." },
+      { "type": "common_distractor", "text": "She lived in a pet shop in the city." }
+    ],
+    "semantic_slots": {
+      "agent": { "canonical": "Rattles", "synonyms": ["the kitty", "the cat", "she"] },
+      "location": { "canonical": "haymow", "synonyms": ["hay mow", "hayloft", "barn", "hay bales"], "distractors": ["kitchen", "house", "city", "pet shop"] }
+    }
+  },
+  {
+    "id": "Q2_verbatim",
+    "question_id": "Q2",
+    "bucket": "verbatim_correct",
+    "checkin_question": "How was Rattles different from all the other barn cats?",
+    "target_answer_concept": "Rattles loved humans and was not afraid of them, while all the other cats were wild.",
+    "child_transcript": "She was not wild and she loved humans.",
+    "expected_status": "mastered",
+    "keyword_clusters": [
+      { "concept_name": "trait", "synonyms": ["loved humans", "liked people", "not wild", "not afraid", "friendly"] }
+    ],
+    "acceptable_phrasings": [
+      "She was not wild and she loved humans.",
+      "All the other cats were afraid of people, but Rattles liked them.",
+      "loved humans"
+    ],
+    "canonical_prototypes": [
+      { "type": "formal_full", "text": "She was not wild and she loved humans." },
+      { "type": "colloquial", "text": "All the other cats were afraid of people, but Rattles liked them." },
+      { "type": "minimal_core", "text": "Loved humans and was friendly." },
+      { "type": "functional_circumlocution", "text": "All the other barn cats ran away from people but she wanted to be friendly." },
+      { "type": "short_elliptical", "text": "loved humans" },
+      { "type": "common_distractor", "text": "She hated all the people on the farm." }
+    ],
+    "semantic_slots": {
+      "agent": { "canonical": "Rattles", "synonyms": ["the cat", "she"] },
+      "trait": { "canonical": "friendly", "synonyms": ["loved humans", "liked people", "not wild", "not afraid", "friendly"] }
+    }
+  },
+  {
+    "id": "Q2_paraphrase",
+    "question_id": "Q2",
+    "bucket": "non_verbatim_paraphrase",
+    "checkin_question": "How was Rattles different from all the other barn cats?",
+    "target_answer_concept": "Rattles loved humans and was not afraid of them, while all the other cats were wild.",
+    "child_transcript": "All the other barn cats ran away from people but she wanted to be friendly.",
+    "expected_status": "mastered",
+    "keyword_clusters": [
+      { "concept_name": "trait", "synonyms": ["loved humans", "liked people", "not wild", "not afraid", "friendly"] }
+    ],
+    "acceptable_phrasings": [
+      "She was not wild and she loved humans.",
+      "All the other barn cats ran away from people but she wanted to be friendly."
+    ],
+    "canonical_prototypes": [
+      { "type": "formal_full", "text": "She was not wild and she loved humans." },
+      { "type": "colloquial", "text": "All the other cats were afraid of people, but Rattles liked them." },
+      { "type": "minimal_core", "text": "Loved humans and was friendly." },
+      { "type": "functional_circumlocution", "text": "All the other barn cats ran away from people but she wanted to be friendly." },
+      { "type": "short_elliptical", "text": "loved humans" },
+      { "type": "common_distractor", "text": "She hated all the people on the farm." }
+    ],
+    "semantic_slots": {
+      "agent": { "canonical": "Rattles", "synonyms": ["the cat", "she"] },
+      "trait": { "canonical": "friendly", "synonyms": ["loved humans", "liked people", "not wild", "not afraid", "friendly"] }
+    }
+  },
+  {
+    "id": "Q2_short",
+    "question_id": "Q2",
+    "bucket": "short_elliptical_1_2_words",
+    "checkin_question": "How was Rattles different from all the other barn cats?",
+    "target_answer_concept": "Rattles loved humans and was not afraid of them, while all the other cats were wild.",
+    "child_transcript": "loved humans",
+    "expected_status": "mastered",
+    "keyword_clusters": [
+      { "concept_name": "trait", "synonyms": ["loved humans", "liked people", "not wild", "not afraid", "friendly"] }
+    ],
+    "acceptable_phrasings": [
+      "loved humans",
+      "She was not wild and she loved humans."
+    ],
+    "canonical_prototypes": [
+      { "type": "formal_full", "text": "She was not wild and she loved humans." },
+      { "type": "colloquial", "text": "All the other cats were afraid of people, but Rattles liked them." },
+      { "type": "minimal_core", "text": "Loved humans and was friendly." },
+      { "type": "functional_circumlocution", "text": "All the other barn cats ran away from people but she wanted to be friendly." },
+      { "type": "short_elliptical", "text": "loved humans" },
+      { "type": "common_distractor", "text": "She hated all the people on the farm." }
+    ],
+    "semantic_slots": {
+      "agent": { "canonical": "Rattles", "synonyms": ["the cat", "she"] },
+      "trait": { "canonical": "friendly", "synonyms": ["loved humans", "liked people", "not wild", "not afraid", "friendly"] }
+    }
+  },
+  {
+    "id": "Q2_stt",
+    "question_id": "Q2",
+    "bucket": "stt_homophone_with_alternatives",
+    "checkin_question": "How was Rattles different from all the other barn cats?",
+    "target_answer_concept": "Rattles loved humans and was not afraid of them, while all the other cats were wild.",
+    "child_transcript": "she loved you mans",
+    "transcript_alternatives": ["she loved you mans", "she loved humans"],
+    "expected_status": "mastered",
+    "keyword_clusters": [
+      { "concept_name": "trait", "synonyms": ["loved humans", "liked people", "not wild", "not afraid", "friendly"] }
+    ],
+    "acceptable_phrasings": [
+      "loved humans",
+      "she loved humans"
+    ],
+    "canonical_prototypes": [
+      { "type": "formal_full", "text": "She was not wild and she loved humans." },
+      { "type": "colloquial", "text": "All the other cats were afraid of people, but Rattles liked them." },
+      { "type": "minimal_core", "text": "Loved humans and was friendly." },
+      { "type": "functional_circumlocution", "text": "All the other barn cats ran away from people but she wanted to be friendly." },
+      { "type": "short_elliptical", "text": "loved humans" },
+      { "type": "common_distractor", "text": "She hated all the people on the farm." }
+    ],
+    "semantic_slots": {
+      "agent": { "canonical": "Rattles", "synonyms": ["the cat", "she"] },
+      "trait": { "canonical": "friendly", "synonyms": ["loved humans", "liked people", "not wild", "not afraid", "friendly"] }
+    }
+  },
+  {
+    "id": "Q2_partial",
+    "question_id": "Q2",
+    "bucket": "partial_or_near_miss",
+    "checkin_question": "How was Rattles different from all the other barn cats?",
+    "target_answer_concept": "Rattles loved humans and was not afraid of them, while all the other cats were wild.",
+    "child_transcript": "Her brother loved humans.",
+    "expected_status": "needs_scaffold",
+    "keyword_clusters": [
+      { "concept_name": "agent", "synonyms": ["rattles", "she", "the cat"] },
+      { "concept_name": "trait", "synonyms": ["loved humans", "liked people", "friendly"] }
+    ],
+    "acceptable_phrasings": [
+      "She was not wild and she loved humans."
+    ],
+    "canonical_prototypes": [
+      { "type": "formal_full", "text": "She was not wild and she loved humans." },
+      { "type": "common_distractor", "text": "She hated all the people on the farm." }
+    ],
+    "semantic_slots": {
+      "agent": { "canonical": "Rattles", "synonyms": ["the cat", "she"], "distractors": ["brother", "grandma", "duane"] },
+      "trait": { "canonical": "friendly", "synonyms": ["loved humans", "liked people"] }
+    }
+  },
+  {
+    "id": "Q2_distractor",
+    "question_id": "Q2",
+    "bucket": "distractor_or_off_track",
+    "checkin_question": "How was Rattles different from all the other barn cats?",
+    "target_answer_concept": "Rattles loved humans and was not afraid of them, while all the other cats were wild.",
+    "child_transcript": "She hated all the people on the farm.",
+    "expected_status": "needs_scaffold",
+    "keyword_clusters": [
+      { "concept_name": "trait", "synonyms": ["loved humans", "liked people", "friendly"] }
+    ],
+    "acceptable_phrasings": [
+      "She was not wild and she loved humans."
+    ],
+    "canonical_prototypes": [
+      { "type": "formal_full", "text": "She was not wild and she loved humans." },
+      { "type": "common_distractor", "text": "She hated all the people on the farm." }
+    ],
+    "semantic_slots": {
+      "agent": { "canonical": "Rattles", "synonyms": ["the cat", "she"] },
+      "trait": { "canonical": "friendly", "synonyms": ["loved humans", "liked people"], "distractors": ["hated people", "hated all the people"] }
+    }
+  },
+  {
+    "id": "Q3_verbatim",
+    "question_id": "Q3",
+    "bucket": "verbatim_correct",
+    "checkin_question": "What did Rattles do when Uncle Duane was milking the cows?",
+    "target_answer_concept": "Rattles jumped onto Uncle Duane's lap while he milked the cows.",
+    "child_transcript": "She jumped right onto his lap.",
+    "expected_status": "mastered",
+    "keyword_clusters": [
+      { "concept_name": "action", "synonyms": ["jumped", "hopped", "climbed", "sat"] },
+      { "concept_name": "location", "synonyms": ["lap", "his lap", "knee", "on him"] }
+    ],
+    "acceptable_phrasings": [
+      "She jumped right onto his lap.",
+      "Rattles would sit on Uncle Duane's lap while he milked.",
+      "his lap"
+    ],
+    "canonical_prototypes": [
+      { "type": "formal_full", "text": "She jumped right onto his lap." },
+      { "type": "colloquial", "text": "Rattles would sit on Uncle Duane's lap while he milked." },
+      { "type": "minimal_core", "text": "Jumped on his lap." },
+      { "type": "functional_circumlocution", "text": "The kitten hopped up to sit on Uncle Duane while he was milking." },
+      { "type": "short_elliptical", "text": "his lap" },
+      { "type": "common_distractor", "text": "She ran away and hid from the cows." }
+    ],
+    "semantic_slots": {
+      "agent": { "canonical": "Rattles", "synonyms": ["the cat", "the kitten", "she"] },
+      "action": { "canonical": "jumped", "synonyms": ["hopped", "climbed", "sat"] },
+      "location": { "canonical": "lap", "synonyms": ["knee", "on him", "his lap"] },
+      "target_person": { "canonical": "Uncle Duane", "synonyms": ["Duane", "the uncle", "the farmer"], "distractors": ["Grandma", "Michelle", "Linda"] }
+    }
+  },
+  {
+    "id": "Q3_paraphrase",
+    "question_id": "Q3",
+    "bucket": "non_verbatim_paraphrase",
+    "checkin_question": "What did Rattles do when Uncle Duane was milking the cows?",
+    "target_answer_concept": "Rattles jumped onto Uncle Duane's lap while he milked the cows.",
+    "child_transcript": "The kitten hopped up to sit on Uncle Duane while he was milking.",
+    "expected_status": "mastered",
+    "keyword_clusters": [
+      { "concept_name": "action", "synonyms": ["jumped", "hopped", "climbed", "sat", "sit"] },
+      { "concept_name": "location", "synonyms": ["lap", "his lap", "on uncle duane", "on him"] }
+    ],
+    "acceptable_phrasings": [
+      "She jumped right onto his lap.",
+      "The kitten hopped up to sit on Uncle Duane while he was milking."
+    ],
+    "canonical_prototypes": [
+      { "type": "formal_full", "text": "She jumped right onto his lap." },
+      { "type": "colloquial", "text": "Rattles would sit on Uncle Duane's lap while he milked." },
+      { "type": "minimal_core", "text": "Jumped on his lap." },
+      { "type": "functional_circumlocution", "text": "The kitten hopped up to sit on Uncle Duane while he was milking." },
+      { "type": "short_elliptical", "text": "his lap" },
+      { "type": "common_distractor", "text": "She ran away and hid from the cows." }
+    ],
+    "semantic_slots": {
+      "agent": { "canonical": "Rattles", "synonyms": ["the cat", "the kitten", "she"] },
+      "action": { "canonical": "jumped", "synonyms": ["hopped", "climbed", "sat", "sit"] },
+      "location": { "canonical": "lap", "synonyms": ["knee", "on him", "on uncle duane"] },
+      "target_person": { "canonical": "Uncle Duane", "synonyms": ["Duane", "the uncle", "the farmer"] }
+    }
+  },
+  {
+    "id": "Q3_short",
+    "question_id": "Q3",
+    "bucket": "short_elliptical_1_2_words",
+    "checkin_question": "What did Rattles do when Uncle Duane was milking the cows?",
+    "target_answer_concept": "Rattles jumped onto Uncle Duane's lap while he milked the cows.",
+    "child_transcript": "his lap",
+    "expected_status": "mastered",
+    "keyword_clusters": [
+      { "concept_name": "location", "synonyms": ["lap", "his lap", "knee", "on him"] }
+    ],
+    "acceptable_phrasings": [
+      "She jumped right onto his lap.",
+      "his lap"
+    ],
+    "canonical_prototypes": [
+      { "type": "formal_full", "text": "She jumped right onto his lap." },
+      { "type": "colloquial", "text": "Rattles would sit on Uncle Duane's lap while he milked." },
+      { "type": "minimal_core", "text": "Jumped on his lap." },
+      { "type": "functional_circumlocution", "text": "The kitten hopped up to sit on Uncle Duane while he was milking." },
+      { "type": "short_elliptical", "text": "his lap" },
+      { "type": "common_distractor", "text": "She ran away and hid from the cows." }
+    ],
+    "semantic_slots": {
+      "agent": { "canonical": "Rattles", "synonyms": ["the cat", "the kitten", "she"] },
+      "location": { "canonical": "lap", "synonyms": ["knee", "on him", "his lap"] }
+    }
+  },
+  {
+    "id": "Q3_stt",
+    "question_id": "Q3",
+    "bucket": "stt_homophone_with_alternatives",
+    "checkin_question": "What did Rattles do when Uncle Duane was milking the cows?",
+    "target_answer_concept": "Rattles jumped onto Uncle Duane's lap while he milked the cows.",
+    "child_transcript": "jumped on his slap",
+    "transcript_alternatives": ["jumped on his slap", "jumped on his lap"],
+    "expected_status": "mastered",
+    "keyword_clusters": [
+      { "concept_name": "action", "synonyms": ["jumped", "hopped", "climbed", "sat"] },
+      { "concept_name": "location", "synonyms": ["lap", "his lap", "knee", "on him"] }
+    ],
+    "acceptable_phrasings": [
+      "She jumped right onto his lap.",
+      "jumped on his lap"
+    ],
+    "canonical_prototypes": [
+      { "type": "formal_full", "text": "She jumped right onto his lap." },
+      { "type": "colloquial", "text": "Rattles would sit on Uncle Duane's lap while he milked." },
+      { "type": "minimal_core", "text": "Jumped on his lap." },
+      { "type": "functional_circumlocution", "text": "The kitten hopped up to sit on Uncle Duane while he was milking." },
+      { "type": "short_elliptical", "text": "his lap" },
+      { "type": "common_distractor", "text": "She ran away and hid from the cows." }
+    ],
+    "semantic_slots": {
+      "agent": { "canonical": "Rattles", "synonyms": ["the cat", "the kitten", "she"] },
+      "action": { "canonical": "jumped", "synonyms": ["hopped", "climbed", "sat"] },
+      "location": { "canonical": "lap", "synonyms": ["knee", "on him", "his lap"] }
+    }
+  },
+  {
+    "id": "Q3_partial",
+    "question_id": "Q3",
+    "bucket": "partial_or_near_miss",
+    "checkin_question": "What did Rattles do when Uncle Duane was milking the cows?",
+    "target_answer_concept": "Rattles jumped onto Uncle Duane's lap while he milked the cows.",
+    "child_transcript": "She jumped on Grandma's lap.",
+    "expected_status": "needs_scaffold",
+    "keyword_clusters": [
+      { "concept_name": "action", "synonyms": ["jumped", "hopped"] },
+      { "concept_name": "person", "synonyms": ["uncle duane", "duane"] }
+    ],
+    "acceptable_phrasings": [
+      "She jumped right onto his lap."
+    ],
+    "canonical_prototypes": [
+      { "type": "formal_full", "text": "She jumped right onto his lap." },
+      { "type": "common_distractor", "text": "She ran away and hid from the cows." }
+    ],
+    "semantic_slots": {
+      "agent": { "canonical": "Rattles", "synonyms": ["the cat", "the kitten", "she"] },
+      "action": { "canonical": "jumped", "synonyms": ["hopped", "climbed", "sat"] },
+      "target_person": { "canonical": "Uncle Duane", "synonyms": ["Duane", "the uncle"], "distractors": ["Grandma", "Michelle", "Linda"] }
+    }
+  },
+  {
+    "id": "Q3_distractor",
+    "question_id": "Q3",
+    "bucket": "distractor_or_off_track",
+    "checkin_question": "What did Rattles do when Uncle Duane was milking the cows?",
+    "target_answer_concept": "Rattles jumped onto Uncle Duane's lap while he milked the cows.",
+    "child_transcript": "She ran away and hid from the cows.",
+    "expected_status": "needs_scaffold",
+    "keyword_clusters": [
+      { "concept_name": "action", "synonyms": ["jumped", "hopped"] },
+      { "concept_name": "location", "synonyms": ["lap", "his lap"] }
+    ],
+    "acceptable_phrasings": [
+      "She jumped right onto his lap."
+    ],
+    "canonical_prototypes": [
+      { "type": "formal_full", "text": "She jumped right onto his lap." },
+      { "type": "common_distractor", "text": "She ran away and hid from the cows." }
+    ],
+    "semantic_slots": {
+      "agent": { "canonical": "Rattles", "synonyms": ["the cat", "the kitten", "she"] },
+      "action": { "canonical": "jumped", "synonyms": ["hopped", "climbed"], "distractors": ["ran away", "hid"] }
+    }
+  },
+  {
+    "id": "Q4_verbatim",
+    "question_id": "Q4",
+    "bucket": "verbatim_correct",
+    "checkin_question": "Why was the kitten named Rattles?",
+    "target_answer_concept": "She purred so loudly and strongly that it sounded like a rattle.",
+    "child_transcript": "Because her purr was so loud it sounded like a rattle.",
+    "expected_status": "mastered",
+    "keyword_clusters": [
+      { "concept_name": "action", "synonyms": ["purr", "purred", "purring"] },
+      { "concept_name": "sound", "synonyms": ["rattle", "sounded like a rattle", "rattling"] }
+    ],
+    "acceptable_phrasings": [
+      "Because her purr was so loud it sounded like a rattle.",
+      "When she purred, her whole body shook like a rattle.",
+      "loud purr"
+    ],
+    "canonical_prototypes": [
+      { "type": "formal_full", "text": "Because her purr was so loud it sounded like a rattle." },
+      { "type": "colloquial", "text": "When she purred, her whole body shook like a rattle." },
+      { "type": "minimal_core", "text": "Her loud purr sounded like a rattle." },
+      { "type": "functional_circumlocution", "text": "because her purring sounded just like a baby toy shaking" },
+      { "type": "short_elliptical", "text": "loud purr" },
+      { "type": "common_distractor", "text": "She found a rattlesnake in the barn." }
+    ],
+    "semantic_slots": {
+      "agent": { "canonical": "Rattles", "synonyms": ["the cat", "she"] },
+      "action": { "canonical": "purred", "synonyms": ["her purr", "purring"] },
+      "sound": { "canonical": "rattle", "synonyms": ["rattling sound", "shook like a rattle"] }
+    }
+  },
+  {
+    "id": "Q4_paraphrase",
+    "question_id": "Q4",
+    "bucket": "non_verbatim_paraphrase",
+    "checkin_question": "Why was the kitten named Rattles?",
+    "target_answer_concept": "She purred so loudly and strongly that it sounded like a rattle.",
+    "child_transcript": "because her purring sounded just like a baby toy shaking",
+    "expected_status": "mastered",
+    "keyword_clusters": [
+      { "concept_name": "action", "synonyms": ["purr", "purred", "purring"] }
+    ],
+    "acceptable_phrasings": [
+      "Because her purr was so loud it sounded like a rattle.",
+      "because her purring sounded just like a baby toy shaking"
+    ],
+    "canonical_prototypes": [
+      { "type": "formal_full", "text": "Because her purr was so loud it sounded like a rattle." },
+      { "type": "colloquial", "text": "When she purred, her whole body shook like a rattle." },
+      { "type": "minimal_core", "text": "Her loud purr sounded like a rattle." },
+      { "type": "functional_circumlocution", "text": "because her purring sounded just like a baby toy shaking" },
+      { "type": "short_elliptical", "text": "loud purr" },
+      { "type": "common_distractor", "text": "She found a rattlesnake in the barn." }
+    ],
+    "semantic_slots": {
+      "agent": { "canonical": "Rattles", "synonyms": ["the cat", "she"] },
+      "action": { "canonical": "purred", "synonyms": ["her purr", "purring"] },
+      "sound": { "canonical": "rattle", "synonyms": ["baby toy shaking", "shook like a rattle"] }
+    }
+  },
+  {
+    "id": "Q4_short",
+    "question_id": "Q4",
+    "bucket": "short_elliptical_1_2_words",
+    "checkin_question": "Why was the kitten named Rattles?",
+    "target_answer_concept": "She purred so loudly and strongly that it sounded like a rattle.",
+    "child_transcript": "loud purr",
+    "expected_status": "mastered",
+    "keyword_clusters": [
+      { "concept_name": "action", "synonyms": ["purr", "purred", "purring", "loud purr"] }
+    ],
+    "acceptable_phrasings": [
+      "Because her purr was so loud it sounded like a rattle.",
+      "loud purr"
+    ],
+    "canonical_prototypes": [
+      { "type": "formal_full", "text": "Because her purr was so loud it sounded like a rattle." },
+      { "type": "colloquial", "text": "When she purred, her whole body shook like a rattle." },
+      { "type": "minimal_core", "text": "Her loud purr sounded like a rattle." },
+      { "type": "functional_circumlocution", "text": "because her purring sounded just like a baby toy shaking" },
+      { "type": "short_elliptical", "text": "loud purr" },
+      { "type": "common_distractor", "text": "She found a rattlesnake in the barn." }
+    ],
+    "semantic_slots": {
+      "agent": { "canonical": "Rattles", "synonyms": ["the cat", "she"] },
+      "action": { "canonical": "purred", "synonyms": ["her purr", "purring", "loud purr"] }
+    }
+  },
+  {
+    "id": "Q4_stt",
+    "question_id": "Q4",
+    "bucket": "stt_homophone_with_alternatives",
+    "checkin_question": "Why was the kitten named Rattles?",
+    "target_answer_concept": "She purred so loudly and strongly that it sounded like a rattle.",
+    "child_transcript": "she bird loud",
+    "transcript_alternatives": ["she bird loud", "she purred loud"],
+    "expected_status": "mastered",
+    "keyword_clusters": [
+      { "concept_name": "action", "synonyms": ["purr", "purred", "purring", "purred loud", "loud purr"] }
+    ],
+    "acceptable_phrasings": [
+      "Because her purr was so loud it sounded like a rattle.",
+      "she purred loud"
+    ],
+    "canonical_prototypes": [
+      { "type": "formal_full", "text": "Because her purr was so loud it sounded like a rattle." },
+      { "type": "colloquial", "text": "When she purred, her whole body shook like a rattle." },
+      { "type": "minimal_core", "text": "Her loud purr sounded like a rattle." },
+      { "type": "functional_circumlocution", "text": "because her purring sounded just like a baby toy shaking" },
+      { "type": "short_elliptical", "text": "she purred loud" },
+      { "type": "common_distractor", "text": "She found a rattlesnake in the barn." }
+    ],
+    "semantic_slots": {
+      "agent": { "canonical": "Rattles", "synonyms": ["the cat", "she"] },
+      "action": { "canonical": "purred", "synonyms": ["her purr", "purring", "purred loud"] }
+    }
+  },
+  {
+    "id": "Q4_partial",
+    "question_id": "Q4",
+    "bucket": "partial_or_near_miss",
+    "checkin_question": "Why was the kitten named Rattles?",
+    "target_answer_concept": "She purred so loudly and strongly that it sounded like a rattle.",
+    "child_transcript": "Because her bark sounded like a rattle.",
+    "expected_status": "needs_scaffold",
+    "keyword_clusters": [
+      { "concept_name": "action", "synonyms": ["purred", "purr"] },
+      { "concept_name": "sound", "synonyms": ["rattle", "sounded like a rattle"] }
+    ],
+    "acceptable_phrasings": [
+      "Because her purr was so loud it sounded like a rattle."
+    ],
+    "canonical_prototypes": [
+      { "type": "formal_full", "text": "Because her purr was so loud it sounded like a rattle." },
+      { "type": "common_distractor", "text": "She found a rattlesnake in the barn." }
+    ],
+    "semantic_slots": {
+      "agent": { "canonical": "Rattles", "synonyms": ["the cat", "she"] },
+      "action": { "canonical": "purred", "synonyms": ["her purr", "purring"], "distractors": ["bark", "barked"] },
+      "sound": { "canonical": "rattle", "synonyms": ["rattling sound"] }
+    }
+  },
+  {
+    "id": "Q4_distractor",
+    "question_id": "Q4",
+    "bucket": "distractor_or_off_track",
+    "checkin_question": "Why was the kitten named Rattles?",
+    "target_answer_concept": "She purred so loudly and strongly that it sounded like a rattle.",
+    "child_transcript": "She found a rattlesnake in the barn.",
+    "expected_status": "needs_scaffold",
+    "keyword_clusters": [
+      { "concept_name": "action", "synonyms": ["purred", "purr"] }
+    ],
+    "acceptable_phrasings": [
+      "Because her purr was so loud it sounded like a rattle."
+    ],
+    "canonical_prototypes": [
+      { "type": "formal_full", "text": "Because her purr was so loud it sounded like a rattle." },
+      { "type": "common_distractor", "text": "She found a rattlesnake in the barn." }
+    ],
+    "semantic_slots": {
+      "agent": { "canonical": "Rattles", "synonyms": ["the cat", "she"] },
+      "sound": { "canonical": "rattle", "synonyms": ["rattling"], "distractors": ["rattlesnake"] }
+    }
+  },
+  {
+    "id": "Q5_verbatim",
+    "question_id": "Q5",
+    "bucket": "verbatim_correct",
+    "checkin_question": "Who were the two children that came to visit Grandma's farm?",
+    "target_answer_concept": "The two children were Linda and Michelle.",
+    "child_transcript": "Their names were Linda and Michelle.",
+    "expected_status": "mastered",
+    "keyword_clusters": [
+      { "concept_name": "child1", "synonyms": ["linda"] },
+      { "concept_name": "child2", "synonyms": ["michelle"] }
+    ],
+    "acceptable_phrasings": [
+      "Linda and Michelle.",
+      "Their names were Linda and Michelle.",
+      "Linda Michelle"
+    ],
+    "canonical_prototypes": [
+      { "type": "formal_full", "text": "Their names were Linda and Michelle." },
+      { "type": "colloquial", "text": "Linda and Michelle came to visit." },
+      { "type": "minimal_core", "text": "Linda and Michelle." },
+      { "type": "functional_circumlocution", "text": "Two sisters named Linda and Michelle came to Grandma's farm." },
+      { "type": "short_elliptical", "text": "Linda Michelle" },
+      { "type": "common_distractor", "text": "Two boys named Jack and Ben." }
+    ],
+    "semantic_slots": {
+      "child1": { "canonical": "Linda", "synonyms": ["the girl in yellow shorts", "linda"] },
+      "child2": { "canonical": "Michelle", "synonyms": ["her sister", "michelle"] }
+    }
+  },
+  {
+    "id": "Q5_paraphrase",
+    "question_id": "Q5",
+    "bucket": "non_verbatim_paraphrase",
+    "checkin_question": "Who were the two children that came to visit Grandma's farm?",
+    "target_answer_concept": "The two children were Linda and Michelle.",
+    "child_transcript": "Two sisters named Linda and Michelle came to Grandma's farm.",
+    "expected_status": "mastered",
+    "keyword_clusters": [
+      { "concept_name": "child1", "synonyms": ["linda"] },
+      { "concept_name": "child2", "synonyms": ["michelle"] }
+    ],
+    "acceptable_phrasings": [
+      "Linda and Michelle.",
+      "Two sisters named Linda and Michelle came to Grandma's farm."
+    ],
+    "canonical_prototypes": [
+      { "type": "formal_full", "text": "Their names were Linda and Michelle." },
+      { "type": "colloquial", "text": "Linda and Michelle came to visit." },
+      { "type": "minimal_core", "text": "Linda and Michelle." },
+      { "type": "functional_circumlocution", "text": "Two sisters named Linda and Michelle came to Grandma's farm." },
+      { "type": "short_elliptical", "text": "Linda Michelle" },
+      { "type": "common_distractor", "text": "Two boys named Jack and Ben." }
+    ],
+    "semantic_slots": {
+      "child1": { "canonical": "Linda", "synonyms": ["linda"] },
+      "child2": { "canonical": "Michelle", "synonyms": ["michelle"] }
+    }
+  },
+  {
+    "id": "Q5_short",
+    "question_id": "Q5",
+    "bucket": "short_elliptical_1_2_words",
+    "checkin_question": "Who were the two children that came to visit Grandma's farm?",
+    "target_answer_concept": "The two children were Linda and Michelle.",
+    "child_transcript": "Linda Michelle",
+    "expected_status": "mastered",
+    "keyword_clusters": [
+      { "concept_name": "child1", "synonyms": ["linda"] },
+      { "concept_name": "child2", "synonyms": ["michelle"] }
+    ],
+    "acceptable_phrasings": [
+      "Linda and Michelle.",
+      "Linda Michelle"
+    ],
+    "canonical_prototypes": [
+      { "type": "formal_full", "text": "Their names were Linda and Michelle." },
+      { "type": "colloquial", "text": "Linda and Michelle came to visit." },
+      { "type": "minimal_core", "text": "Linda and Michelle." },
+      { "type": "functional_circumlocution", "text": "Two sisters named Linda and Michelle came to Grandma's farm." },
+      { "type": "short_elliptical", "text": "Linda Michelle" },
+      { "type": "common_distractor", "text": "Two boys named Jack and Ben." }
+    ],
+    "semantic_slots": {
+      "child1": { "canonical": "Linda", "synonyms": ["linda"] },
+      "child2": { "canonical": "Michelle", "synonyms": ["michelle"] }
+    }
+  },
+  {
+    "id": "Q5_stt",
+    "question_id": "Q5",
+    "bucket": "stt_homophone_with_alternatives",
+    "checkin_question": "Who were the two children that came to visit Grandma's farm?",
+    "target_answer_concept": "The two children were Linda and Michelle.",
+    "child_transcript": "lender and michelle",
+    "transcript_alternatives": ["lender and michelle", "Linda and Michelle"],
+    "expected_status": "mastered",
+    "keyword_clusters": [
+      { "concept_name": "child1", "synonyms": ["linda"] },
+      { "concept_name": "child2", "synonyms": ["michelle"] }
+    ],
+    "acceptable_phrasings": [
+      "Linda and Michelle.",
+      "Linda Michelle"
+    ],
+    "canonical_prototypes": [
+      { "type": "formal_full", "text": "Their names were Linda and Michelle." },
+      { "type": "colloquial", "text": "Linda and Michelle came to visit." },
+      { "type": "minimal_core", "text": "Linda and Michelle." },
+      { "type": "functional_circumlocution", "text": "Two sisters named Linda and Michelle came to Grandma's farm." },
+      { "type": "short_elliptical", "text": "Linda Michelle" },
+      { "type": "common_distractor", "text": "Two boys named Jack and Ben." }
+    ],
+    "semantic_slots": {
+      "child1": { "canonical": "Linda", "synonyms": ["linda"] },
+      "child2": { "canonical": "Michelle", "synonyms": ["michelle"] }
+    }
+  },
+  {
+    "id": "Q5_partial",
+    "question_id": "Q5",
+    "bucket": "partial_or_near_miss",
+    "checkin_question": "Who were the two children that came to visit Grandma's farm?",
+    "target_answer_concept": "The two children were Linda and Michelle.",
+    "child_transcript": "Linda and Sarah came to visit.",
+    "expected_status": "needs_scaffold",
+    "keyword_clusters": [
+      { "concept_name": "child1", "synonyms": ["linda"] },
+      { "concept_name": "child2", "synonyms": ["michelle"] }
+    ],
+    "acceptable_phrasings": [
+      "Linda and Michelle."
+    ],
+    "canonical_prototypes": [
+      { "type": "formal_full", "text": "Their names were Linda and Michelle." },
+      { "type": "common_distractor", "text": "Two boys named Jack and Ben." }
+    ],
+    "semantic_slots": {
+      "child1": { "canonical": "Linda", "synonyms": ["linda"] },
+      "child2": { "canonical": "Michelle", "synonyms": ["michelle"], "distractors": ["sarah", "mary"] }
+    }
+  },
+  {
+    "id": "Q5_distractor",
+    "question_id": "Q5",
+    "bucket": "distractor_or_off_track",
+    "checkin_question": "Who were the two children that came to visit Grandma's farm?",
+    "target_answer_concept": "The two children were Linda and Michelle.",
+    "child_transcript": "Two boys named Jack and Ben.",
+    "expected_status": "needs_scaffold",
+    "keyword_clusters": [
+      { "concept_name": "child1", "synonyms": ["linda"] },
+      { "concept_name": "child2", "synonyms": ["michelle"] }
+    ],
+    "acceptable_phrasings": [
+      "Linda and Michelle."
+    ],
+    "canonical_prototypes": [
+      { "type": "formal_full", "text": "Their names were Linda and Michelle." },
+      { "type": "common_distractor", "text": "Two boys named Jack and Ben." }
+    ],
+    "semantic_slots": {
+      "child1": { "canonical": "Linda", "synonyms": ["linda"], "distractors": ["jack"] },
+      "child2": { "canonical": "Michelle", "synonyms": ["michelle"], "distractors": ["ben"] }
+    }
+  },
+  {
+    "id": "Q6_verbatim",
+    "question_id": "Q6",
+    "bucket": "verbatim_correct",
+    "checkin_question": "What did the wild barn cats do when Linda climbed up the ladder into the haymow?",
+    "target_answer_concept": "All the other cats ran away, hissed 'Danger', and hid in the straw bales.",
+    "child_transcript": "They ran away and hid between the straw bales.",
+    "expected_status": "mastered",
+    "keyword_clusters": [
+      { "concept_name": "action", "synonyms": ["ran away", "hid", "hissed", "hide"] },
+      { "concept_name": "location", "synonyms": ["straw bales", "straw", "hay", "bales"] }
+    ],
+    "acceptable_phrasings": [
+      "They ran away and hid between the straw bales.",
+      "The scary wild cats hissed and went to hide in the straw.",
+      "to hide"
+    ],
+    "canonical_prototypes": [
+      { "type": "formal_full", "text": "They ran away and hid between the straw bales." },
+      { "type": "colloquial", "text": "They all hissed danger and hid from the human." },
+      { "type": "minimal_core", "text": "Ran and hid in the straw." },
+      { "type": "functional_circumlocution", "text": "The scary wild cats hissed and went to hide in the straw." },
+      { "type": "short_elliptical", "text": "to hide" },
+      { "type": "common_distractor", "text": "Uncle Duane chased them with a broom." }
+    ],
+    "semantic_slots": {
+      "agent": { "canonical": "wild cats", "synonyms": ["other cats", "her family", "the kittens", "they"] },
+      "action": { "canonical": "ran and hid", "synonyms": ["ran away", "hid in the straw", "hissed", "to hide"] }
+    }
+  },
+  {
+    "id": "Q6_paraphrase",
+    "question_id": "Q6",
+    "bucket": "non_verbatim_paraphrase",
+    "checkin_question": "What did the wild barn cats do when Linda climbed up the ladder into the haymow?",
+    "target_answer_concept": "All the other cats ran away, hissed 'Danger', and hid in the straw bales.",
+    "child_transcript": "The scary wild cats hissed and went to hide in the straw.",
+    "expected_status": "mastered",
+    "keyword_clusters": [
+      { "concept_name": "action", "synonyms": ["ran away", "hid", "hissed", "hide", "went to hide"] },
+      { "concept_name": "location", "synonyms": ["straw bales", "straw", "hay", "bales"] }
+    ],
+    "acceptable_phrasings": [
+      "They ran away and hid between the straw bales.",
+      "The scary wild cats hissed and went to hide in the straw."
+    ],
+    "canonical_prototypes": [
+      { "type": "formal_full", "text": "They ran away and hid between the straw bales." },
+      { "type": "colloquial", "text": "They all hissed danger and hid from the human." },
+      { "type": "minimal_core", "text": "Ran and hid in the straw." },
+      { "type": "functional_circumlocution", "text": "The scary wild cats hissed and went to hide in the straw." },
+      { "type": "short_elliptical", "text": "to hide" },
+      { "type": "common_distractor", "text": "Uncle Duane chased them with a broom." }
+    ],
+    "semantic_slots": {
+      "agent": { "canonical": "wild cats", "synonyms": ["other cats", "her family", "they"] },
+      "action": { "canonical": "ran and hid", "synonyms": ["ran away", "hid in the straw", "hissed", "went to hide"] }
+    }
+  },
+  {
+    "id": "Q6_short",
+    "question_id": "Q6",
+    "bucket": "short_elliptical_1_2_words",
+    "checkin_question": "What did the wild barn cats do when Linda climbed up the ladder into the haymow?",
+    "target_answer_concept": "All the other cats ran away, hissed 'Danger', and hid in the straw bales.",
+    "child_transcript": "to hide",
+    "expected_status": "mastered",
+    "keyword_clusters": [
+      { "concept_name": "action", "synonyms": ["ran away", "hid", "hissed", "hide", "to hide"] }
+    ],
+    "acceptable_phrasings": [
+      "They ran away and hid between the straw bales.",
+      "to hide"
+    ],
+    "canonical_prototypes": [
+      { "type": "formal_full", "text": "They ran away and hid between the straw bales." },
+      { "type": "colloquial", "text": "They all hissed danger and hid from the human." },
+      { "type": "minimal_core", "text": "Ran and hid in the straw." },
+      { "type": "functional_circumlocution", "text": "The scary wild cats hissed and went to hide in the straw." },
+      { "type": "short_elliptical", "text": "to hide" },
+      { "type": "common_distractor", "text": "Uncle Duane chased them with a broom." }
+    ],
+    "semantic_slots": {
+      "agent": { "canonical": "wild cats", "synonyms": ["other cats", "her family", "they"] },
+      "action": { "canonical": "ran and hid", "synonyms": ["ran away", "hid in the straw", "hissed", "to hide"] }
+    }
+  },
+  {
+    "id": "Q6_stt",
+    "question_id": "Q6",
+    "bucket": "stt_homophone_with_alternatives",
+    "checkin_question": "What did the wild barn cats do when Linda climbed up the ladder into the haymow?",
+    "target_answer_concept": "All the other cats ran away, hissed 'Danger', and hid in the straw bales.",
+    "child_transcript": "ran and hit",
+    "transcript_alternatives": ["ran and hit", "ran and hid between the straw bales"],
+    "expected_status": "mastered",
+    "keyword_clusters": [
+      { "concept_name": "action", "synonyms": ["ran away", "hid", "hissed", "ran and hid"] }
+    ],
+    "acceptable_phrasings": [
+      "They ran away and hid between the straw bales.",
+      "ran and hid between the straw bales"
+    ],
+    "canonical_prototypes": [
+      { "type": "formal_full", "text": "They ran away and hid between the straw bales." },
+      { "type": "colloquial", "text": "They all hissed danger and hid from the human." },
+      { "type": "minimal_core", "text": "Ran and hid in the straw." },
+      { "type": "functional_circumlocution", "text": "The scary wild cats hissed and went to hide in the straw." },
+      { "type": "short_elliptical", "text": "to hide" },
+      { "type": "common_distractor", "text": "Uncle Duane chased them with a broom." }
+    ],
+    "semantic_slots": {
+      "agent": { "canonical": "wild cats", "synonyms": ["other cats", "they"] },
+      "action": { "canonical": "ran and hid", "synonyms": ["ran away", "hid in the straw", "hissed"] }
+    }
+  },
+  {
+    "id": "Q6_partial",
+    "question_id": "Q6",
+    "bucket": "partial_or_near_miss",
+    "checkin_question": "What did the wild barn cats do when Linda climbed up the ladder into the haymow?",
+    "target_answer_concept": "All the other cats ran away, hissed 'Danger', and hid in the straw bales.",
+    "child_transcript": "They ran and jumped into Linda's arms.",
+    "expected_status": "needs_scaffold",
+    "keyword_clusters": [
+      { "concept_name": "action", "synonyms": ["ran away", "hid", "hissed"] }
+    ],
+    "acceptable_phrasings": [
+      "They ran away and hid between the straw bales."
+    ],
+    "canonical_prototypes": [
+      { "type": "formal_full", "text": "They ran away and hid between the straw bales." },
+      { "type": "common_distractor", "text": "Uncle Duane chased them with a broom." }
+    ],
+    "semantic_slots": {
+      "agent": { "canonical": "wild cats", "synonyms": ["other cats", "they"] },
+      "action": { "canonical": "ran and hid", "synonyms": ["ran away", "hid in the straw"], "distractors": ["jumped into linda's arms"] }
+    }
+  },
+  {
+    "id": "Q6_distractor",
+    "question_id": "Q6",
+    "bucket": "distractor_or_off_track",
+    "checkin_question": "What did the wild barn cats do when Linda climbed up the ladder into the haymow?",
+    "target_answer_concept": "All the other cats ran away, hissed 'Danger', and hid in the straw bales.",
+    "child_transcript": "Uncle Duane chased them with a broom.",
+    "expected_status": "needs_scaffold",
+    "keyword_clusters": [
+      { "concept_name": "action", "synonyms": ["ran away", "hid", "hissed"] }
+    ],
+    "acceptable_phrasings": [
+      "They ran away and hid between the straw bales."
+    ],
+    "canonical_prototypes": [
+      { "type": "formal_full", "text": "They ran away and hid between the straw bales." },
+      { "type": "common_distractor", "text": "Uncle Duane chased them with a broom." }
+    ],
+    "semantic_slots": {
+      "agent": { "canonical": "wild cats", "synonyms": ["other cats", "they"], "distractors": ["uncle duane"] },
+      "action": { "canonical": "ran and hid", "synonyms": ["ran away", "hid in the straw"], "distractors": ["chased them with a broom"] }
+    }
+  },
+  {
+    "id": "Q7_verbatim",
+    "question_id": "Q7",
+    "bucket": "verbatim_correct",
+    "checkin_question": "What did Rattles do when Linda came into the haymow?",
+    "target_answer_concept": "Rattles walked right out, purred, and jumped into Linda's arms.",
+    "child_transcript": "She walked right out, purred, and jumped into Linda's arms.",
+    "expected_status": "mastered",
+    "keyword_clusters": [
+      { "concept_name": "action", "synonyms": ["walked out", "waddled over", "jumped into arms", "purred", "came out", "played"] },
+      { "concept_name": "target", "synonyms": ["linda", "her arms", "the girl", "arms", "lap"] }
+    ],
+    "acceptable_phrasings": [
+      "She purred, put her tail up, and waddled over to Linda.",
+      "She walked right out, purred, and jumped into Linda's arms.",
+      "purred waddled"
+    ],
+    "canonical_prototypes": [
+      { "type": "formal_full", "text": "She walked right out, purred, and jumped into Linda's arms." },
+      { "type": "colloquial", "text": "She purred, put her tail up, and waddled over to Linda." },
+      { "type": "minimal_core", "text": "Jumped into Linda's arms." },
+      { "type": "functional_circumlocution", "text": "Rattles was happy and walked right over to play with the girl." },
+      { "type": "short_elliptical", "text": "purred waddled" },
+      { "type": "common_distractor", "text": "She jumped out the window into the grass." }
+    ],
+    "semantic_slots": {
+      "agent": { "canonical": "Rattles", "synonyms": ["the cat", "she", "the kitten"] },
+      "action": { "canonical": "jumped into arms", "synonyms": ["waddled over", "walked over", "purred", "purred waddled"] }
+    }
+  },
+  {
+    "id": "Q7_paraphrase",
+    "question_id": "Q7",
+    "bucket": "non_verbatim_paraphrase",
+    "checkin_question": "What did Rattles do when Linda came into the haymow?",
+    "target_answer_concept": "Rattles walked right out, purred, and jumped into Linda's arms.",
+    "child_transcript": "Rattles was happy and walked right over to play with the girl.",
+    "expected_status": "mastered",
+    "keyword_clusters": [
+      { "concept_name": "action", "synonyms": ["walked out", "waddled over", "walked right over", "purred", "play with the girl"] }
+    ],
+    "acceptable_phrasings": [
+      "She walked right out, purred, and jumped into Linda's arms.",
+      "Rattles was happy and walked right over to play with the girl."
+    ],
+    "canonical_prototypes": [
+      { "type": "formal_full", "text": "She walked right out, purred, and jumped into Linda's arms." },
+      { "type": "colloquial", "text": "She purred, put her tail up, and waddled over to Linda." },
+      { "type": "minimal_core", "text": "Jumped into Linda's arms." },
+      { "type": "functional_circumlocution", "text": "Rattles was happy and walked right over to play with the girl." },
+      { "type": "short_elliptical", "text": "purred waddled" },
+      { "type": "common_distractor", "text": "She jumped out the window into the grass." }
+    ],
+    "semantic_slots": {
+      "agent": { "canonical": "Rattles", "synonyms": ["the cat", "she"] },
+      "action": { "canonical": "jumped into arms", "synonyms": ["walked right over to play with the girl", "waddled over"] }
+    }
+  },
+  {
+    "id": "Q7_short",
+    "question_id": "Q7",
+    "bucket": "short_elliptical_1_2_words",
+    "checkin_question": "What did Rattles do when Linda came into the haymow?",
+    "target_answer_concept": "Rattles walked right out, purred, and jumped into Linda's arms.",
+    "child_transcript": "purred waddled",
+    "expected_status": "mastered",
+    "keyword_clusters": [
+      { "concept_name": "action", "synonyms": ["purred waddled", "waddled over", "purred"] }
+    ],
+    "acceptable_phrasings": [
+      "She purred, put her tail up, and waddled over to Linda.",
+      "purred waddled"
+    ],
+    "canonical_prototypes": [
+      { "type": "formal_full", "text": "She walked right out, purred, and jumped into Linda's arms." },
+      { "type": "colloquial", "text": "She purred, put her tail up, and waddled over to Linda." },
+      { "type": "minimal_core", "text": "Jumped into Linda's arms." },
+      { "type": "functional_circumlocution", "text": "Rattles was happy and walked right over to play with the girl." },
+      { "type": "short_elliptical", "text": "purred waddled" },
+      { "type": "common_distractor", "text": "She jumped out the window into the grass." }
+    ],
+    "semantic_slots": {
+      "agent": { "canonical": "Rattles", "synonyms": ["the cat", "she"] },
+      "action": { "canonical": "jumped into arms", "synonyms": ["purred waddled", "purred", "waddled over"] }
+    }
+  },
+  {
+    "id": "Q7_stt",
+    "question_id": "Q7",
+    "bucket": "stt_homophone_with_alternatives",
+    "checkin_question": "What did Rattles do when Linda came into the haymow?",
+    "target_answer_concept": "Rattles walked right out, purred, and jumped into Linda's arms.",
+    "child_transcript": "modeled over",
+    "transcript_alternatives": ["modeled over", "waddled over to Linda"],
+    "expected_status": "mastered",
+    "keyword_clusters": [
+      { "concept_name": "action", "synonyms": ["walked out", "waddled over", "waddled over to linda"] }
+    ],
+    "acceptable_phrasings": [
+      "She purred, put her tail up, and waddled over to Linda.",
+      "waddled over to Linda"
+    ],
+    "canonical_prototypes": [
+      { "type": "formal_full", "text": "She walked right out, purred, and jumped into Linda's arms." },
+      { "type": "colloquial", "text": "She purred, put her tail up, and waddled over to Linda." },
+      { "type": "minimal_core", "text": "Jumped into Linda's arms." },
+      { "type": "functional_circumlocution", "text": "Rattles was happy and walked right over to play with the girl." },
+      { "type": "short_elliptical", "text": "waddled over to Linda" },
+      { "type": "common_distractor", "text": "She jumped out the window into the grass." }
+    ],
+    "semantic_slots": {
+      "agent": { "canonical": "Rattles", "synonyms": ["the cat", "she"] },
+      "action": { "canonical": "jumped into arms", "synonyms": ["waddled over", "waddled over to linda"] }
+    }
+  },
+  {
+    "id": "Q7_partial",
+    "question_id": "Q7",
+    "bucket": "partial_or_near_miss",
+    "checkin_question": "What did Rattles do when Linda came into the haymow?",
+    "target_answer_concept": "Rattles walked right out, purred, and jumped into Linda's arms.",
+    "child_transcript": "She put her tail up and waddled over to Uncle Duane.",
+    "expected_status": "needs_scaffold",
+    "keyword_clusters": [
+      { "concept_name": "action", "synonyms": ["waddled over", "walked over"] },
+      { "concept_name": "target", "synonyms": ["linda"] }
+    ],
+    "acceptable_phrasings": [
+      "She walked right out, purred, and jumped into Linda's arms."
+    ],
+    "canonical_prototypes": [
+      { "type": "formal_full", "text": "She walked right out, purred, and jumped into Linda's arms." },
+      { "type": "common_distractor", "text": "She jumped out the window into the grass." }
+    ],
+    "semantic_slots": {
+      "agent": { "canonical": "Rattles", "synonyms": ["the cat", "she"] },
+      "action": { "canonical": "jumped into arms", "synonyms": ["waddled over"] },
+      "target": { "canonical": "Linda", "synonyms": ["linda"], "distractors": ["uncle duane"] }
+    }
+  },
+  {
+    "id": "Q7_distractor",
+    "question_id": "Q7",
+    "bucket": "distractor_or_off_track",
+    "checkin_question": "What did Rattles do when Linda came into the haymow?",
+    "target_answer_concept": "Rattles walked right out, purred, and jumped into Linda's arms.",
+    "child_transcript": "She jumped out the window into the grass.",
+    "expected_status": "needs_scaffold",
+    "keyword_clusters": [
+      { "concept_name": "action", "synonyms": ["walked out", "waddled over"] }
+    ],
+    "acceptable_phrasings": [
+      "She walked right out, purred, and jumped into Linda's arms."
+    ],
+    "canonical_prototypes": [
+      { "type": "formal_full", "text": "She walked right out, purred, and jumped into Linda's arms." },
+      { "type": "common_distractor", "text": "She jumped out the window into the grass." }
+    ],
+    "semantic_slots": {
+      "agent": { "canonical": "Rattles", "synonyms": ["the cat", "she"] },
+      "action": { "canonical": "jumped into arms", "synonyms": ["waddled over"], "distractors": ["jumped out the window into the grass"] }
+    }
+  },
+  {
+    "id": "Q8_verbatim",
+    "question_id": "Q8",
+    "bucket": "verbatim_correct",
+    "checkin_question": "Why was Uncle Duane so surprised at the end of the story?",
+    "target_answer_concept": "He had never seen a wild barn cat sit in a human's lap or be friendly before.",
+    "child_transcript": "Because he had never seen a barn cat let a human hold it before.",
+    "expected_status": "mastered",
+    "keyword_clusters": [
+      { "concept_name": "reason", "synonyms": ["never seen", "never saw", "not wild", "friendly", "let a human hold"] },
+      { "concept_name": "cat", "synonyms": ["barn cat", "cat", "rattles", "wild cat"] }
+    ],
+    "acceptable_phrasings": [
+      "Because he had never seen a barn cat let a human hold it before.",
+      "Barn cats are always wild, but Rattles was sitting right in Linda's lap.",
+      "never saw friendly"
+    ],
+    "canonical_prototypes": [
+      { "type": "formal_full", "text": "Because he had never seen a barn cat let a human hold it before." },
+      { "type": "colloquial", "text": "Barn cats are always wild, but Rattles was sitting right in Linda's lap." },
+      { "type": "minimal_core", "text": "Never saw a wild barn cat be friendly." },
+      { "type": "functional_circumlocution", "text": "Wild barn cats are always scared of people, but Rattles was cuddled up friendly." },
+      { "type": "short_elliptical", "text": "never saw friendly" },
+      { "type": "common_distractor", "text": "Because a cow escaped from the barn." }
+    ],
+    "semantic_slots": {
+      "agent": { "canonical": "Uncle Duane", "synonyms": ["the farmer", "he"] },
+      "reason": { "canonical": "wild cat friendly", "synonyms": ["barn cats never let people hold them", "never saw a cat act like that", "never saw friendly", "never seen a barn cat let a human hold it"] }
+    }
+  },
+  {
+    "id": "Q8_paraphrase",
+    "question_id": "Q8",
+    "bucket": "non_verbatim_paraphrase",
+    "checkin_question": "Why was Uncle Duane so surprised at the end of the story?",
+    "target_answer_concept": "He had never seen a wild barn cat sit in a human's lap or be friendly before.",
+    "child_transcript": "Wild barn cats are always scared of people, but Rattles was cuddled up friendly.",
+    "expected_status": "mastered",
+    "keyword_clusters": [
+      { "concept_name": "reason", "synonyms": ["cuddled up friendly", "friendly", "scared of people"] },
+      { "concept_name": "cat", "synonyms": ["barn cats", "wild barn cats", "rattles"] }
+    ],
+    "acceptable_phrasings": [
+      "Because he had never seen a barn cat let a human hold it before.",
+      "Wild barn cats are always scared of people, but Rattles was cuddled up friendly."
+    ],
+    "canonical_prototypes": [
+      { "type": "formal_full", "text": "Because he had never seen a barn cat let a human hold it before." },
+      { "type": "colloquial", "text": "Barn cats are always wild, but Rattles was sitting right in Linda's lap." },
+      { "type": "minimal_core", "text": "Never saw a wild barn cat be friendly." },
+      { "type": "functional_circumlocution", "text": "Wild barn cats are always scared of people, but Rattles was cuddled up friendly." },
+      { "type": "short_elliptical", "text": "never saw friendly" },
+      { "type": "common_distractor", "text": "Because a cow escaped from the barn." }
+    ],
+    "semantic_slots": {
+      "agent": { "canonical": "Uncle Duane", "synonyms": ["the farmer", "he"] },
+      "reason": { "canonical": "wild cat friendly", "synonyms": ["cuddled up friendly", "wild barn cats are always scared of people"] }
+    }
+  },
+  {
+    "id": "Q8_short",
+    "question_id": "Q8",
+    "bucket": "short_elliptical_1_2_words",
+    "checkin_question": "Why was Uncle Duane so surprised at the end of the story?",
+    "target_answer_concept": "He had never seen a wild barn cat sit in a human's lap or be friendly before.",
+    "child_transcript": "never saw friendly",
+    "expected_status": "mastered",
+    "keyword_clusters": [
+      { "concept_name": "reason", "synonyms": ["never saw friendly", "friendly", "never seen"] }
+    ],
+    "acceptable_phrasings": [
+      "Because he had never seen a barn cat let a human hold it before.",
+      "never saw friendly"
+    ],
+    "canonical_prototypes": [
+      { "type": "formal_full", "text": "Because he had never seen a barn cat let a human hold it before." },
+      { "type": "colloquial", "text": "Barn cats are always wild, but Rattles was sitting right in Linda's lap." },
+      { "type": "minimal_core", "text": "Never saw a wild barn cat be friendly." },
+      { "type": "functional_circumlocution", "text": "Wild barn cats are always scared of people, but Rattles was cuddled up friendly." },
+      { "type": "short_elliptical", "text": "never saw friendly" },
+      { "type": "common_distractor", "text": "Because a cow escaped from the barn." }
+    ],
+    "semantic_slots": {
+      "agent": { "canonical": "Uncle Duane", "synonyms": ["the farmer", "he"] },
+      "reason": { "canonical": "wild cat friendly", "synonyms": ["never saw friendly"] }
+    }
+  },
+  {
+    "id": "Q8_stt",
+    "question_id": "Q8",
+    "bucket": "stt_homophone_with_alternatives",
+    "checkin_question": "Why was Uncle Duane so surprised at the end of the story?",
+    "target_answer_concept": "He had never seen a wild barn cat sit in a human's lap or be friendly before.",
+    "child_transcript": "never seen a burn cat",
+    "transcript_alternatives": ["never seen a burn cat", "never seen a wild barn cat be friendly"],
+    "expected_status": "mastered",
+    "keyword_clusters": [
+      { "concept_name": "reason", "synonyms": ["never seen", "friendly", "wild barn cat"] }
+    ],
+    "acceptable_phrasings": [
+      "Because he had never seen a barn cat let a human hold it before.",
+      "never seen a wild barn cat be friendly"
+    ],
+    "canonical_prototypes": [
+      { "type": "formal_full", "text": "Because he had never seen a barn cat let a human hold it before." },
+      { "type": "colloquial", "text": "Barn cats are always wild, but Rattles was sitting right in Linda's lap." },
+      { "type": "minimal_core", "text": "Never saw a wild barn cat be friendly." },
+      { "type": "functional_circumlocution", "text": "Wild barn cats are always scared of people, but Rattles was cuddled up friendly." },
+      { "type": "short_elliptical", "text": "never seen a wild barn cat be friendly" },
+      { "type": "common_distractor", "text": "Because a cow escaped from the barn." }
+    ],
+    "semantic_slots": {
+      "agent": { "canonical": "Uncle Duane", "synonyms": ["the farmer", "he"] },
+      "reason": { "canonical": "wild cat friendly", "synonyms": ["never seen a wild barn cat be friendly"] }
+    }
+  },
+  {
+    "id": "Q8_partial",
+    "question_id": "Q8",
+    "bucket": "partial_or_near_miss",
+    "checkin_question": "Why was Uncle Duane so surprised at the end of the story?",
+    "target_answer_concept": "He had never seen a wild barn cat sit in a human's lap or be friendly before.",
+    "child_transcript": "Grandma was surprised because the cat was friendly.",
+    "expected_status": "needs_scaffold",
+    "keyword_clusters": [
+      { "concept_name": "agent", "synonyms": ["uncle duane", "duane"] },
+      { "concept_name": "reason", "synonyms": ["never seen", "friendly"] }
+    ],
+    "acceptable_phrasings": [
+      "Because he had never seen a barn cat let a human hold it before."
+    ],
+    "canonical_prototypes": [
+      { "type": "formal_full", "text": "Because he had never seen a barn cat let a human hold it before." },
+      { "type": "common_distractor", "text": "Because a cow escaped from the barn." }
+    ],
+    "semantic_slots": {
+      "agent": { "canonical": "Uncle Duane", "synonyms": ["the farmer", "he"], "distractors": ["grandma"] },
+      "reason": { "canonical": "wild cat friendly", "synonyms": ["never seen a wild barn cat be friendly"] }
+    }
+  },
+  {
+    "id": "Q8_distractor",
+    "question_id": "Q8",
+    "bucket": "distractor_or_off_track",
+    "checkin_question": "Why was Uncle Duane so surprised at the end of the story?",
+    "target_answer_concept": "He had never seen a wild barn cat sit in a human's lap or be friendly before.",
+    "child_transcript": "Because a cow escaped from the barn.",
+    "expected_status": "needs_scaffold",
+    "keyword_clusters": [
+      { "concept_name": "reason", "synonyms": ["never seen", "friendly"] }
+    ],
+    "acceptable_phrasings": [
+      "Because he had never seen a barn cat let a human hold it before."
+    ],
+    "canonical_prototypes": [
+      { "type": "formal_full", "text": "Because he had never seen a barn cat let a human hold it before." },
+      { "type": "common_distractor", "text": "Because a cow escaped from the barn." }
+    ],
+    "semantic_slots": {
+      "agent": { "canonical": "Uncle Duane", "synonyms": ["the farmer", "he"] },
+      "reason": { "canonical": "wild cat friendly", "synonyms": ["never seen a wild barn cat be friendly"], "distractors": ["cow escaped from the barn"] }
+    }
+  }
+]

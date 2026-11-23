@@ -45,6 +45,7 @@ export class StoryReaderApp {
     this.microturnUsed = false;
     this.bookData = null;
     this.transcript = '';
+    this.transcriptAlternatives = [];
     this.activeEvaluation = null;
 
     // Cache elements mapping
@@ -319,8 +320,11 @@ export class StoryReaderApp {
     }
   }
 
-  setTranscript(text) {
+  setTranscript(text, alternatives = null) {
     this.transcript = text || '';
+    if (Array.isArray(alternatives)) {
+      this.transcriptAlternatives = alternatives;
+    }
     if (this.elements.transcriptText) {
       this.elements.transcriptText.textContent = this.transcript;
     }
@@ -699,9 +703,11 @@ export class StoryReaderApp {
 
     if (this.audioManager) {
       try {
-        const finalTranscript = await this.audioManager.stopListening();
+        const stopRes = await this.audioManager.stopListening();
+        const finalTranscript = typeof stopRes === 'string' ? stopRes : stopRes?.transcript;
+        const alts = Array.isArray(stopRes?.alternatives) ? stopRes.alternatives : [];
         if (finalTranscript) {
-          this.setTranscript(finalTranscript);
+          this.setTranscript(finalTranscript, alts);
         }
       } catch (err) {
         console.warn('Error stopping speech recording:', err);
@@ -747,6 +753,7 @@ export class StoryReaderApp {
       verbatim_page_text: chunk?.verbatim_page_text || '',
       attempt_count: currentAttempt,
       microturn_used: this.microturnUsed,
+      transcript_alternatives: this.transcriptAlternatives || [],
     };
 
     this.transitionTo(APP_STATE.EVALUATING);
@@ -1154,6 +1161,7 @@ export class StoryReaderApp {
         verbatim_page_text: chunk?.verbatim_page_text || '',
         attempt_count: this.attemptCount,
         microturn_used: this.microturnUsed,
+        transcript_alternatives: this.transcriptAlternatives || [],
       };
 
       try {
@@ -1404,6 +1412,7 @@ export class StoryReaderApp {
         verbatim_page_text: chunk.verbatim_page_text || '',
         attempt_count: this.attemptCount,
         microturn_used: this.microturnUsed,
+        transcript_alternatives: this.transcriptAlternatives || [],
       };
 
       try {
