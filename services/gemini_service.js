@@ -118,6 +118,15 @@ const PEDAGOGY_STOPWORDS = new Set([
   'during', 'each', 'both', 'between', 'while',
 ]);
 
+function stemWord(word = '') {
+  let w = word.toLowerCase().trim();
+  if (w.endsWith('ing') && w.length > 5) w = w.slice(0, -3);
+  else if (w.endsWith('ed') && w.length > 4) w = w.slice(0, -2);
+  else if (w.endsWith('es') && w.length > 4) w = w.slice(0, -2);
+  else if (w.endsWith('s') && !w.endsWith('ss') && w.length > 3) w = w.slice(0, -1);
+  return w;
+}
+
 /**
  * Audits a chunk's pedagogical soundness, lookout spoiler risk, and question brevity.
  *
@@ -164,10 +173,14 @@ export function auditChunkPedagogy(chunk = {}) {
 
   const lookoutWords = extractContentWords(lookoutPrompt);
   const targetWords = extractContentWords(targetConcept);
+  const targetStems = new Set();
+  for (const w of targetWords) {
+    targetStems.add(stemWord(w));
+  }
 
   const sharedWords = [];
   for (const word of lookoutWords) {
-    if (targetWords.has(word)) {
+    if (targetWords.has(word) || targetStems.has(stemWord(word))) {
       sharedWords.push(word);
     }
   }
@@ -175,8 +188,8 @@ export function auditChunkPedagogy(chunk = {}) {
   // 1. spoiler_leak: true if lookout_prompt shares >= 2 content words with target_answer_concept
   const spoiler_leak = sharedWords.length >= 2;
 
-  // 2. is_trivia_only: true if checkin_question matches /^(what color|how many|what size)\b/i and question_type !== 'observable_visual'
-  const triviaRegex = /^(what color|how many|what size)\b/i;
+  // 2. is_trivia_only: true if checkin_question matches /\b(what color|how many|what size)\b/i and question_type !== 'observable_visual'
+  const triviaRegex = /\b(what color|how many|what size)\b/i;
   const is_trivia_only = triviaRegex.test(checkinQuestion.trim()) && questionType !== 'observable_visual';
 
   // 3. word_count_ok: checkin_question <= 15 words and lookout_prompt <= 16 words
@@ -223,18 +236,18 @@ function getFromCache(cacheKey) {
   // Re-insert to mark as MRU
   bookAnalysisCache.delete(cacheKey);
   bookAnalysisCache.set(cacheKey, entry);
-  return JSON.parse(JSON.stringify(entry));
+  return structuredClone(entry);
 }
 
 function setInCache(cacheKey, analysis) {
-  if (process.env.DISABLE_BOOK_CACHE === 'true') return;
+  if (process.env.DISABLE_BOOK_CACHE === 'true' || !analysis) return;
   if (bookAnalysisCache.has(cacheKey)) {
     bookAnalysisCache.delete(cacheKey);
   } else if (bookAnalysisCache.size >= MAX_BOOK_CACHE_ENTRIES) {
     const oldestKey = bookAnalysisCache.keys().next().value;
     bookAnalysisCache.delete(oldestKey);
   }
-  const entryToStore = JSON.parse(JSON.stringify(analysis));
+  const entryToStore = structuredClone(analysis);
   delete entryToStore._cacheHit;
   bookAnalysisCache.set(cacheKey, entryToStore);
 }
@@ -243,10 +256,57 @@ export function offsetPageRange(pageRangeStr, pageOffset) {
   if (!pageRangeStr || typeof pageRangeStr !== 'string' || !pageOffset) {
     return pageRangeStr;
   }
-  return pageRangeStr.replace(/\b(\d+)\b/g, (match) => {
-    const pageNum = parseInt(match, 10);
-    return String(pageNum + pageOffset);
-  });
+  const match = pageRangeStr.match(/^(Pages?\s*)(\d+)(?:(\s*[-–—]\s*)(\d+))?(.*)$/i);
+  if (!match) return pageRangeStr;
+  const prefix = match[1];
+  const start = parseInt(match[2], 10) + pageOffset;
+  const sep = match[3] || '';
+  const end = match[4] ? parseInt(match[4], 10) + pageOffset : '';
+  const suffix = match[5] || '';
+  return `${prefix}${start}${sep}${end}${suffix}`;
+}
+
+export function getPageBuffersForChunk(chunk, files = []) {
+  if (!files || files.length === 0) return { imageBuffer: null, mimeType: 'image/jpeg' };
+  const rangeStr = chunk?.page_range;
+  if (typeof rangeStr === 'string') {
+    const matchRange = rangeStr.match(/(\d+)\s*[-–—]\s*(\d+)/);
+    if (matchRange) {
+      const startIdx = parseInt(matchRange[1], 10) - 1;
+      const targetFile = (startIdx >= 0 && startIdx < files.length) ? files[startIdx] : files[0];
+      return {
+        imageBuffer: targetFile?.buffer,
+        mimeType: targetFile?.mimetype || 'image/jpeg',
+      };
+    }
+    const matchSingle = rangeStr.match(/(\d+)/);
+    if (matchSingle) {
+      const idx = parseInt(matchSingle[1], 10) - 1;
+      const targetFile = (idx >= 0 && idx < files.length) ? files[idx] : files[0];
+      return {
+        imageBuffer: targetFile?.buffer,
+        mimeType: targetFile?.mimetype || 'image/jpeg',
+      };
+    }
+  }
+  return {
+    imageBuffer: files[0]?.buffer,
+    mimeType: files[0]?.mimetype || 'image/jpeg',
+  };
+}
+
+async function mapConcurrent(items, limit, fn) {
+  const results = new Array(items.length);
+  let nextIndex = 0;
+  async function worker() {
+    while (nextIndex < items.length) {
+      const idx = nextIndex++;
+      results[idx] = await fn(items[idx], idx);
+    }
+  }
+  const workers = Array.from({ length: Math.min(limit, items.length) }, () => worker());
+  await Promise.all(workers);
+  return results;
 }
 
 export function getMockBookAnalysis(files = []) {
@@ -429,6 +489,7 @@ export function sanitizeAnalysisProbes(analysis) {
   const LEADING_INTERROGATIVE_REGEX = /^(?:who|what|why|where|when|how|did|does|do|is|are|was|were|can|could|would)\s+(?:did\s+|does\s+|will\s+|was\s+|is\s+)?/i;
 
   for (const chunk of analysis.chunks) {
+    chunk.scaffold_hint = chunk.scaffold_hint || chunk.hint_level_1;
     if (chunk.diagnostic_probes) {
       for (const [key, probe] of Object.entries(chunk.diagnostic_probes)) {
         if (probe && typeof probe.hypothesis === 'string') {
@@ -513,12 +574,14 @@ export async function analyzeBookBatch(files) {
     }
     const analysis = sanitizeAnalysisProbes(getMockBookAnalysis(files));
     if (analysis && Array.isArray(analysis.chunks)) {
-      for (const chunk of analysis.chunks) {
+      await mapConcurrent(analysis.chunks, 3, async (chunk) => {
+        const { imageBuffer, mimeType } = getPageBuffersForChunk(chunk, files);
         chunk.grounding_verification = await verifyGroundingFidelity(chunk, {
-          imageBuffer: files[0]?.buffer,
+          imageBuffer,
+          mimeType,
         });
         chunk.pedagogy_audit = auditChunkPedagogy(chunk);
-      }
+      });
     }
     return analysis;
   }
@@ -610,13 +673,14 @@ export async function analyzeBookBatch(files) {
   });
 
   if (analysis && Array.isArray(analysis.chunks)) {
-    for (const chunk of analysis.chunks) {
+    await mapConcurrent(analysis.chunks, 3, async (chunk) => {
+      const { imageBuffer, mimeType } = getPageBuffersForChunk(chunk, files);
       chunk.grounding_verification = await verifyGroundingFidelity(chunk, {
-        imageBuffer: files[0]?.buffer,
-        mimeType: files[0]?.mimetype,
+        imageBuffer,
+        mimeType,
       });
       chunk.pedagogy_audit = auditChunkPedagogy(chunk);
-    }
+    });
   }
   return analysis;
 }
@@ -629,22 +693,37 @@ export async function analyzeBookPages(files) {
   const cacheKey = computeBookCacheKey(files);
   const cached = getFromCache(cacheKey);
   if (cached) {
-    cached._cacheHit = true;
-    return cached;
+    const cloned = structuredClone(cached);
+    cloned._cacheHit = true;
+    return cloned;
   }
 
   let analysis;
   if (files.length > 6) {
     const BATCH_SIZE = 6;
-    const batchResults = [];
+    const batchList = [];
     for (let i = 0; i < files.length; i += BATCH_SIZE) {
-      const batchFiles = files.slice(i, i + BATCH_SIZE);
+      batchList.push({ batchFiles: files.slice(i, i + BATCH_SIZE), pageOffset: i });
+    }
+
+    const batchResults = await mapConcurrent(batchList, 2, async ({ batchFiles, pageOffset }) => {
       const batchAnalysis = await analyzeBookBatch(batchFiles);
-      if (!batchAnalysis || !batchAnalysis.is_legible) {
-        batchAnalysis._cacheHit = false;
-        return batchAnalysis;
+      return { analysis: batchAnalysis, pageOffset };
+    });
+
+    for (const { analysis: bAnalysis } of batchResults) {
+      if (!bAnalysis || !bAnalysis.is_legible) {
+        if (bAnalysis) {
+          bAnalysis._cacheHit = false;
+          return bAnalysis;
+        }
+        return {
+          is_legible: false,
+          error_message: 'Analysis returned empty or illegible response.',
+          chunks: [],
+          _cacheHit: false,
+        };
       }
-      batchResults.push({ analysis: batchAnalysis, pageOffset: i });
     }
 
     const mergedChunks = [];
@@ -682,7 +761,7 @@ export async function analyzeBookPages(files) {
 
   analysis._cacheHit = false;
   setInCache(cacheKey, analysis);
-  return analysis;
+  return structuredClone(analysis);
 }
 
 export function getMockAnswerClassification(data = {}) {

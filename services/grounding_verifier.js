@@ -16,7 +16,7 @@ const STOPWORDS = new Set([
   'out', 'over', 'to', 'up', 'with', 'about', 'against', 'between',
   'through', 'during', 'before', 'after', 'above', 'below', 'under',
   'again', 'further', 'then', 'once', 'here', 'there', 'all', 'any', 'both',
-  'each', 'few', 'more', 'most', 'other', 'some', 'such', 'no', 'not',
+  'each', 'few', 'more', 'most', 'other', 'some', 'such',
   'only', 'own', 'same', 'than', 'too', 'very', 's', 't', 'just', 'don', 'now',
   'because', 'if', 'as', 'until', 'while', 'let', 'get', 'got', 'give', 'gave', 'given'
 ]);
@@ -77,43 +77,27 @@ function extractKeySubjects(chunk = {}) {
 
 export function checkLexicalEntityOverlap(chunk = {}) {
   if (!chunk) return false;
+
+  // Ground strictly on verbatim_page_text when present to eliminate circular grounding
+  const hasVerbatim = typeof chunk.verbatim_page_text === 'string' && chunk.verbatim_page_text.trim().length > 0;
   const factsText = Array.isArray(chunk.story_facts) ? chunk.story_facts.join(' ') : '';
-  const pageText = [chunk.paraphrased_story_facts, factsText, chunk.verbatim_page_text].filter(Boolean).join(' ').toLowerCase();
-  if (!pageText.trim()) return false;
+  const fallbackText = [chunk.paraphrased_story_facts, factsText].filter(Boolean).join(' ');
+  const rawTextToGround = (hasVerbatim ? chunk.verbatim_page_text : fallbackText).toLowerCase().trim();
 
-  const graphEntities = [];
-  if (chunk.entity_graph?.characters && Array.isArray(chunk.entity_graph.characters)) {
-    for (const char of chunk.entity_graph.characters) {
-      if (char.canonical_name) graphEntities.push(char.canonical_name.toLowerCase());
-      if (Array.isArray(char.aliases)) {
-        for (const alias of char.aliases) {
-          if (alias) graphEntities.push(alias.toLowerCase());
-        }
-      }
-    }
-  }
+  if (!rawTextToGround) return false;
 
-  const keywordEntities = [];
-  if (Array.isArray(chunk.keyword_clusters)) {
-    for (const cluster of chunk.keyword_clusters) {
-      if (cluster.concept_name) keywordEntities.push(cluster.concept_name.toLowerCase());
-      if (Array.isArray(cluster.synonyms)) {
-        for (const syn of cluster.synonyms) {
-          if (syn) keywordEntities.push(syn.toLowerCase());
-        }
-      }
-    }
-  }
-
-  const groundedText = [pageText, ...graphEntities, ...keywordEntities].join(' ');
   const subjects = extractKeySubjects(chunk);
+  if (subjects.length === 0) {
+    return hasVerbatim;
+  }
 
-  if (subjects.length === 0) return true;
+  // Tokenize grounded text once into a Set
+  const groundedTokens = new Set(rawTextToGround.match(/[a-z0-9]+(?:'[a-z0-9]+)?/g) || []);
 
   for (const subject of subjects) {
     const words = subject.split(/\s+/).filter((w) => !STOPWORDS.has(w) && w.length > 2);
     if (words.length === 0) continue;
-    const hasMatch = words.some((w) => groundedText.includes(w));
+    const hasMatch = words.some((w) => groundedTokens.has(w));
     if (!hasMatch) {
       return false;
     }
@@ -166,7 +150,8 @@ export async function checkNliEntailment(premise, hypothesis) {
     };
   } catch (err) {
     console.warn('⚠️ checkNliEntailment Decision 1 call failed:', err?.message);
-    return { entailment: 0.5, contradiction: 0.1, neutral: 0.4 };
+    // Fail closed on NLI API failure
+    return { entailment: 0, contradiction: 0, neutral: 1, error: true };
   }
 }
 
@@ -193,13 +178,28 @@ export async function verifyGroundingFidelity(chunk = {}, options = {}) {
   }
 
   // 3. NLI Entailment Pass
+  // Premise strictly grounded against verbatim_page_text when available
+  const hasVerbatim = typeof chunk.verbatim_page_text === 'string' && chunk.verbatim_page_text.trim().length > 0;
   const factsText = Array.isArray(chunk.story_facts) ? chunk.story_facts.join(' ') : '';
-  const premise = [chunk.paraphrased_story_facts, factsText, chunk.verbatim_page_text].filter(Boolean).join(' ');
+  const fallbackPremise = [chunk.paraphrased_story_facts, factsText].filter(Boolean).join(' ');
+  const premise = hasVerbatim ? chunk.verbatim_page_text.trim() : fallbackPremise;
   const hypothesis = chunk.target_answer_concept || '';
   const nliScore = await checkNliEntailment(premise, hypothesis);
-  const { entailment, contradiction, neutral } = nliScore;
+  const { entailment, contradiction, neutral, error } = nliScore;
 
-  if (contradiction > 0.30 || entailment < 0.40) {
+  if (error) {
+    return {
+      is_grounded: false,
+      verification_status: 'unverified',
+      lexical_pass: true,
+      nli_score: { entailment, contradiction, neutral, error: true },
+      failure_reason: 'NLI_VERIFICATION_FAILED',
+      flagged_for_review: true,
+    };
+  }
+
+  // Zero dead zone: fail closed below 0.40 or on contradiction >= 0.30
+  if (contradiction >= 0.30 || entailment < 0.40) {
     return {
       is_grounded: false,
       lexical_pass: true,
@@ -209,52 +209,42 @@ export async function verifyGroundingFidelity(chunk = {}, options = {}) {
     };
   }
 
-  if (entailment >= 0.45 && contradiction < 0.30) {
-    // 4. Multimodal Visual Grounding Pass via Gemini Decision 1
-    if (options.visualDecisionVerifier || (options.imageBuffer && process.env.DISABLE_DECISION_MODEL !== 'true')) {
-      try {
-        if (options.visualDecisionVerifier || (process.env.GEMINI_API_KEY && process.env.MOCK_AI !== 'true')) {
-          const verifier = options.visualDecisionVerifier || ((args) => {
-            return defaultDecisionBreaker.execute(
-              (signal) => verifyVisualGroundingWithDecision({ ...args, signal }),
-              () => null
-            );
-          });
+  // 4. Multimodal Visual Grounding Pass via Gemini Decision 1
+  if (options.visualDecisionVerifier || (options.imageBuffer && process.env.DISABLE_DECISION_MODEL !== 'true')) {
+    try {
+      if (options.visualDecisionVerifier || (process.env.GEMINI_API_KEY && process.env.MOCK_AI !== 'true')) {
+        const verifier = options.visualDecisionVerifier || ((args) => {
+          return defaultDecisionBreaker.execute(
+            (signal) => verifyVisualGroundingWithDecision({ ...args, signal }),
+            () => null
+          );
+        });
 
-          const visualDecision = await verifier({
-            imageBuffer: options.imageBuffer,
-            mimeType: options.mimeType || chunk.image_mime_type || 'image/png',
-            target_answer_concept: hypothesis,
-            checkin_question: chunk.checkin_question || '',
-          });
+        const visualDecision = await verifier({
+          imageBuffer: options.imageBuffer,
+          mimeType: options.mimeType || chunk.image_mime_type || 'image/png',
+          target_answer_concept: hypothesis,
+          checkin_question: chunk.checkin_question || '',
+        });
 
-          if (visualDecision && visualDecision.grounded === false) {
-            return {
-              is_grounded: false,
-              failure_reason: 'VISUAL_GROUNDING_FAILED',
-              flagged_for_review: true,
-            };
-          }
+        if (visualDecision && visualDecision.grounded === false) {
+          return {
+            is_grounded: false,
+            failure_reason: 'VISUAL_GROUNDING_FAILED',
+            flagged_for_review: true,
+          };
         }
-      } catch (err) {
-        console.warn('⚠️ Visual grounding check error, preserving text NLI verdict:', err?.message);
       }
+    } catch (err) {
+      console.warn('⚠️ Visual grounding check error, preserving text NLI verdict:', err?.message);
     }
-
-    return {
-      is_grounded: true,
-      lexical_pass: true,
-      nli_score: { entailment, contradiction, neutral },
-      flagged_for_review: false,
-    };
   }
 
   return {
-    is_grounded: false,
+    is_grounded: true,
     lexical_pass: true,
     nli_score: { entailment, contradiction, neutral },
-    failure_reason: 'FACTUAL_CONTRADICTION_OR_UNENTAILED',
-    flagged_for_review: true,
+    flagged_for_review: false,
   };
 }
 

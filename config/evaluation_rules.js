@@ -1,4 +1,14 @@
-export const EVAL_RULES = {
+function deepFreeze(obj) {
+  if (obj && typeof obj === 'object') {
+    Object.freeze(obj);
+    for (const key of Object.keys(obj)) {
+      deepFreeze(obj[key]);
+    }
+  }
+  return obj;
+}
+
+export const EVAL_RULES = deepFreeze({
   MAX_ATTEMPTS: 2,
   MAX_TRANSCRIPT_WORDS: 35,
   NLI_THRESHOLDS: {
@@ -12,10 +22,6 @@ export const EVAL_RULES = {
     DISTRACTOR_SIMILARITY: 0.70,
     QUESTION_ECHO_RATIO: 0.60,
   },
-  TOKENIZER: {
-    MAX_LENGTH_FAST: 32,
-    MAX_LENGTH_PROBE: 64,
-  },
-};
+});
 
 export default EVAL_RULES;
